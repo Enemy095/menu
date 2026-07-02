@@ -28,7 +28,7 @@ const MENU = Object.freeze([
 const state = {
   category: "Все",
   cart: new Map(),
-  selectedOrderType: "Предзаказ",
+  selectedOrderType: "preorder",
   pendingOrder: null,
   isSubmitting: false
 };
@@ -58,8 +58,13 @@ const elements = {
   orderComment: document.querySelector("#orderComment"),
   submitButton: document.querySelector("#submitOrderButton"),
   contactSection: document.querySelector("#contactSection"),
+  brandLogo: document.querySelector("#brandLogo"),
+  brandSlogan: document.querySelector("[data-brand-slogan]"),
   orderIntro: document.querySelector("#orderIntro"),
   submitModeNote: document.querySelector("#submitModeNote"),
+  orderTypeOptions: document.querySelector("#orderTypeOptions"),
+  scheduleBlock: document.querySelector("#scheduleBlock"),
+  scheduleText: document.querySelector("#scheduleText"),
   toast: document.querySelector("#toast"),
   testResults: document.querySelector("#testResults")
 };
@@ -68,9 +73,8 @@ init();
 
 function init() {
   restoreState();
-  renderRestaurantInfo();
+  applyWhiteLabelConfig();
   applyConfiguredLimits();
-  applyFeatureConfig();
   mountOptionalModules();
   renderCategories();
   renderMenu();
@@ -114,22 +118,107 @@ function bindEvents() {
   }
 }
 
-function renderRestaurantInfo() {
-  document.querySelector("#restaurantName").textContent = CONFIG.restaurantName;
-  document.querySelector("#cuisineText").textContent = CONFIG.cuisine;
-  document.querySelector("#scheduleText").textContent = CONFIG.schedule;
-  document.title = `${CONFIG.restaurantName} — электронное меню`;
-  if (FEATURE_CONFIG.customTheme) {
-    const theme = BRAND_CONFIG.theme;
-    const root = document.documentElement.style;
-    root.setProperty("--burgundy", theme.primaryColor);
-    root.setProperty("--gold", theme.accentColor);
-    root.setProperty("--cream", theme.backgroundColor);
-    root.setProperty("--milk", theme.surfaceColor);
-    root.setProperty("--ink", theme.textColor);
-    root.setProperty("--muted", theme.mutedTextColor);
-    root.setProperty("--line", theme.borderColor);
-  }
+function applyWhiteLabelConfig(
+  brand = BRAND_CONFIG,
+  profile = BUSINESS_PROFILE_CONFIG,
+  features = FEATURE_CONFIG,
+  orderTypes = ORDER_TYPE_CONFIG,
+  submitMode = APP_CONFIG.orderSubmitMode
+) {
+  renderBrand(brand);
+  setText("[data-brand-business-type]", brand.businessTypeLabel, "Ресторан-кафе");
+  setText("[data-brand-cuisine]", brand.cuisineText, CONFIG.cuisine);
+  setText("[data-brand-intro]", brand.introText, "");
+  setText("#menuEyebrow", brand.menuSection?.eyebrow, "Наше меню");
+  setText("#menuTitle", brand.menuSection?.title, "Выберите блюда");
+  setText("#cartBarLabel", brand.cartTexts?.cartBarLabel, "Посмотреть заказ");
+  setText("#drawerEyebrow", brand.cartTexts?.drawerEyebrow, "Проверьте детали");
+  setText("#cartTitle", brand.cartTexts?.title, "Ваш заказ");
+  setText("#clearCart", brand.cartTexts?.clearButton, "Очистить");
+  document.querySelector("#closeCart").setAttribute(
+    "aria-label",
+    normalizeText(brand.cartTexts?.closeLabel, 80) || "Закрыть корзину"
+  );
+  setText("#orderTypeLegend", brand.orderTexts?.typeLegend, "Как хотите получить заказ?");
+  applyFormTexts(brand.formTexts || {});
+
+  const workingHours = normalizeText(profile.workingHoursText, 120);
+  elements.scheduleText.textContent = workingHours;
+  elements.scheduleBlock.hidden = !workingHours;
+
+  applyTheme(brand.theme, features.customTheme);
+  applyFeatureConfig(features, submitMode, orderTypes, brand.orderTexts || {});
+}
+
+function setText(selector, value, fallback = "") {
+  const text = normalizeText(value, 500) || fallback;
+  document.querySelectorAll(selector).forEach(element => {
+    element.textContent = text;
+  });
+}
+
+function applyFormTexts(formTexts) {
+  setText("#phoneLabel", formTexts.phoneLabel, "Номер для связи");
+  setText("#phoneHint", formTexts.phoneHint, "Можно ввести российский или международный номер.");
+  setText("#phoneError", formTexts.phoneError, "Укажите корректный номер для связи");
+  setText("#nameLabel", formTexts.nameLabel, "Ваше имя");
+  setText("#guestCountLabel", formTexts.guestCountLabel, "Количество гостей");
+  setText("#addressLabel", formTexts.addressLabel, "Адрес доставки");
+  setText("#addressError", formTexts.addressError, "Укажите адрес доставки");
+  setText("#commentLabel", formTexts.commentLabel, "Комментарий");
+  setText("[data-form-optional]", formTexts.optionalLabel, "необязательно");
+  elements.customerPhone.placeholder = normalizeText(formTexts.phonePlaceholder, 120);
+  elements.customerName.placeholder = normalizeText(formTexts.namePlaceholder, 120);
+  elements.guestCount.placeholder = normalizeText(formTexts.guestCountPlaceholder, 120);
+  elements.deliveryAddress.placeholder = normalizeText(formTexts.addressPlaceholder, 160);
+  elements.orderComment.placeholder = normalizeText(formTexts.commentPlaceholder, 200);
+}
+
+function renderBrand(brand = BRAND_CONFIG) {
+  const displayName = normalizeText(brand?.displayName, 120) || "Ресторан-кафе Стамбул";
+  const slogan = normalizeText(brand?.slogan, 180);
+  document.querySelectorAll("[data-brand-display-name]").forEach(element => {
+    element.textContent = displayName;
+  });
+  elements.brandSlogan.textContent = slogan;
+  elements.brandSlogan.hidden = !slogan;
+  const configuredLogo = brand?.logoUrl || brand?.avatarUrl || "";
+  const logoUrl = isSafeImageUrl(configuredLogo) ? configuredLogo : "./images/logo-stambul.png";
+  elements.brandLogo.src = logoUrl;
+  elements.brandLogo.alt = normalizeText(brand?.logoAlt, 180) || `Логотип ${displayName}`;
+  document.querySelector('meta[name="description"]').content =
+    normalizeText(brand?.metaDescription, 240) || `Электронное меню ${displayName}`;
+  document.querySelector('meta[name="theme-color"]').content =
+    normalizeText(brand?.theme?.primaryColor, 32) || "#641c25";
+  document.title = normalizeText(brand?.pageTitle, 180) || `${displayName} — электронное меню`;
+}
+
+function applyTheme(theme = BRAND_CONFIG.theme, enabled = true) {
+  if (!enabled || !theme) return;
+  const values = {
+    "--color-primary": theme.primaryColor,
+    "--color-primary-text": theme.primaryTextColor,
+    "--color-accent": theme.accentColor,
+    "--color-background": theme.backgroundColor,
+    "--color-surface": theme.surfaceColor,
+    "--color-text": theme.textColor,
+    "--color-muted": theme.mutedTextColor,
+    "--color-border": theme.borderColor,
+    "--radius-card": theme.cardRadius,
+    "--radius-button": theme.buttonRadius,
+    // Legacy aliases keep the existing visual system stable.
+    "--burgundy": theme.primaryColor,
+    "--gold": theme.accentColor,
+    "--cream": theme.backgroundColor,
+    "--milk": theme.surfaceColor,
+    "--ink": theme.textColor,
+    "--muted": theme.mutedTextColor,
+    "--line": theme.borderColor
+  };
+  const root = document.documentElement.style;
+  Object.entries(values).forEach(([property, value]) => {
+    if (typeof value === "string" && value.trim()) root.setProperty(property, value.trim());
+  });
 }
 
 function applyConfiguredLimits() {
@@ -139,34 +228,50 @@ function applyConfiguredLimits() {
   elements.orderComment.maxLength = APP_CONFIG.maxCommentLength;
 }
 
-function applyFeatureConfig() {
-  const featureByValue = {
-    "Предзаказ": FEATURE_CONFIG.preorder,
-    "Доставка": FEATURE_CONFIG.delivery,
-    "Самовывоз": FEATURE_CONFIG.pickup
-  };
-  elements.orderForm.querySelectorAll('input[name="orderType"]').forEach(input => {
-    input.closest("label").hidden = !featureByValue[input.value];
-  });
-  if (!featureByValue[state.selectedOrderType]) {
-    state.selectedOrderType = Object.keys(featureByValue).find(value => featureByValue[value]) || "";
-  }
-  elements.submitButton.hidden = !FEATURE_CONFIG.orders;
+function applyFeatureConfig(
+  features = FEATURE_CONFIG,
+  submitMode = APP_CONFIG.orderSubmitMode,
+  orderTypes = ORDER_TYPE_CONFIG,
+  orderTexts = BRAND_CONFIG.orderTexts || {}
+) {
+  renderOrderTypeOptions(orderTypes, features);
+  elements.submitButton.hidden = !features.orders;
   const modeLabels = {
-    whatsapp: "Отправить заказ в WhatsApp",
-    backend: "Оформить заказ",
-    mock: "Создать тестовый заказ"
+    whatsapp: normalizeText(orderTexts.submitWhatsapp, 120) || "Отправить заказ в WhatsApp",
+    backend: normalizeText(orderTexts.submitBackend, 120) || "Оформить заказ",
+    mock: normalizeText(orderTexts.submitMock, 120) || "Создать тестовый заказ"
   };
   const modeNotes = {
-    whatsapp: "Откроется WhatsApp с готовым текстом заказа",
-    backend: "Заказ будет отправлен в ресторан",
-    mock: "Заказ будет обработан локально без сети"
+    whatsapp: normalizeText(orderTexts.noteWhatsapp, 180) || "Откроется WhatsApp с готовым текстом заказа",
+    backend: normalizeText(orderTexts.noteBackend, 180) || "Заказ будет отправлен в кафе",
+    mock: normalizeText(orderTexts.noteMock, 180) || "Тестовый режим без отправки заказа"
   };
-  elements.submitButton.lastChild.textContent = modeLabels[APP_CONFIG.orderSubmitMode] || "Оформить заказ";
-  elements.submitModeNote.textContent = modeNotes[APP_CONFIG.orderSubmitMode] || "";
-  elements.orderIntro.textContent = APP_CONFIG.orderSubmitMode === "whatsapp"
-    ? "Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp."
-    : "Выбирайте любимые блюда — мы соберём и передадим заказ ресторану.";
+  elements.submitButton.lastChild.textContent = modeLabels[submitMode] || "Оформить заказ";
+  elements.submitModeNote.textContent = modeNotes[submitMode] || "";
+}
+
+function renderOrderTypeOptions(orderTypes = ORDER_TYPE_CONFIG, features = FEATURE_CONFIG) {
+  const available = orderTypes.filter(type => features[type.feature] !== false);
+  const normalizedSelected = toApiOrderType(state.selectedOrderType);
+  const selectedAvailable = available.some(type => type.code === normalizedSelected);
+  if (!selectedAvailable) {
+    state.selectedOrderType = available.find(type => type.default)?.code || available[0]?.code || "";
+  } else {
+    state.selectedOrderType = normalizedSelected;
+  }
+  elements.orderTypeOptions.replaceChildren(...available.map(type => {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "orderType";
+    input.value = type.code;
+    input.dataset.legacyValue = type.legacyValue || "";
+    input.checked = type.code === state.selectedOrderType;
+    const text = document.createElement("span");
+    text.textContent = normalizeText(type.label, 80) || type.code;
+    label.append(input, text);
+    return label;
+  }));
 }
 
 function mountOptionalModules() {
@@ -561,7 +666,7 @@ function handleCustomerPhoneBlur() {
 function updateOrderTypeUI() {
   const radio = elements.orderForm.querySelector(`input[name="orderType"][value="${state.selectedOrderType}"]`);
   if (radio) radio.checked = true;
-  const needsAddress = state.selectedOrderType === "Доставка";
+  const needsAddress = toApiOrderType(state.selectedOrderType) === "delivery";
   elements.addressField.hidden = !needsAddress;
   elements.addressField.classList.remove("invalid");
 }
@@ -580,6 +685,9 @@ function readOrderData() {
 
 function toApiOrderType(type) {
   return {
+    preorder: "preorder",
+    delivery: "delivery",
+    pickup: "pickup",
     "Предзаказ": "preorder",
     "Доставка": "delivery",
     "Самовывоз": "pickup"
@@ -731,9 +839,9 @@ function restoreState() {
     return;
   }
 
-  const validOrderTypes = ["Предзаказ", "Доставка", "Самовывоз"];
+  const validOrderTypes = ["preorder", "delivery", "pickup", "Предзаказ", "Доставка", "Самовывоз"];
   if (validOrderTypes.includes(saved.selectedOrderType)) {
-    state.selectedOrderType = saved.selectedOrderType;
+    state.selectedOrderType = toApiOrderType(saved.selectedOrderType);
   }
   if (saved.cart && typeof saved.cart === "object" && !Array.isArray(saved.cart)) {
     Object.entries(saved.cart).forEach(([id, quantity]) => {
@@ -905,6 +1013,101 @@ async function runSelfTests() {
   renderContacts(FEATURE_CONFIG);
   const cspContent = document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content || "";
 
+  const testBrand = {
+    ...BRAND_CONFIG,
+    displayName: "Тестовое кафе",
+    businessTypeLabel: "Кафе",
+    cuisineText: "Авторская кухня",
+    slogan: "Тестовый слоган",
+    introText: "Тестовый intro-текст",
+    pageTitle: "Тестовое кафе — меню",
+    metaDescription: "Тестовое описание меню",
+    logoUrl: "javascript:alert(1)",
+    theme: { ...BRAND_CONFIG.theme, primaryColor: "#2E7D32" }
+  };
+  const testProfile = { ...BUSINESS_PROFILE_CONFIG, workingHoursText: "По будням с 09:00 до 18:00" };
+  applyWhiteLabelConfig(testBrand, testProfile, FEATURE_CONFIG, ORDER_TYPE_CONFIG);
+  const testBrandNameApplied = [...document.querySelectorAll("[data-brand-display-name]")]
+    .every(element => element.textContent === "Тестовое кафе");
+  const testBrandSloganApplied = elements.brandSlogan.textContent === "Тестовый слоган" && !elements.brandSlogan.hidden;
+  const testBusinessTypeApplied = document.querySelector("[data-brand-business-type]").textContent === "Кафе";
+  const testCuisineApplied = document.querySelector("[data-brand-cuisine]").textContent === "Авторская кухня";
+  const testIntroApplied = document.querySelector("[data-brand-intro]").textContent === "Тестовый intro-текст";
+  const testPageTitleApplied = document.title === "Тестовое кафе — меню";
+  const testMetaDescriptionApplied =
+    document.querySelector('meta[name="description"]').content === "Тестовое описание меню";
+  const testThemeColorApplied =
+    document.querySelector('meta[name="theme-color"]').content === "#2E7D32";
+  const testWorkingHoursApplied = elements.scheduleText.textContent === "По будням с 09:00 до 18:00";
+  const unsafeLogoFellBack = elements.brandLogo.getAttribute("src") === "./images/logo-stambul.png";
+  const brandUsesSafeDom = !/innerHTML|outerHTML|insertAdjacentHTML/.test(
+    applyWhiteLabelConfig.toString() + renderBrand.toString() + applyFormTexts.toString()
+  );
+  applyWhiteLabelConfig({ ...testBrand, slogan: "" }, testProfile, FEATURE_CONFIG, ORDER_TYPE_CONFIG);
+  const emptySloganHidden = elements.brandSlogan.hidden && elements.brandSlogan.textContent === "";
+  applyWhiteLabelConfig();
+
+  const testTheme = {
+    ...BRAND_CONFIG.theme,
+    primaryColor: "#2E7D32",
+    backgroundColor: "#E8F5E9",
+    cardRadius: "31px",
+    buttonRadius: "13px"
+  };
+  applyTheme(testTheme);
+  const rootStyle = document.documentElement.style;
+  const testPrimaryApplied = rootStyle.getPropertyValue("--color-primary").trim() === "#2E7D32";
+  const testBackgroundApplied = rootStyle.getPropertyValue("--color-background").trim() === "#E8F5E9";
+  const testCardRadiusApplied = rootStyle.getPropertyValue("--radius-card").trim() === "31px";
+  const testButtonRadiusApplied = rootStyle.getPropertyValue("--radius-button").trim() === "13px";
+  const allThemeFieldsApplied = [
+    "--color-primary", "--color-primary-text", "--color-accent", "--color-background",
+    "--color-surface", "--color-text", "--color-muted", "--color-border",
+    "--radius-card", "--radius-button"
+  ].every(property => rootStyle.getPropertyValue(property).trim());
+  applyTheme(BRAND_CONFIG.theme);
+
+  const originalOrderType = state.selectedOrderType;
+  applyFeatureConfig({ ...FEATURE_CONFIG, delivery: false });
+  const deliveryHidden = !elements.orderForm.querySelector('input[value="delivery"]');
+  applyFeatureConfig({ ...FEATURE_CONFIG, pickup: false });
+  const pickupHidden = !elements.orderForm.querySelector('input[value="pickup"]');
+  state.selectedOrderType = "preorder";
+  applyFeatureConfig({ ...FEATURE_CONFIG, preorder: false });
+  const preorderHidden = !elements.orderForm.querySelector('input[value="preorder"]');
+  const disabledDefaultSelectsFirstAvailable = state.selectedOrderType === "delivery";
+  state.selectedOrderType = originalOrderType;
+  applyFeatureConfig(FEATURE_CONFIG);
+  updateOrderTypeUI();
+  const customOrderTypes = ORDER_TYPE_CONFIG.map(type =>
+    type.code === "preorder" ? { ...type, label: "Быстрый заказ" } : type
+  );
+  renderOrderTypeOptions(customOrderTypes, FEATURE_CONFIG);
+  const configOrderTypeLabelApplied =
+    elements.orderForm.querySelector('input[value="preorder"] + span')?.textContent === "Быстрый заказ";
+  renderOrderTypeOptions(ORDER_TYPE_CONFIG, FEATURE_CONFIG);
+  updateOrderTypeUI();
+
+  const profileWithLinks = {
+    ...BUSINESS_PROFILE_CONFIG,
+    location: { latitude: 55.75, longitude: 37.61, label: "Открыть карту" },
+    socialLinks: [
+      { type: "safe", label: "Безопасная сеть", url: "https://example.com/social" },
+      { type: "unsafe", label: "Опасная сеть", url: "javascript:alert(1)" }
+    ]
+  };
+  renderContacts({ ...FEATURE_CONFIG, contacts: true, geoLocation: true, socialLinks: true }, profileWithLinks);
+  const validGeoShown = Boolean(elements.contactSection.querySelector('a[href*="google.com/maps"]'));
+  const safeSocialShown = Boolean(elements.contactSection.querySelector('a[href="https://example.com/social"]'));
+  const unsafeSocialRejected = ![...elements.contactSection.querySelectorAll("a")]
+    .some(link => link.textContent === "Опасная сеть");
+  renderContacts(
+    { ...FEATURE_CONFIG, contacts: true, geoLocation: true, socialLinks: false },
+    { ...profileWithLinks, location: { latitude: 999, longitude: 999, label: "Неверная карта" } }
+  );
+  const invalidGeoRejected = !elements.contactSection.querySelector('a[href*="google.com/maps"]');
+  renderContacts(FEATURE_CONFIG);
+
   const tests = [
     ["старый сценарий телефона +7 работает", normalizeCustomerPhone("+7 (999) 123-45-67") === "+79991234567"],
     ["старый сценарий телефона 8 работает", normalizeCustomerPhone("89991234567") === "+79991234567"],
@@ -1009,11 +1212,38 @@ async function runSelfTests() {
     ["поля формы остаются выделяемыми", formSelectionAllowed],
     ["CSP не ограничивает WhatsApp-навигацию", !cspContent.includes("navigate-to")],
     ["production CSP ограничивает backend своим origin", cspContent.includes("connect-src 'self'")],
+    ["white-label displayName отображается", testBrandNameApplied],
+    ["white-label slogan отображается", testBrandSloganApplied],
+    ["white-label businessTypeLabel отображается", testBusinessTypeApplied],
+    ["white-label cuisineText отображается", testCuisineApplied],
+    ["white-label introText отображается", testIntroApplied],
+    ["white-label pageTitle применяется", testPageTitleApplied],
+    ["white-label metaDescription применяется", testMetaDescriptionApplied],
+    ["white-label theme-color применяется", testThemeColorApplied],
+    ["workingHoursText меняет schedule", testWorkingHoursApplied],
+    ["пустой slogan скрывается", emptySloganHidden],
+    ["brand text не использует HTML-вставки", brandUsesSafeDom],
+    ["primaryColor меняет --color-primary", testPrimaryApplied],
+    ["backgroundColor меняет --color-background", testBackgroundApplied],
+    ["cardRadius меняет --radius-card", testCardRadiusApplied],
+    ["buttonRadius меняет --radius-button", testButtonRadiusApplied],
+    ["все theme-поля подключены к CSS variables", allThemeFieldsApplied],
+    ["delivery=false скрывает delivery", deliveryHidden],
+    ["pickup=false скрывает pickup", pickupHidden],
+    ["preorder=false скрывает preorder", preorderHidden],
+    ["выключенный default выбирает первый доступный тип", disabledDefaultSelectsFirstAvailable],
+    ["order type label берётся из config", configOrderTypeLabelApplied],
+    ["payload orderType использует технический код", ["preorder", "delivery", "pickup"].includes(payload.orderType)],
+    ["geoLocation=true показывает валидную geo link", validGeoShown],
+    ["невалидные координаты скрывают geo link", invalidGeoRejected],
+    ["socialLinks=true показывает safe link", safeSocialShown],
+    ["unsafe social link отклоняется", unsafeSocialRejected],
+    ["unsafe brand logo использует fallback", unsafeLogoFellBack],
     ["динамические тесты выводятся через безопасный DOM", runSelfTests.toString().includes("replaceChildren")]
   ];
 
   const passed = tests.filter(([, result]) => result).length;
-  console.group(`Самопроверка меню «Стамбул»: ${passed}/${tests.length}`);
+  console.group(`Самопроверка меню «${CONFIG.restaurantName}»: ${passed}/${tests.length}`);
   tests.forEach(([name, result]) => console[result ? "log" : "error"](`${result ? "✓" : "✗"} ${name}`));
   console.groupEnd();
 

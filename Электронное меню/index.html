@@ -7,20 +7,20 @@
   <meta name="description" content="Электронное меню ресторан-кафе «Стамбул»">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Стамбул — электронное меню</title>
-  <link rel="stylesheet" href="./style.css?v=5">
-  <script src="./config.js?v=9" defer></script>
+  <link rel="stylesheet" href="./style.css?v=14">
+  <script src="./config.js?v=16" defer></script>
   <script src="./validation.js?v=5" defer></script>
   <script src="./order-submit.js?v=10" defer></script>
-  <script src="./app.js?v=10" defer></script>
+  <script src="./app.js?v=14" defer></script>
 </head>
 <body>
   <header class="site-header">
     <div class="header-inner">
-      <img class="logo" src="./images/logo-stambul.png" alt="Логотип ресторан-кафе «Стамбул»" width="72" height="65">
+      <img class="logo" id="brandLogo" src="./images/logo-stambul.png" alt="Логотип ресторан-кафе «Стамбул»" width="72" height="65">
       <div class="brand-copy">
-        <span>Ресторан-кафе</span>
-        <strong>Стамбул</strong>
-        <span class="visually-hidden" id="restaurantName">Ресторан-кафе Стамбул</span>
+        <span data-brand-business-type>Ресторан-кафе</span>
+        <strong data-brand-display-name>Ресторан-кафе Стамбул</strong>
+        <span class="visually-hidden" id="restaurantName" data-brand-display-name>Ресторан-кафе Стамбул</span>
       </div>
       <button class="header-cart" id="headerCart" type="button" aria-label="Открыть корзину">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h2l2.4 11.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H7M10 20h.01M18 20h.01"/></svg>
@@ -33,10 +33,10 @@
   <main>
     <section class="hero">
       <div class="hero-ornament" aria-hidden="true">☾</div>
-      <p class="eyebrow" id="cuisineText">Турецкая кухня</p>
-      <h1>Вкус Стамбула<br>рядом с вами</h1>
-      <p id="orderIntro">Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.</p>
-      <div class="schedule"><span aria-hidden="true">◷</span> Ежедневно <span id="scheduleText">с 10:00 до 23:00</span></div>
+      <p class="eyebrow" id="cuisineText" data-brand-cuisine>Турецкая кухня</p>
+      <h1 data-brand-slogan>Вкус Стамбула рядом с вами</h1>
+      <p id="orderIntro" data-brand-intro>Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.</p>
+      <div class="schedule" id="scheduleBlock"><span aria-hidden="true">◷</span><span id="scheduleText">Ежедневно с 10:00 до 23:00</span></div>
     </section>
 
     <section class="contact-section" id="contactSection" aria-labelledby="contactTitle" hidden></section>
@@ -44,7 +44,7 @@
     <section class="menu-section" aria-labelledby="menuTitle">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Наше меню</p>
+          <p class="eyebrow" id="menuEyebrow">Наше меню</p>
           <h2 id="menuTitle">Выберите блюда</h2>
         </div>
         <span class="dish-count" id="dishCount"></span>
@@ -56,7 +56,7 @@
 
   <button class="cart-bar" id="cartBar" type="button" hidden>
     <span class="cart-bar-count" id="cartBarCount">0</span>
-    <span class="cart-bar-label">Посмотреть заказ</span>
+    <span class="cart-bar-label" id="cartBarLabel">Посмотреть заказ</span>
     <strong id="cartBarTotal">0 ₽</strong>
   </button>
 
@@ -66,7 +66,7 @@
         <div class="drawer-handle" aria-hidden="true"></div>
         <header class="drawer-header">
           <div>
-            <p class="eyebrow">Проверьте детали</p>
+            <p class="eyebrow" id="drawerEyebrow">Проверьте детали</p>
             <h2 id="cartTitle">Ваш заказ</h2>
           </div>
           <div class="drawer-actions">
@@ -81,16 +81,12 @@
           <div class="cart-items" id="cartItems"></div>
 
           <fieldset class="order-type">
-            <legend>Как хотите получить заказ?</legend>
-            <div class="type-options">
-              <label><input type="radio" name="orderType" value="Предзаказ" checked><span>Предзаказ</span></label>
-              <label><input type="radio" name="orderType" value="Доставка"><span>Доставка</span></label>
-              <label><input type="radio" name="orderType" value="Самовывоз"><span>Самовывоз</span></label>
-            </div>
+            <legend id="orderTypeLegend">Как хотите получить заказ?</legend>
+            <div class="type-options" id="orderTypeOptions"></div>
           </fieldset>
 
           <label class="field" id="phoneField">
-            <span>Номер для связи</span>
+            <span id="phoneLabel">Номер для связи</span>
             <input
               id="customerPhone"
               type="tel"
@@ -100,24 +96,24 @@
               maxlength="32"
               required
             >
-            <small class="field-hint">Можно ввести российский или международный номер.</small>
-            <em class="field-error">Укажите корректный номер для связи</em>
+            <small class="field-hint" id="phoneHint">Можно ввести российский или международный номер.</small>
+            <em class="field-error" id="phoneError">Укажите корректный номер для связи</em>
           </label>
           <label class="field">
-            <span>Ваше имя</span>
+            <span id="nameLabel">Ваше имя</span>
             <input id="customerName" type="text" autocomplete="name" maxlength="80" placeholder="Например, Адам" required>
           </label>
           <label class="field">
-            <span>Количество гостей <small>необязательно</small></span>
+            <span><span id="guestCountLabel">Количество гостей</span> <small data-form-optional>необязательно</small></span>
             <input id="guestCount" type="number" inputmode="numeric" min="1" max="99" placeholder="Например, 2">
           </label>
           <label class="field" id="addressField">
-            <span>Адрес доставки</span>
+            <span id="addressLabel">Адрес доставки</span>
             <input id="deliveryAddress" type="text" autocomplete="street-address" maxlength="240" placeholder="Улица, дом, квартира">
-            <em class="field-error">Укажите адрес доставки</em>
+            <em class="field-error" id="addressError">Укажите адрес доставки</em>
           </label>
           <label class="field">
-            <span>Комментарий <small>необязательно</small></span>
+            <span><span id="commentLabel">Комментарий</span> <small data-form-optional>необязательно</small></span>
             <textarea id="orderComment" rows="3" maxlength="500" placeholder="Без лука, позвонить заранее…"></textarea>
           </label>
         </div>

@@ -19,9 +19,52 @@ window.APP_CONFIG = Object.freeze({
 
 window.BRAND_CONFIG = Object.freeze({
   displayName: "Ресторан-кафе Стамбул",
+  shortName: "Стамбул",
+  businessTypeLabel: "Ресторан-кафе",
+  cuisineText: "Турецкая кухня",
   slogan: "Вкус Стамбула рядом с вами",
+  introText: "Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.",
+  pageTitle: "Стамбул — электронное меню",
+  metaDescription: "Электронное меню ресторан-кафе «Стамбул»",
   logoUrl: "./images/logo-stambul.png",
   avatarUrl: "./images/logo-stambul.png",
+  logoAlt: "Логотип ресторан-кафе «Стамбул»",
+  menuSection: Object.freeze({
+    eyebrow: "Наше меню",
+    title: "Выберите блюда"
+  }),
+  cartTexts: Object.freeze({
+    cartBarLabel: "Посмотреть заказ",
+    drawerEyebrow: "Проверьте детали",
+    title: "Ваш заказ",
+    clearButton: "Очистить",
+    closeLabel: "Закрыть корзину"
+  }),
+  orderTexts: Object.freeze({
+    typeLegend: "Как хотите получить заказ?",
+    submitWhatsapp: "Отправить заказ в WhatsApp",
+    submitBackend: "Оформить заказ",
+    submitMock: "Создать тестовый заказ",
+    noteWhatsapp: "Откроется WhatsApp с готовым текстом заказа",
+    noteBackend: "Заказ будет отправлен в кафе",
+    noteMock: "Тестовый режим без отправки заказа"
+  }),
+  formTexts: Object.freeze({
+    phoneLabel: "Номер для связи",
+    phonePlaceholder: "Введите номер для связи",
+    phoneHint: "Можно ввести российский или международный номер.",
+    phoneError: "Укажите корректный номер для связи",
+    nameLabel: "Ваше имя",
+    namePlaceholder: "Например, Адам",
+    guestCountLabel: "Количество гостей",
+    optionalLabel: "необязательно",
+    guestCountPlaceholder: "Например, 2",
+    addressLabel: "Адрес доставки",
+    addressPlaceholder: "Улица, дом, квартира",
+    addressError: "Укажите адрес доставки",
+    commentLabel: "Комментарий",
+    commentPlaceholder: "Без лука, позвонить заранее…"
+  }),
   theme: Object.freeze({
     primaryColor: "#721f2a",
     primaryTextColor: "#fff9ed",
@@ -35,6 +78,12 @@ window.BRAND_CONFIG = Object.freeze({
     buttonRadius: "18px"
   })
 });
+
+window.ORDER_TYPE_CONFIG = Object.freeze([
+  Object.freeze({ code: "preorder", label: "Предзаказ", legacyValue: "Предзаказ", feature: "preorder", default: true }),
+  Object.freeze({ code: "delivery", label: "Доставка", legacyValue: "Доставка", feature: "delivery" }),
+  Object.freeze({ code: "pickup", label: "Самовывоз", legacyValue: "Самовывоз", feature: "pickup" })
+]);
 
 window.FEATURE_CONFIG = Object.freeze({
   orders: true,

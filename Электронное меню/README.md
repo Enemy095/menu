@@ -6,6 +6,9 @@ Frontend уже подготовлен к `backend` mode, но сам backend е
 `POST /api/public/orders` описан в [`docs/api-contract.md`](docs/api-contract.md).
 Следующий этап — Go backend skeleton, реализующий этот контракт.
 
+Настройка названия, слогана, логотипа, темы, контактов и feature flags описана в
+[`docs/white-label.md`](docs/white-label.md).
+
 ## Запуск
 
 Можно открыть `index.html` напрямую или запустить локальный сервер:
@@ -155,7 +158,7 @@ Frontend-проверки улучшают UX, но не заменяют эти
 http://localhost:8000/?test=1
 ```
 
-Результаты появятся в консоли и на странице. Сейчас проходит **101/101** проверка. Самопроверка покрывает старые сценарии телефона/корзины/WhatsApp, точный формат сообщения, payload, idempotency, выбор адаптера, backend request, non-2xx и network errors, mock mode, double-submit lock, лимиты количества, malicious URL parameters, XSS-like данные, безопасные URL, localStorage cleanup, DOM-render, optional-модули, Android selection и feature flags.
+Результаты появятся в консоли и на странице. Сейчас проходит **128/128** проверок. Самопроверка покрывает старые сценарии телефона/корзины/WhatsApp, точный формат сообщения, payload, idempotency, выбор адаптера, backend request, non-2xx и network errors, mock mode, double-submit lock, лимиты количества, malicious URL parameters, XSS-like данные, безопасные URL, localStorage cleanup, DOM-render, optional-модули, Android selection, полный white-label brand/theme/UI, config-driven order types и feature flags.
 
 История счётчика: исходные 66 тестов были заменены при архитектурном рефакторинге более компактным набором 52, затем расширены до 62 во время hardening. Контрольный review восстановил потерянные детальные проверки телефона, WhatsApp-формата, pickup и базового изменения количества, не удаляя новые security/backend-тесты.
 

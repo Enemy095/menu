@@ -1,0 +1,34 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node / frontend, если позже появится сборка
+node_modules/
+dist/
+build/
+
+# Go / backend, если позже появится backend
+backend/bin/
+backend/tmp/
+*.exe
+
+# Docker / database local data
+postgres_data/
+data/
+tmp/
+
+# Coverage
+coverage/
+*.cover

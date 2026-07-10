@@ -13,7 +13,7 @@
     const indent = " ".repeat(prefix.length);
     const formula = `${indent}${item.quantity} × ${formatMoney(item.price)} =`;
     const lineTotal = formatMoney(item.total);
-    const spacesCount = Math.max(1, 35 - formula.length - lineTotal.length);
+    const spacesCount = Math.max(1, 34 - formula.length - lineTotal.length);
     return `${nameLine}\n${formula}${" ".repeat(spacesCount)}${lineTotal}`;
   }
 

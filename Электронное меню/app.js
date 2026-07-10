@@ -10,20 +10,7 @@ const CONFIG = Object.freeze({
   currencyText: "₽"
 });
 
-const MENU = Object.freeze([
-  { id: "mercimek", category: "Супы", name: "Мерджимек чорбасы", description: "Традиционный крем-суп из красной чечевицы с лимоном", price: 320, image: "./images/dishes/mercimek-corbasi.webp" },
-  { id: "iskender", category: "Горячее", name: "Искендер-кебаб", description: "Тонкая говядина, лепёшка, томатный соус и йогурт", price: 690, image: "./images/dishes/iskender-kebab.webp" },
-  { id: "adana", category: "Горячее", name: "Адана-кебаб", description: "Пряный кебаб из рубленой баранины с овощами", price: 650, image: "./images/dishes/adana-kebab.webp" },
-  { id: "pide", category: "Выпечка", name: "Пиде с сыром и мясом", description: "Турецкая лодочка из тонкого теста с сочной начинкой", price: 520, image: "./images/dishes/pide-cheese-meat.webp" },
-  { id: "lahmacun", category: "Выпечка", name: "Лахмаджун", description: "Тонкая лепёшка с мясом, томатами и свежей зеленью", price: 390, image: "./images/dishes/lahmacun.webp" },
-  { id: "dolma", category: "Закуски", name: "Долма", description: "Виноградные листья с пряной мясной начинкой", price: 460, image: "./images/dishes/dolma.webp" },
-  { id: "meze", category: "Закуски", name: "Ассорти мезе", description: "Хумус, хайдари, бабагануш и свежая лепёшка", price: 580, image: "./images/dishes/meze-assorti.webp" },
-  { id: "salad", category: "Салаты", name: "Чобан-салат", description: "Томаты, огурцы, перец, зелень и гранатовый соус", price: 350, image: "./images/dishes/choban-salad.webp" },
-  { id: "baklava", category: "Десерты", name: "Пахлава", description: "Слоёное тесто, фисташки и ароматный медовый сироп", price: 330, image: "./images/dishes/baklava.webp" },
-  { id: "sutlac", category: "Десерты", name: "Сютлач", description: "Нежный запечённый рисовый пудинг по-турецки", price: 290, image: "./images/dishes/sutlac.webp" },
-  { id: "tea", category: "Напитки", name: "Турецкий чай", description: "Крепкий чёрный чай в традиционном стакане", price: 140, image: "./images/dishes/turkish-tea.webp" },
-  { id: "ayran", category: "Напитки", name: "Айран", description: "Освежающий кисломолочный напиток", price: 180, image: "./images/dishes/ayran.webp" }
-]);
+const MENU = window.MENU;
 
 const state = {
   category: "Все",

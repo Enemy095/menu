@@ -5,7 +5,7 @@ window.APP_CONFIG = Object.freeze({
   apiBaseUrl: "",
   allowedImageOrigins: Object.freeze([]),
   businessSlug: "stambul",
-  managerPhone: "79292979937",
+  managerPhone: "79886953807",
   maxItemQuantity: 99,
   maxTotalItems: 200,
   maxNameLength: 80,
@@ -18,17 +18,17 @@ window.APP_CONFIG = Object.freeze({
 });
 
 window.BRAND_CONFIG = Object.freeze({
-  displayName: "Ресторан-кафе Стамбул",
-  shortName: "Стамбул",
+  displayName: "Ресторан-кафе у Ризвана",
+  shortName: "у Ризвана",
   businessTypeLabel: "Ресторан-кафе",
   cuisineText: "Турецкая кухня",
   slogan: "Вкус Стамбула рядом с вами",
   introText: "Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.",
-  pageTitle: "Стамбул — электронное меню",
-  metaDescription: "Электронное меню ресторан-кафе «Стамбул»",
+  pageTitle: "У ризвана — электронное меню",
+  metaDescription: "Электронное меню ресторан-кафе «У Ризвана»",
   logoUrl: "./images/logo-stambul.png",
   avatarUrl: "./images/logo-stambul.png",
-  logoAlt: "Логотип ресторан-кафе «Стамбул»",
+  logoAlt: "Логотип ресторан-кафе «У Ризвана»",
   menuSection: Object.freeze({
     eyebrow: "Наше меню",
     title: "Выберите блюда"
@@ -98,7 +98,7 @@ window.FEATURE_CONFIG = Object.freeze({
 });
 
 window.BUSINESS_PROFILE_CONFIG = Object.freeze({
-  phone: "+7 (929) 297-99-37",
+  phone: "+7 (989) 442-81-81",
   publicPhoneLabel: "Позвонить ресторану",
   address: "",
   workingHoursText: "Ежедневно с 10:00 до 23:00",

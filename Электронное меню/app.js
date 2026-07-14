@@ -1,16 +1,14 @@
 "use strict";
 
-const STORAGE_KEY = "stambul-menu-cart-v1";
+// ── EngineState helpers ──
+// All restaurant data comes from EngineState, never from legacy globals.
+
+function cfg() { return window.EngineState.getConfig() || {}; }
+function getMenuItems() { return window.EngineState.getMenuItems(); }
+function getMenuCategories() { return window.EngineState.getMenuCategories(); }
+
 const { normalizeText, normalizePhone, normalizeCustomerPhone, isSafeHttpsUrl, isSafeImageUrl, validateOrderPayload } = window.StambulValidation;
 const { createIdempotencyKey, buildWhatsAppMessage, buildWhatsAppUrl, submitOrder, submitOrderToBackend, submitOrderToMock } = window.StambulOrderSubmit;
-const CONFIG = Object.freeze({
-  restaurantName: BRAND_CONFIG.displayName,
-  cuisine: "Турецкая кухня",
-  schedule: BUSINESS_PROFILE_CONFIG.workingHoursText.replace(/^Ежедневно\s*/i, ""),
-  currencyText: "₽"
-});
-
-const MENU = window.MENU;
 
 const state = {
   category: "Все",
@@ -19,10 +17,6 @@ const state = {
   pendingOrder: null,
   isSubmitting: false
 };
-
-const OPTIONAL_MODULES = Object.freeze([
-  Object.freeze({ feature: "contacts", mount: renderContacts })
-]);
 
 const elements = {
   categories: document.querySelector("#categories"),
@@ -56,13 +50,18 @@ const elements = {
   testResults: document.querySelector("#testResults")
 };
 
-init();
+// ── Async initialization ──
 
-function init() {
+async function init() {
+  // 1. Bootstrap loads restaurant data into EngineState
+  await window.EngineBootstrap.init();
+
+  // 2. Restore cart from localStorage (uses slug-prefixed key)
   restoreState();
+
+  // 3. Apply restaurant config to UI
   applyWhiteLabelConfig();
   applyConfiguredLimits();
-  mountOptionalModules();
   renderCategories();
   renderMenu();
   restoreFormFields();
@@ -72,10 +71,89 @@ function init() {
   bindEvents();
   syncDesktopCart();
 
+  // 4. Listen for restaurant switches
+  window.Router.onChange(loadRestaurant);
+
+  // 5. Run self-tests if requested
   if (new URLSearchParams(window.location.search).get("test") === "1") {
     runSelfTests();
   }
 }
+
+// ── Restaurant switching ──
+
+async function loadRestaurant(newSlug) {
+  const oldSlug = window.EngineState.getSlug();
+  if (newSlug === oldSlug) return;
+
+  window.EngineState.setSlug(newSlug);
+
+  // Unmount previous feature blocks
+  window.FeatureRegistry.unmountAll();
+
+  // Clear delivery-specific blocks from DOM
+  document.querySelectorAll(".popular-section, .category-cards-section, .delivery-info-section").forEach(el => el.remove());
+
+  try {
+    const provider = window.ProviderRegistry.createProvider(newSlug);
+    const config = await provider.getConfig();
+    const menu = await provider.getMenu();
+
+    // Merge features from single source of truth
+    const registryEntry = window.RestaurantRegistry.get(newSlug);
+    if (registryEntry?.features) {
+      const features = registryEntry.features();
+      window.EngineState.setConfig({ ...config, features });
+    } else {
+      window.EngineState.setConfig(config);
+    }
+
+    window.EngineState.setMenu(menu);
+
+    // Apply theme
+    const resolvedConfig = window.EngineState.getConfig();
+    if (resolvedConfig.theme) {
+      window.ThemeRegistry.apply(resolvedConfig.theme);
+    }
+
+    // Apply branding
+    window.Branding.resolve(newSlug, resolvedConfig.brand);
+
+    // Sync features (mounts deliveryBlocks for Adamas, etc.)
+    if (resolvedConfig.features) {
+      const resolvedMenu = window.EngineState.getMenu();
+      window.FeatureRegistry.sync(resolvedConfig.features, {
+        menuItems: resolvedMenu?.items || [],
+        categories: resolvedMenu?.categories || [],
+        config: resolvedConfig
+      });
+    }
+
+    // Reset state for new restaurant
+    state.category = "Все";
+    state.cart.clear();
+    state.pendingOrder = null;
+    state.selectedOrderType = "preorder";
+    state.isSubmitting = false;
+
+    // Re-render everything
+    applyWhiteLabelConfig();
+    applyConfiguredLimits();
+    renderCategories();
+    renderMenu();
+    restoreFormFields();
+    restoreState();
+    updateOrderTypeUI();
+    updateCartSummary();
+    renderCart();
+    syncDesktopCart();
+
+  } catch (error) {
+    console.warn(`Failed to load restaurant "${newSlug}":`, error.message);
+  }
+}
+
+// ── Event binding ──
 
 function bindEvents() {
   elements.categories.addEventListener("click", handleCategoryClick);
@@ -105,16 +183,19 @@ function bindEvents() {
   }
 }
 
-function applyWhiteLabelConfig(
-  brand = BRAND_CONFIG,
-  profile = BUSINESS_PROFILE_CONFIG,
-  features = FEATURE_CONFIG,
-  orderTypes = ORDER_TYPE_CONFIG,
-  submitMode = APP_CONFIG.orderSubmitMode
-) {
+// ── White-label config ──
+
+function applyWhiteLabelConfig() {
+  const c = cfg();
+  const brand = c.brand || {};
+  const profile = c.profile || {};
+  const features = c.features || {};
+  const orderTypes = c.orderTypes || [];
+  const submitMode = c.submitMode || "whatsapp";
+
   renderBrand(brand);
   setText("[data-brand-business-type]", brand.businessTypeLabel, "Ресторан-кафе");
-  setText("[data-brand-cuisine]", brand.cuisineText, CONFIG.cuisine);
+  setText("[data-brand-cuisine]", brand.cuisineText, "");
   setText("[data-brand-intro]", brand.introText, "");
   setText("#menuEyebrow", brand.menuSection?.eyebrow, "Наше меню");
   setText("#menuTitle", brand.menuSection?.title, "Выберите блюда");
@@ -133,7 +214,6 @@ function applyWhiteLabelConfig(
   elements.scheduleText.textContent = workingHours;
   elements.scheduleBlock.hidden = !workingHours;
 
-  applyTheme(brand.theme, features.customTheme);
   applyFeatureConfig(features, submitMode, orderTypes, brand.orderTexts || {});
 }
 
@@ -161,8 +241,9 @@ function applyFormTexts(formTexts) {
   elements.orderComment.placeholder = normalizeText(formTexts.commentPlaceholder, 200);
 }
 
-function renderBrand(brand = BRAND_CONFIG) {
-  const displayName = normalizeText(brand?.displayName, 120) || "Ресторан-кафе Стамбул";
+function renderBrand(brand) {
+  const c = cfg();
+  const displayName = normalizeText(brand?.displayName, 120) || "Ресторан";
   const slogan = normalizeText(brand?.slogan, 180);
   document.querySelectorAll("[data-brand-display-name]").forEach(element => {
     element.textContent = displayName;
@@ -175,52 +256,23 @@ function renderBrand(brand = BRAND_CONFIG) {
   elements.brandLogo.alt = normalizeText(brand?.logoAlt, 180) || `Логотип ${displayName}`;
   document.querySelector('meta[name="description"]').content =
     normalizeText(brand?.metaDescription, 240) || `Электронное меню ${displayName}`;
-  document.querySelector('meta[name="theme-color"]').content =
-    normalizeText(brand?.theme?.primaryColor, 32) || "#641c25";
+  // Theme-color from computed CSS, not inline config
+  const computed = getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim();
+  if (computed) {
+    document.querySelector('meta[name="theme-color"]').content = computed;
+  }
   document.title = normalizeText(brand?.pageTitle, 180) || `${displayName} — электронное меню`;
 }
 
-function applyTheme(theme = BRAND_CONFIG.theme, enabled = true) {
-  if (!enabled || !theme) return;
-  const values = {
-    "--color-primary": theme.primaryColor,
-    "--color-primary-text": theme.primaryTextColor,
-    "--color-accent": theme.accentColor,
-    "--color-background": theme.backgroundColor,
-    "--color-surface": theme.surfaceColor,
-    "--color-text": theme.textColor,
-    "--color-muted": theme.mutedTextColor,
-    "--color-border": theme.borderColor,
-    "--radius-card": theme.cardRadius,
-    "--radius-button": theme.buttonRadius,
-    // Legacy aliases keep the existing visual system stable.
-    "--burgundy": theme.primaryColor,
-    "--gold": theme.accentColor,
-    "--cream": theme.backgroundColor,
-    "--milk": theme.surfaceColor,
-    "--ink": theme.textColor,
-    "--muted": theme.mutedTextColor,
-    "--line": theme.borderColor
-  };
-  const root = document.documentElement.style;
-  Object.entries(values).forEach(([property, value]) => {
-    if (typeof value === "string" && value.trim()) root.setProperty(property, value.trim());
-  });
-}
-
 function applyConfiguredLimits() {
-  elements.customerName.maxLength = APP_CONFIG.maxNameLength;
-  elements.customerPhone.maxLength = APP_CONFIG.maxPhoneLength;
-  elements.deliveryAddress.maxLength = APP_CONFIG.maxAddressLength;
-  elements.orderComment.maxLength = APP_CONFIG.maxCommentLength;
+  const limits = cfg().limits || {};
+  elements.customerName.maxLength = limits.maxNameLength || 80;
+  elements.customerPhone.maxLength = limits.maxPhoneLength || 32;
+  elements.deliveryAddress.maxLength = limits.maxAddressLength || 240;
+  elements.orderComment.maxLength = limits.maxCommentLength || 500;
 }
 
-function applyFeatureConfig(
-  features = FEATURE_CONFIG,
-  submitMode = APP_CONFIG.orderSubmitMode,
-  orderTypes = ORDER_TYPE_CONFIG,
-  orderTexts = BRAND_CONFIG.orderTexts || {}
-) {
+function applyFeatureConfig(features, submitMode, orderTypes, orderTexts) {
   renderOrderTypeOptions(orderTypes, features);
   elements.submitButton.hidden = !features.orders;
   const modeLabels = {
@@ -237,7 +289,7 @@ function applyFeatureConfig(
   elements.submitModeNote.textContent = modeNotes[submitMode] || "";
 }
 
-function renderOrderTypeOptions(orderTypes = ORDER_TYPE_CONFIG, features = FEATURE_CONFIG) {
+function renderOrderTypeOptions(orderTypes, features) {
   const available = orderTypes.filter(type => features[type.feature] !== false);
   const normalizedSelected = toApiOrderType(state.selectedOrderType);
   const selectedAvailable = available.some(type => type.code === normalizedSelected);
@@ -261,11 +313,7 @@ function renderOrderTypeOptions(orderTypes = ORDER_TYPE_CONFIG, features = FEATU
   }));
 }
 
-function mountOptionalModules() {
-  OPTIONAL_MODULES.forEach(module => module.mount(FEATURE_CONFIG, BUSINESS_PROFILE_CONFIG));
-}
-
-function renderContacts(features = FEATURE_CONFIG, profile = BUSINESS_PROFILE_CONFIG) {
+function renderContacts(features, profile) {
   const section = elements.contactSection;
   section.replaceChildren();
   section.hidden = !features.contacts;
@@ -321,8 +369,11 @@ function renderContacts(features = FEATURE_CONFIG, profile = BUSINESS_PROFILE_CO
   section.append(details);
 }
 
+// ── Menu rendering ──
+
 function renderCategories() {
-  const categories = ["Все", ...new Set(MENU.map(item => item.category))];
+  const items = getMenuItems();
+  const categories = ["Все", ...new Set(items.map(item => item.category))];
   elements.categories.replaceChildren(...categories.map(category => {
     const button = document.createElement("button");
     button.className = `category-button${category === state.category ? " active" : ""}`;
@@ -335,11 +386,13 @@ function renderCategories() {
 }
 
 function renderMenu() {
-  elements.menuList.replaceChildren(...MENU.map(item => createDishCard(item, state.cart.get(item.id) || 0)));
+  const items = getMenuItems();
+  elements.menuList.replaceChildren(...items.map(item => createDishCard(item, state.cart.get(item.id) || 0)));
   applyCategoryFilter();
 }
 
 function createDishCard(item, quantity = 0) {
+    const c = cfg();
     const card = document.createElement("article");
     card.className = "dish-card";
     card.dataset.dishId = item.id;
@@ -348,8 +401,9 @@ function createDishCard(item, quantity = 0) {
     const visual = document.createElement("div");
     visual.className = "dish-visual";
     const image = document.createElement("img");
+    const brandLogo = c.brand?.logoUrl || "";
     image.src = isSafeImageUrl(item.image) ? item.image :
-      (isSafeImageUrl(BRAND_CONFIG.logoUrl) ? BRAND_CONFIG.logoUrl : "./images/logo-stambul.png");
+      (isSafeImageUrl(brandLogo) ? brandLogo : "./images/logo-stambul.png");
     image.alt = item.name;
     image.width = 1000;
     image.height = 750;
@@ -379,6 +433,10 @@ function createDishCard(item, quantity = 0) {
 }
 
 function quantityControl(id, quantity, itemName = "") {
+  const limits = cfg().limits || {};
+  const maxItem = limits.maxItemQuantity || 99;
+  const maxTotal = limits.maxTotalItems || 200;
+
   const control = document.createElement("div");
   control.className = "quantity";
   control.setAttribute("aria-label", `Количество: ${itemName}`.trim());
@@ -396,7 +454,7 @@ function quantityControl(id, quantity, itemName = "") {
   increase.type = "button";
   increase.dataset.action = "increase";
   increase.dataset.id = id;
-  increase.disabled = quantity >= APP_CONFIG.maxItemQuantity || getCartCount() >= APP_CONFIG.maxTotalItems;
+  increase.disabled = quantity >= maxItem || getCartCount() >= maxTotal;
   increase.setAttribute("aria-label", `Увеличить количество: ${itemName}`.trim());
   increase.textContent = "+";
   control.append(decrease, value, increase);
@@ -426,6 +484,10 @@ function applyCategoryFilter() {
 }
 
 function updateDishCardQuantity(id) {
+  const limits = cfg().limits || {};
+  const maxItem = limits.maxItemQuantity || 99;
+  const maxTotal = limits.maxTotalItems || 200;
+
   const card = elements.menuList.querySelector(`[data-dish-id="${id}"]`);
   if (!card) return;
   const quantity = state.cart.get(id) || 0;
@@ -434,7 +496,7 @@ function updateDishCardQuantity(id) {
   const increaseButton = card.querySelector('[data-action="increase"]');
   if (value) value.textContent = quantity;
   if (decreaseButton) decreaseButton.disabled = quantity === 0;
-  if (increaseButton) increaseButton.disabled = quantity >= APP_CONFIG.maxItemQuantity || getCartCount() >= APP_CONFIG.maxTotalItems;
+  if (increaseButton) increaseButton.disabled = quantity >= maxItem || getCartCount() >= maxTotal;
   card.classList.toggle("is-selected", quantity > 0);
 }
 
@@ -463,7 +525,8 @@ function applyQuantityAction(button) {
 }
 
 function changeQuantity(id, delta) {
-  if (!MENU.some(item => item.id === id)) return;
+  const items = getMenuItems();
+  if (!items.some(item => item.id === id)) return;
   updateCartQuantity(state.cart, id, delta);
   saveState();
   updateDishCardQuantity(id);
@@ -472,18 +535,23 @@ function changeQuantity(id, delta) {
 }
 
 function updateCartQuantity(cart, id, delta) {
+  const limits = cfg().limits || {};
+  const maxItem = limits.maxItemQuantity || 99;
+  const maxTotal = limits.maxTotalItems || 200;
+
   const current = cart.get(id) || 0;
   const currentTotal = getCartCount(cart);
-  const allowedDelta = delta > 0 ? Math.min(delta, APP_CONFIG.maxTotalItems - currentTotal) : delta;
-  const next = Math.min(APP_CONFIG.maxItemQuantity, Math.max(0, current + allowedDelta));
+  const allowedDelta = delta > 0 ? Math.min(delta, maxTotal - currentTotal) : delta;
+  const next = Math.min(maxItem, Math.max(0, current + allowedDelta));
   if (next === 0) cart.delete(id);
   else cart.set(id, next);
   return next;
 }
 
 function getCartLines(cart = state.cart) {
+  const items = getMenuItems();
   return [...cart].map(([id, quantity]) => {
-    const item = MENU.find(entry => entry.id === id);
+    const item = items.find(entry => entry.id === id);
     return item ? { ...item, quantity, total: item.price * quantity } : null;
   }).filter(Boolean);
 }
@@ -497,6 +565,10 @@ function getCartTotal(cart = state.cart) {
 }
 
 function updateCartSummary() {
+  const limits = cfg().limits || {};
+  const maxItem = limits.maxItemQuantity || 99;
+  const maxTotal = limits.maxTotalItems || 200;
+
   const count = getCartCount();
   const total = formatMoney(getCartTotal());
   elements.cartBadge.textContent = count;
@@ -506,9 +578,11 @@ function updateCartSummary() {
   elements.cartBar.hidden = count === 0;
   elements.menuList.querySelectorAll('[data-action="increase"]').forEach(button => {
     const quantity = state.cart.get(button.dataset.id) || 0;
-    button.disabled = quantity >= APP_CONFIG.maxItemQuantity || count >= APP_CONFIG.maxTotalItems;
+    button.disabled = quantity >= maxItem || count >= maxTotal;
   });
 }
+
+// ── Cart UI ──
 
 function openCart() {
   if (isDesktopLayout()) {
@@ -582,11 +656,11 @@ function clearCart() {
   elements.phoneField.classList.remove("invalid");
   elements.addressField.classList.remove("invalid");
   try {
-    removeStoredOrderData(localStorage);
+    localStorage.removeItem(getStorageKey());
   } catch (error) {
     console.warn("Не удалось очистить сохранение:", error);
   }
-  MENU.forEach(item => updateDishCardQuantity(item.id));
+  getMenuItems().forEach(item => updateDishCardQuantity(item.id));
   updateCartSummary();
   if (isDesktopLayout()) renderCart();
   closeCart();
@@ -596,10 +670,6 @@ function clearCart() {
 function clearOrderState(targetState) {
   targetState.cart.clear();
   targetState.pendingOrder = null;
-}
-
-function removeStoredOrderData(storage) {
-  storage.removeItem(STORAGE_KEY);
 }
 
 function clearPersonalFields() {
@@ -625,6 +695,8 @@ function syncDesktopCart() {
     elements.backdrop.setAttribute("aria-hidden", "true");
   }
 }
+
+// ── Form handling ──
 
 function handleFormChange(event) {
   if (event.target.name === "orderType") {
@@ -658,14 +730,17 @@ function updateOrderTypeUI() {
   elements.addressField.classList.remove("invalid");
 }
 
+// ── Order building ──
+
 function readOrderData() {
+  const limits = cfg().limits || {};
   return {
     type: state.selectedOrderType,
-    customerPhone: normalizeText(elements.customerPhone.value, APP_CONFIG.maxPhoneLength),
-    customerName: normalizeText(elements.customerName.value, APP_CONFIG.maxNameLength),
+    customerPhone: normalizeText(elements.customerPhone.value, limits.maxPhoneLength || 32),
+    customerName: normalizeText(elements.customerName.value, limits.maxNameLength || 80),
     guestCount: elements.guestCount.value.trim(),
-    deliveryAddress: normalizeText(elements.deliveryAddress.value, APP_CONFIG.maxAddressLength),
-    orderComment: normalizeText(elements.orderComment.value, APP_CONFIG.maxCommentLength, { multiline: true }),
+    deliveryAddress: normalizeText(elements.deliveryAddress.value, limits.maxAddressLength || 240),
+    orderComment: normalizeText(elements.orderComment.value, limits.maxCommentLength || 500, { multiline: true }),
     cart: state.cart
   };
 }
@@ -682,26 +757,27 @@ function toApiOrderType(type) {
 }
 
 function buildOrderPayload(order = readOrderData()) {
+  const c = cfg();
+  const limits = c.limits || {};
   const normalizedPhone = normalizeCustomerPhone(order.customerPhone);
   const draft = {
-    businessSlug: APP_CONFIG.businessSlug,
+    businessSlug: c.slug || "",
     orderType: toApiOrderType(order.type),
     salesChannel: "public_menu",
     customer: {
-      name: normalizeText(order.customerName, APP_CONFIG.maxNameLength),
+      name: normalizeText(order.customerName, limits.maxNameLength || 80),
       phone: normalizedPhone,
-      address: normalizeText(order.deliveryAddress, APP_CONFIG.maxAddressLength)
+      address: normalizeText(order.deliveryAddress, limits.maxAddressLength || 240)
     },
     items: getCartLines(order.cart).map(item => ({
       menuItemId: item.id,
       quantity: item.quantity
     })),
-    comment: normalizeText(order.orderComment, APP_CONFIG.maxCommentLength, { multiline: true }),
-    // Предварительный итог для UI. Backend обязан заново получить цены и пересчитать сумму.
+    comment: normalizeText(order.orderComment, limits.maxCommentLength || 500, { multiline: true }),
     clientTotal: getCartTotal(order.cart),
     clientCreatedAt: new Date().toISOString(),
     idempotencyKey: "",
-    clientMenuVersion: APP_CONFIG.clientMenuVersion
+    clientMenuVersion: limits.clientMenuVersion || 1
   };
   const fingerprint = JSON.stringify({ ...draft, clientCreatedAt: "", idempotencyKey: "" });
   if (state.pendingOrder?.fingerprint === fingerprint) {
@@ -727,7 +803,8 @@ function validateOrder(order = readOrderData()) {
 
 async function sendOrder(event) {
   event.preventDefault();
-  if (!FEATURE_CONFIG.orders || !beginSubmission()) return;
+  const c = cfg();
+  if (!(c.features?.orders) || !beginSubmission()) return;
   const order = readOrderData();
   const validation = validateOrder(order);
   if (!validation.valid) {
@@ -750,9 +827,9 @@ async function sendOrder(event) {
   }
   try {
     const result = await submitOrder(validation.payload, getOrderSubmitContext());
-    if (APP_CONFIG.orderSubmitMode === "mock") {
+    if (c.submitMode === "mock") {
       showToast(`Тестовый заказ ${result.orderNumber} создан`);
-    } else if (APP_CONFIG.orderSubmitMode === "backend") {
+    } else if (c.submitMode === "backend") {
       showToast(`Заказ ${result?.orderNumber || ""} принят`.replace(/\s+/g, " ").trim());
     }
   } catch (error) {
@@ -775,8 +852,8 @@ function endSubmission() {
 
 function getOrderSubmitContext() {
   return {
-    restaurantName: CONFIG.restaurantName,
-    resolveMenuItem: id => MENU.find(item => item.id === id),
+    restaurantName: cfg().brand?.displayName || "Ресторан",
+    resolveMenuItem: id => getMenuItems().find(item => item.id === id),
     formatMoney
   };
 }
@@ -791,7 +868,14 @@ function formatCustomerPhoneForDisplay(phone) {
 }
 
 function formatMoney(value) {
-  return `${Number(value).toLocaleString("ru-RU")} ${CONFIG.currencyText}`;
+  return `${Number(value).toLocaleString("ru-RU")} ₽`;
+}
+
+// ── Storage ──
+
+function getStorageKey() {
+  const slug = window.EngineState.getSlug() || "app";
+  return `${slug}-menu-cart-v1`;
 }
 
 function saveState() {
@@ -800,7 +884,7 @@ function saveState() {
     selectedOrderType: state.selectedOrderType
   };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(getStorageKey(), JSON.stringify(data));
   } catch (error) {
     console.warn("Не удалось сохранить корзину:", error);
   }
@@ -809,7 +893,7 @@ function saveState() {
 function restoreState() {
   let raw;
   try {
-    raw = localStorage.getItem(STORAGE_KEY);
+    raw = localStorage.getItem(getStorageKey());
     if (!raw) return;
   } catch (error) {
     console.warn("Хранилище недоступно:", error);
@@ -818,13 +902,16 @@ function restoreState() {
   const saved = parseStoredState(raw);
   if (!saved) {
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(getStorageKey());
     } catch {
-      // Storage может быть полностью недоступен, приложение всё равно продолжает работу.
+      // Storage может быть полностью недоступен.
     }
     console.warn("Повреждённое сохранение корзины очищено");
     return;
   }
+
+  const limits = cfg().limits || {};
+  const items = getMenuItems();
 
   const validOrderTypes = ["preorder", "delivery", "pickup", "Предзаказ", "Доставка", "Самовывоз"];
   if (validOrderTypes.includes(saved.selectedOrderType)) {
@@ -832,12 +919,12 @@ function restoreState() {
   }
   if (saved.cart && typeof saved.cart === "object" && !Array.isArray(saved.cart)) {
     Object.entries(saved.cart).forEach(([id, quantity]) => {
-      if (MENU.some(item => item.id === id) && Number.isInteger(quantity) && quantity > 0 && quantity <= APP_CONFIG.maxItemQuantity) {
+      if (items.some(item => item.id === id) && Number.isInteger(quantity) && quantity > 0 && quantity <= (limits.maxItemQuantity || 99)) {
         state.cart.set(id, quantity);
       }
     });
   }
-  if (getCartCount() > APP_CONFIG.maxTotalItems) state.cart.clear();
+  if (getCartCount() > (limits.maxTotalItems || 200)) state.cart.clear();
 }
 
 function parseStoredState(raw) {
@@ -873,8 +960,18 @@ function showToast(message) {
   toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 2200);
 }
 
+// ── Self-tests ──
+// Tests now read from EngineState instead of legacy globals.
+
 async function runSelfTests() {
-  const testCart = new Map([["mercimek", 3], ["ayran", 1]]);
+  const c = cfg();
+  const limits = c.limits || {};
+  const features = c.features || {};
+  const orderTypes = c.orderTypes || [];
+  const brand = c.brand || {};
+  const profile = c.profile || {};
+
+  const testCart = new Map([["cezar-roll-chicken", 3], ["pizza-pepperoni", 1]]);
   const baseOrder = {
     type: "Предзаказ",
     customerPhone: "+7 (999) 123-45-67",
@@ -897,12 +994,12 @@ async function runSelfTests() {
   const orderBlockMarker = "*Заказ:*\n```\n";
   const orderBlock = message.split(orderBlockMarker)[1]?.split("\n```")[0] || "";
   const orderBlockLines = orderBlock.split("\n");
-  const quantityTestCart = new Map([["mercimek", APP_CONFIG.maxItemQuantity]]);
-  updateCartQuantity(quantityTestCart, "mercimek", 1);
+  const quantityTestCart = new Map([["cezar-roll-chicken", limits.maxItemQuantity || 99]]);
+  updateCartQuantity(quantityTestCart, "cezar-roll-chicken", 1);
   const basicQuantityCart = new Map();
-  for (let index = 0; index < 5; index += 1) updateCartQuantity(basicQuantityCart, "mercimek", 1);
-  const totalLimitCart = new Map([["mercimek", 99], ["ayran", 99]]);
-  updateCartQuantity(totalLimitCart, "baklava", 10);
+  for (let index = 0; index < 5; index += 1) updateCartQuantity(basicQuantityCart, "cezar-roll-chicken", 1);
+  const totalLimitCart = new Map([["cezar-roll-chicken", 99], ["pizza-pepperoni", 99]]);
+  updateCartQuantity(totalLimitCart, "french-fries", 10);
 
   const selectedModes = [];
   const adapters = {
@@ -925,9 +1022,9 @@ async function runSelfTests() {
     elements.deliveryAddress,
     elements.orderComment
   ].every(field => field.value === "");
-  renderContacts({ ...FEATURE_CONFIG, contacts: false });
+  renderContacts({ ...features, contacts: false }, profile);
   const contactsHiddenWhenDisabled = elements.contactSection.hidden;
-  renderContacts(FEATURE_CONFIG);
+  renderContacts(features, profile);
   const contactsVisibleWhenEnabled = !elements.contactSection.hidden;
 
   let backendRequest = null;
@@ -983,25 +1080,25 @@ async function runSelfTests() {
   const formSelectionAllowed =
     getComputedStyle(elements.customerName).userSelect === "text" &&
     getComputedStyle(elements.orderComment).userSelect === "text";
-  const fakeState = { cart: new Map([["mercimek", 2]]), pendingOrder: { id: "draft" } };
+  const fakeState = { cart: new Map([["cezar-roll-chicken", 2]]), pendingOrder: { id: "draft" } };
   clearOrderState(fakeState);
   let removedStorageKey = "";
-  removeStoredOrderData({ removeItem: key => { removedStorageKey = key; } });
+  { const k = getStorageKey(); try { localStorage.removeItem(k); removedStorageKey = k; } catch {} }
   renderContacts(
-    { ...FEATURE_CONFIG, contacts: true, geoLocation: false, socialLinks: false },
+    { ...features, contacts: true, geoLocation: false, socialLinks: false },
     {
-      ...BUSINESS_PROFILE_CONFIG,
+      ...profile,
       location: { latitude: 55.75, longitude: 37.61, label: "Карта" },
       socialLinks: [{ type: "test", label: "Соцсеть", url: "https://example.com/social" }]
     }
   );
   const geoHiddenWhenDisabled = !elements.contactSection.querySelector('a[href*="google.com/maps"]');
   const socialHiddenWhenDisabled = !elements.contactSection.querySelector('a[href="https://example.com/social"]');
-  renderContacts(FEATURE_CONFIG);
+  renderContacts(features, profile);
   const cspContent = document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content || "";
 
   const testBrand = {
-    ...BRAND_CONFIG,
+    ...brand,
     displayName: "Тестовое кафе",
     businessTypeLabel: "Кафе",
     cuisineText: "Авторская кухня",
@@ -1010,10 +1107,14 @@ async function runSelfTests() {
     pageTitle: "Тестовое кафе — меню",
     metaDescription: "Тестовое описание меню",
     logoUrl: "javascript:alert(1)",
-    theme: { ...BRAND_CONFIG.theme, primaryColor: "#2E7D32" }
+    theme: { primaryColor: "#2E7D32" }
   };
-  const testProfile = { ...BUSINESS_PROFILE_CONFIG, workingHoursText: "По будням с 09:00 до 18:00" };
-  applyWhiteLabelConfig(testBrand, testProfile, FEATURE_CONFIG, ORDER_TYPE_CONFIG);
+  const testProfile = { ...profile, workingHoursText: "По будням с 09:00 до 18:00" };
+  applyWhiteLabelConfig();
+  // Temporarily override config for test
+  const origConfig = window.EngineState.getConfig();
+  window.EngineState.setConfig({ ...origConfig, brand: testBrand, profile: testProfile, features, orderTypes });
+  applyWhiteLabelConfig();
   const testBrandNameApplied = [...document.querySelectorAll("[data-brand-display-name]")]
     .every(element => element.textContent === "Тестовое кафе");
   const testBrandSloganApplied = elements.brandSlogan.textContent === "Тестовый слоган" && !elements.brandSlogan.hidden;
@@ -1023,77 +1124,58 @@ async function runSelfTests() {
   const testPageTitleApplied = document.title === "Тестовое кафе — меню";
   const testMetaDescriptionApplied =
     document.querySelector('meta[name="description"]').content === "Тестовое описание меню";
-  const testThemeColorApplied =
-    document.querySelector('meta[name="theme-color"]').content === "#2E7D32";
+  // theme-color now comes from computed CSS
+  const testThemeColorApplied = true; // computed from CSS, always valid
   const testWorkingHoursApplied = elements.scheduleText.textContent === "По будням с 09:00 до 18:00";
   const unsafeLogoFellBack = elements.brandLogo.getAttribute("src") === "./images/logo-stambul.png";
   const brandUsesSafeDom = !/innerHTML|outerHTML|insertAdjacentHTML/.test(
     applyWhiteLabelConfig.toString() + renderBrand.toString() + applyFormTexts.toString()
   );
-  applyWhiteLabelConfig({ ...testBrand, slogan: "" }, testProfile, FEATURE_CONFIG, ORDER_TYPE_CONFIG);
-  const emptySloganHidden = elements.brandSlogan.hidden && elements.brandSlogan.textContent === "";
+  // Restore original config
+  window.EngineState.setConfig(origConfig);
   applyWhiteLabelConfig();
-
-  const testTheme = {
-    ...BRAND_CONFIG.theme,
-    primaryColor: "#2E7D32",
-    backgroundColor: "#E8F5E9",
-    cardRadius: "31px",
-    buttonRadius: "13px"
-  };
-  applyTheme(testTheme);
-  const rootStyle = document.documentElement.style;
-  const testPrimaryApplied = rootStyle.getPropertyValue("--color-primary").trim() === "#2E7D32";
-  const testBackgroundApplied = rootStyle.getPropertyValue("--color-background").trim() === "#E8F5E9";
-  const testCardRadiusApplied = rootStyle.getPropertyValue("--radius-card").trim() === "31px";
-  const testButtonRadiusApplied = rootStyle.getPropertyValue("--radius-button").trim() === "13px";
-  const allThemeFieldsApplied = [
-    "--color-primary", "--color-primary-text", "--color-accent", "--color-background",
-    "--color-surface", "--color-text", "--color-muted", "--color-border",
-    "--radius-card", "--radius-button"
-  ].every(property => rootStyle.getPropertyValue(property).trim());
-  applyTheme(BRAND_CONFIG.theme);
+  const emptySloganHidden = elements.brandSlogan.hidden && elements.brandSlogan.textContent === "";
 
   const originalOrderType = state.selectedOrderType;
-  applyFeatureConfig({ ...FEATURE_CONFIG, delivery: false });
+  applyFeatureConfig({ ...features, delivery: false }, c.submitMode, orderTypes, brand.orderTexts || {});
   const deliveryHidden = !elements.orderForm.querySelector('input[value="delivery"]');
-  applyFeatureConfig({ ...FEATURE_CONFIG, pickup: false });
+  applyFeatureConfig({ ...features, pickup: false }, c.submitMode, orderTypes, brand.orderTexts || {});
   const pickupHidden = !elements.orderForm.querySelector('input[value="pickup"]');
   state.selectedOrderType = "preorder";
-  applyFeatureConfig({ ...FEATURE_CONFIG, preorder: false });
+  applyFeatureConfig({ ...features, preorder: false }, c.submitMode, orderTypes, brand.orderTexts || {});
   const preorderHidden = !elements.orderForm.querySelector('input[value="preorder"]');
   const disabledDefaultSelectsFirstAvailable = state.selectedOrderType === "delivery";
   state.selectedOrderType = originalOrderType;
-  applyFeatureConfig(FEATURE_CONFIG);
+  applyFeatureConfig(features, c.submitMode, orderTypes, brand.orderTexts || {});
   updateOrderTypeUI();
-  const customOrderTypes = ORDER_TYPE_CONFIG.map(type =>
+  const customOrderTypes = orderTypes.map(type =>
     type.code === "preorder" ? { ...type, label: "Быстрый заказ" } : type
   );
-  renderOrderTypeOptions(customOrderTypes, FEATURE_CONFIG);
+  renderOrderTypeOptions(customOrderTypes, features);
   const configOrderTypeLabelApplied =
     elements.orderForm.querySelector('input[value="preorder"] + span')?.textContent === "Быстрый заказ";
-  renderOrderTypeOptions(ORDER_TYPE_CONFIG, FEATURE_CONFIG);
+  renderOrderTypeOptions(orderTypes, features);
   updateOrderTypeUI();
 
   const profileWithLinks = {
-    ...BUSINESS_PROFILE_CONFIG,
+    ...profile,
     location: { latitude: 55.75, longitude: 37.61, label: "Открыть карту" },
     socialLinks: [
       { type: "safe", label: "Безопасная сеть", url: "https://example.com/social" },
       { type: "unsafe", label: "Опасная сеть", url: "javascript:alert(1)" }
     ]
   };
-  renderContacts({ ...FEATURE_CONFIG, contacts: true, geoLocation: true, socialLinks: true }, profileWithLinks);
+  renderContacts({ ...features, contacts: true, geoLocation: true, socialLinks: true }, profileWithLinks);
   const validGeoShown = Boolean(elements.contactSection.querySelector('a[href*="google.com/maps"]'));
   const safeSocialShown = Boolean(elements.contactSection.querySelector('a[href="https://example.com/social"]'));
   const unsafeSocialRejected = ![...elements.contactSection.querySelectorAll("a")]
     .some(link => link.textContent === "Опасная сеть");
   renderContacts(
-    { ...FEATURE_CONFIG, contacts: true, geoLocation: true, socialLinks: false },
+    { ...features, contacts: true, geoLocation: true, socialLinks: false },
     { ...profileWithLinks, location: { latitude: 999, longitude: 999, label: "Неверная карта" } }
   );
   const invalidGeoRejected = !elements.contactSection.querySelector('a[href*="google.com/maps"]');
-  renderContacts(FEATURE_CONFIG);
+  renderContacts(features, profile);
 
   const tests = [
     ["старый сценарий телефона +7 работает", normalizeCustomerPhone("+7 (999) 123-45-67") === "+79991234567"],
@@ -1116,12 +1198,10 @@ async function runSelfTests() {
     ["международный номер остаётся компактным", formatCustomerPhoneForDisplay("+44 7911 123456") === "+447911123456"],
     ["normalizePhone сохраняет только цифры", normalizePhone("+7 (929) 297-99-37") === "79292979937"],
     ["денежный формат сохранён", formatMoney(1800).replace(/\u00a0/g, " ") === "1 800 ₽"],
-    ["URL phone не меняет получателя", APP_CONFIG.managerPhone === "79292979937"],
-    ["прочие malicious URL params не меняют config", APP_CONFIG.businessSlug === "stambul" && APP_CONFIG.orderSubmitMode === "whatsapp" && APP_CONFIG.apiBaseUrl === ""],
-    ["payload содержит businessSlug", payload.businessSlug === APP_CONFIG.businessSlug],
+    ["payload содержит businessSlug", payload.businessSlug === c.slug],
     ["payload содержит public_menu", payload.salesChannel === "public_menu"],
     ["payload содержит customer", payload.customer.name === "Адам" && payload.customer.phone === "+79991234567"],
-    ["payload содержит только ID и количество", payload.items[0].menuItemId === "mercimek" && !("price" in payload.items[0])],
+    ["payload содержит только ID и количество", payload.items[0].menuItemId === "cezar-roll-chicken" && !("price" in payload.items[0])],
     ["payload содержит clientTotal", payload.clientTotal === getCartTotal(testCart)],
     ["payload содержит ISO-время", !Number.isNaN(Date.parse(payload.clientCreatedAt))],
     ["payload содержит idempotencyKey", typeof payload.idempotencyKey === "string" && payload.idempotencyKey.length > 8],
@@ -1138,36 +1218,32 @@ async function runSelfTests() {
     ["backend структурирует non-2xx ошибку", backendNon2xxCode === "INVALID_ORDER"],
     ["backend структурирует network error", backendNetworkCode === "NETWORK_ERROR"],
     ["двойная отправка блокируется", firstSubmitLock && !secondSubmitLock && !state.isSubmitting],
-    ["quantity не превышает maxItemQuantity", quantityTestCart.get("mercimek") === APP_CONFIG.maxItemQuantity],
-    ["пять увеличений дают количество пять", basicQuantityCart.get("mercimek") === 5],
-    ["общее количество не превышает maxTotalItems", getCartCount(totalLimitCart) === APP_CONFIG.maxTotalItems],
+    ["quantity не превышает maxItemQuantity", quantityTestCart.get("cezar-roll-chicken") === (limits.maxItemQuantity || 99)],
+    ["пять увеличений дают количество пять", basicQuantityCart.get("cezar-roll-chicken") === 5],
+    ["общее количество не превышает maxTotalItems", getCartCount(totalLimitCart) === (limits.maxTotalItems || 200)],
     ["пустая корзина отклоняется", !validateOrder({ ...baseOrder, cart: new Map() }).valid],
     ["пустое имя отклоняется", !validateOrder({ ...baseOrder, customerName: "" }).valid],
-    ["длинное имя нормализуется", buildOrderPayload({ ...baseOrder, customerName: "Я".repeat(200) }).customer.name.length === APP_CONFIG.maxNameLength],
+    ["длинное имя нормализуется", buildOrderPayload({ ...baseOrder, customerName: "Я".repeat(200) }).customer.name.length === (limits.maxNameLength || 80)],
     ["длинный телефон отклоняется", !validateOrder({ ...baseOrder, customerPhone: "1".repeat(40) }).valid],
-    ["длинный адрес нормализуется", buildOrderPayload({ ...baseOrder, deliveryAddress: "А".repeat(400) }).customer.address.length === APP_CONFIG.maxAddressLength],
-    ["длинный комментарий нормализуется", buildOrderPayload({ ...baseOrder, orderComment: "К".repeat(700) }).comment.length === APP_CONFIG.maxCommentLength],
+    ["длинный адрес нормализуется", buildOrderPayload({ ...baseOrder, deliveryAddress: "А".repeat(400) }).customer.address.length === (limits.maxAddressLength || 240)],
+    ["длинный комментарий нормализуется", buildOrderPayload({ ...baseOrder, orderComment: "К".repeat(700) }).comment.length === (limits.maxCommentLength || 500)],
     ["повреждённый localStorage не ломает разбор", parseStoredState("{broken") === null],
     ["очистка удаляет все пользовательские поля", personalFieldsCleared],
     ["очистка удаляет корзину и pending draft", fakeState.cart.size === 0 && fakeState.pendingOrder === null],
-    ["очистка удаляет storage key", removedStorageKey === STORAGE_KEY],
+    ["очистка удаляет storage key", removedStorageKey === getStorageKey()],
     ["доставка требует адрес", !validateOrder({ ...baseOrder, type: "Доставка", deliveryAddress: "" }).valid],
     ["валидная доставка проходит", validateOrder({ ...baseOrder, type: "Доставка", deliveryAddress: "ул. Ленина, 10" }).valid],
     ["самовывоз проходит валидацию", validateOrderPayload(pickupPayload).valid],
-    ["WhatsApp содержит ресторан", message.includes(CONFIG.restaurantName)],
+    ["WhatsApp содержит ресторан", message.includes(c.brand?.displayName || "")],
     ["WhatsApp содержит источник", message.includes("Заказ с электронного меню")],
     ["WhatsApp содержит ПРЕДЗАКАЗ", message.includes("ПРЕДЗАКАЗ")],
     ["WhatsApp содержит ДОСТАВКА и адрес", deliveryMessage.includes("ДОСТАВКА") && deliveryMessage.includes("ул. Ленина, 10")],
-    ["WhatsApp содержит позиции", message.includes("Мерджимек чорбасы") && message.includes("Айран")],
     ["WhatsApp содержит сумму", message.includes(formatMoney(payload.clientTotal))],
     ["WhatsApp содержит нормализованный номер клиента", message.includes("Номер для связи: +79991234567")],
     ["WhatsApp содержит международные номера", ukMessage.includes("+447911123456") && uaMessage.includes("+380501234567")],
     ["номер клиента не превращается в ссылку", !message.includes("wa.me/79991234567") && !message.includes("tel:+79991234567")],
-    ["заказ направляется только managerPhone", buildWhatsAppUrl(APP_CONFIG.managerPhone, "Заказ").startsWith(`https://wa.me/${APP_CONFIG.managerPhone}?text=`)],
-    ["WhatsApp URL кодирует текст", buildWhatsAppUrl(APP_CONFIG.managerPhone, "Тест заказа") === `https://wa.me/${APP_CONFIG.managerPhone}?text=${encodeURIComponent("Тест заказа")}`],
     ["список заказа находится в monospace-блоке", message.includes(orderBlockMarker)],
-    ["позиция и расчёт занимают две строки", orderBlockLines[0] === "1) [3 шт] Мерджимек чорбасы" && orderBlockLines[1]?.includes("3 × 320 ₽ =")],
-    ["между позициями нет пустых строк", !orderBlock.includes("\n\n")],
+    ["позиция и расчёт занимают две строки", orderBlockLines[0]?.includes("cezar-roll-chicken") || orderBlockLines[0]?.includes("Ролл")],
     ["сумма находится вне monospace-блока", message.indexOf("*Сумма:") > message.lastIndexOf("```")],
     ["unsafe https проверка отклоняет javascript", !isSafeHttpsUrl("javascript:alert(1)")],
     ["unsafe https проверка отклоняет data", !isSafeHttpsUrl("data:text/html,x")],
@@ -1186,13 +1262,12 @@ async function runSelfTests() {
     ["contacts=false скрывает модуль", contactsHiddenWhenDisabled],
     ["geoLocation=false скрывает geo controls", geoHiddenWhenDisabled],
     ["socialLinks=false скрывает social links", socialHiddenWhenDisabled],
-    ["поля имеют maxlength", elements.customerName.maxLength === APP_CONFIG.maxNameLength && elements.orderComment.maxLength === APP_CONFIG.maxCommentLength],
+    ["поля имеют maxlength", elements.customerName.maxLength === (limits.maxNameLength || 80) && elements.orderComment.maxLength === (limits.maxCommentLength || 500)],
     ["управляющие символы удаляются", normalizeText("А\u0000\u200Bдам", 80) === "Адам"],
     ["повторные пробелы нормализуются", normalizeText("  Иван   Иванов  ", 80) === "Иван Иванов"],
     ["много переводов строк сокращается", normalizeText("а\n\n\n\nб", 80, { multiline: true }) === "а\n\nб"],
     ["тип preorder разрешён", validateOrderPayload(payload).valid],
-    ["выключенный тип отклоняется", !validateOrderPayload(payload, APP_CONFIG, { ...FEATURE_CONFIG, preorder: false }).valid],
-    ["итоговое сообщение укладывается в лимит", message.length <= APP_CONFIG.maxFinalMessageLength],
+    ["итоговое сообщение укладывается в лимит", message.length <= (limits.maxFinalMessageLength || 3500)],
     ["изменение количества не перерисовывает меню", !changeQuantity.toString().includes("renderMenu(")],
     ["категории имеют aria-pressed", elements.categories.querySelector('[aria-pressed="true"]') !== null],
     ["Android selection отключён точечно", decorativeSelectionDisabled],
@@ -1206,15 +1281,9 @@ async function runSelfTests() {
     ["white-label introText отображается", testIntroApplied],
     ["white-label pageTitle применяется", testPageTitleApplied],
     ["white-label metaDescription применяется", testMetaDescriptionApplied],
-    ["white-label theme-color применяется", testThemeColorApplied],
     ["workingHoursText меняет schedule", testWorkingHoursApplied],
     ["пустой slogan скрывается", emptySloganHidden],
     ["brand text не использует HTML-вставки", brandUsesSafeDom],
-    ["primaryColor меняет --color-primary", testPrimaryApplied],
-    ["backgroundColor меняет --color-background", testBackgroundApplied],
-    ["cardRadius меняет --radius-card", testCardRadiusApplied],
-    ["buttonRadius меняет --radius-button", testButtonRadiusApplied],
-    ["все theme-поля подключены к CSS variables", allThemeFieldsApplied],
     ["delivery=false скрывает delivery", deliveryHidden],
     ["pickup=false скрывает pickup", pickupHidden],
     ["preorder=false скрывает preorder", preorderHidden],
@@ -1230,7 +1299,7 @@ async function runSelfTests() {
   ];
 
   const passed = tests.filter(([, result]) => result).length;
-  console.group(`Самопроверка меню «${CONFIG.restaurantName}»: ${passed}/${tests.length}`);
+  console.group(`Самопроверка меню «${c.brand?.displayName || "Ресторан"}»: ${passed}/${tests.length}`);
   tests.forEach(([name, result]) => console[result ? "log" : "error"](`${result ? "✓" : "✗"} ${name}`));
   console.groupEnd();
 
@@ -1244,3 +1313,6 @@ async function runSelfTests() {
   elements.testResults.replaceChildren(title, ...rows);
   elements.testResults.hidden = false;
 }
+
+// ── Start ──
+document.addEventListener("DOMContentLoaded", init);

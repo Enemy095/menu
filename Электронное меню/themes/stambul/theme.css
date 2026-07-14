@@ -1,0 +1,19 @@
+/*
+ * Stambul theme — warm burgundy and gold palette.
+ *
+ * This theme is referenced by restaurants/stambul/config.js → theme: "stambul"
+ * A restaurant can override individual tokens at runtime via applyTheme().
+ */
+
+:root {
+  --color-primary: #721f2a;
+  --color-primary-text: #fff9ed;
+  --color-accent: #c8a467;
+  --color-background: #f7f0e3;
+  --color-surface: #fffdf8;
+  --color-text: #2e2020;
+  --color-muted: #7e6c66;
+  --color-border: rgba(91, 38, 41, .13);
+  --radius-card: 21px;
+  --radius-button: 18px;
+}

@@ -8,10 +8,41 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Стамбул — электронное меню</title>
   <link rel="stylesheet" href="./style.css?v=14">
+  <!-- Existing application scripts (unchanged — source of truth for current behavior) -->
   <script src="./config.js?v=16" defer></script>
   <script src="./menu.js?v=1" defer></script>
   <script src="./validation.js?v=5" defer></script>
   <script src="./order-submit.js?v=10" defer></script>
+  <!-- SaaS engine infrastructure (Phase 0 — runs after existing scripts, no behavior change) -->
+  <script src="./restaurants/_defaults.js" defer></script>
+  <script src="./restaurants/stambul/config.js" defer></script>
+  <script src="./restaurants/stambul/features.js" defer></script>
+  <script src="./restaurants/stambul/order-types.js" defer></script>
+  <script src="./restaurants/stambul/menu.js" defer></script>
+  <script src="./restaurants/adamas/config.js" defer></script>
+  <script src="./restaurants/adamas/features.js" defer></script>
+  <script src="./restaurants/adamas/order-types.js" defer></script>
+  <script src="./restaurants/adamas/menu.js" defer></script>
+  <script src="./restaurants/registry.js" defer></script>
+  <script src="./providers/restaurant-provider.js" defer></script>
+  <script src="./providers/json-provider.js" defer></script>
+  <script src="./providers/api-provider.js" defer></script>
+  <script src="./providers/provider-registry.js" defer></script>
+  <script src="./engine/state.js" defer></script>
+  <script src="./engine/router/router.js" defer></script>
+  <script src="./engine/router/hash-strategy.js" defer></script>
+  <script src="./engine/router/history-strategy.js" defer></script>
+  <script src="./engine/router/memory-strategy.js" defer></script>
+  <script src="./themes/theme-registry.js" defer></script>
+  <script src="./features/feature-registry.js" defer></script>
+  <script src="./features/contacts.js" defer></script>
+  <script src="./features/promotions.js" defer></script>
+  <script src="./features/delivery.js" defer></script>
+  <script src="./features/loyalty.js" defer></script>
+  <script src="./features/reservations.js" defer></script>
+  <script src="./features/delivery-blocks.js" defer></script>
+  <script src="./engine/branding-manager.js" defer></script>
+  <script src="./engine/bootstrap.js" defer></script>
   <script src="./app.js?v=14" defer></script>
 </head>
 <body>

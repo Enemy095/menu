@@ -7,6 +7,24 @@ spring:
     username: ${DATABASE_USERNAME:emenu}
     password: ${DATABASE_PASSWORD:emenu_local_password}
 
+management:
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLER_PROBABILITY:1.0}
+    export:
+      otlp:
+        enabled: ${OTEL_TRACES_EXPORT_ENABLED:false}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+        url: ${OTEL_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
+
 app:
   platform:
     hosts:

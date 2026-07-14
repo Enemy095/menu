@@ -24,12 +24,13 @@ dependencies {
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.opentelemetry)
-    implementation(libs.flyway.core)
+    implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.modulith.starter.core)
     implementation(libs.spring.modulith.starter.insight)
 
     runtimeOnly(libs.flyway.postgresql)
     runtimeOnly(libs.postgresql)
+    runtimeOnly(libs.micrometer.registry.prometheus)
 
     testImplementation(platform(libs.spring.boot.bom))
     testImplementation(platform(libs.spring.modulith.bom))

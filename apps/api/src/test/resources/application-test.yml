@@ -20,12 +20,18 @@ app:
     asset-base-url: https://assets.example.test
 
 management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState
   otlp:
     metrics:
       export:
         enabled: false
   tracing:
     export:
+      enabled: false
       otlp:
         enabled: false
   logging:

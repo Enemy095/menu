@@ -6,15 +6,15 @@
 |---|---|---|---:|---|
 | PLAN-001 | Architecture rules и master migration plan | — | 0 | done |
 | LEG-001 | Legacy inventory и parity baseline | — | 0 | done |
-| BE-001/MOD-001 | Spring Boot scaffold и Modulith boundaries | PLAN-001 | 1 | ready |
-| API-001 | OpenAPI-first package и TS generation | PLAN-001, LEG-001 | 1 | ready |
-| INF-001 | Local PostgreSQL/assets/observability infrastructure | PLAN-001 | 1 | ready |
-| DB-001 | Flyway schema и JPA persistence baseline | BE-001, INF-001 | 2 | planned |
-| OBS-001 | Logs, traces, health и baseline metrics | BE-001 | 2 | planned |
-| CI-001 | Contract/build/migration/security gates | BE-001, API-001, INF-001 | 2 | planned |
-| TEN-001 | Trusted tenant resolver и context | DB-001, MOD-001 | 3 | planned |
-| AST-001 | S3-compatible tenant asset adapter | DB-001, TEN-001, INF-001 | 3 | planned |
-| SEC-001 | Security boundaries и rate limiting | BE-001, TEN-001 | 3 | planned |
+| BE-001/MOD-001 | Spring Boot scaffold и Modulith boundaries | PLAN-001 | 1 | done |
+| API-001 | OpenAPI-first package и TS generation | PLAN-001, LEG-001 | 1 | done |
+| INF-001 | Local PostgreSQL/assets/observability infrastructure | PLAN-001 | 1 | done |
+| DB-001 | Flyway schema и JPA persistence baseline | BE-001, INF-001 | 2 | done |
+| OBS-001 | Logs, traces, health и baseline metrics | BE-001 | 2 | done |
+| CI-001 | Contract/build/migration/security gates | BE-001, API-001, INF-001 | 2 | done |
+| TEN-001 | Trusted tenant resolver и context | DB-001, MOD-001 | 3 | in_progress |
+| AST-001 | S3-compatible tenant asset adapter | DB-001, TEN-001, INF-001 | 3 | in_progress |
+| SEC-001 | Security boundaries и rate limiting | BE-001, TEN-001 | 3 | in_progress |
 | CFG-001 | Restaurant/config public read API | API-001, TEN-001, DB-001 | 4 | planned |
 | MENU-001 | Published menu public read API | API-001, TEN-001, DB-001 | 4 | planned |
 | MIG-001 | Idempotent legacy tenant import | CFG-001, MENU-001, AST-001 | 4 | planned |

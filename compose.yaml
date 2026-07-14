@@ -1,0 +1,128 @@
+name: ${COMPOSE_PROJECT_NAME:-emenu-local}
+
+services:
+  postgres:
+    image: postgres:17.5-alpine3.21
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-emenu}
+      POSTGRES_USER: ${POSTGRES_USER:-emenu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-emenu_local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    profiles: ["assets"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-emenu-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - assets
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    profiles: ["assets"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-emenu-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-tenant-assets-local}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}"
+        mc anonymous set none "local/$${MINIO_BUCKET}"
+    networks:
+      - assets
+    restart: "no"
+
+  otel-collector:
+    image: emenu/otel-collector-contrib:0.130.0-local
+    build:
+      context: ./infra/observability/otel-collector
+      dockerfile: Dockerfile
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "${OTEL_GRPC_PORT:-4317}:4317"
+      - "${OTEL_HTTP_PORT:-4318}:4318"
+      - "${OTEL_HEALTH_PORT:-13133}:13133"
+    volumes:
+      - ./infra/observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - observability
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:13133/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    profiles: ["observability"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - observability
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  backend:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-backend
+  assets:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-assets
+  observability:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-observability
+
+volumes:
+  postgres-data:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-postgres-data
+  minio-data:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-minio-data
+  prometheus-data:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-prometheus-data

@@ -2,16 +2,19 @@ spring:
   config:
     activate:
       on-profile: local
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/emenu}
+    username: ${DATABASE_USERNAME:emenu}
+    password: ${DATABASE_PASSWORD:emenu_local_password}
 
 app:
   platform:
     hosts:
-      base-domain: localhost
-      allowed-hosts:
-        - localhost
+      base-domain: ${PLATFORM_BASE_DOMAIN:localhost}
+      allowed-hosts: ${PLATFORM_ALLOWED_HOSTS:localhost,127.0.0.1}
     trusted-forwarding:
       enabled: false
       trusted-proxy-cidrs: []
   external:
-    public-base-url: http://localhost:3000
-    asset-base-url: http://localhost:9000
+    public-base-url: ${PUBLIC_BASE_URL:http://localhost:3000}
+    asset-base-url: ${ASSET_BASE_URL:http://localhost:9000/tenant-assets-local}

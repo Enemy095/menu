@@ -1,0 +1,38 @@
+{
+  "name": "@e-menu/api-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenAPI-first public contract and generated TypeScript client for the e-menu platform.",
+  "files": [
+    "dist",
+    "openapi/openapi.yaml"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./openapi": "./openapi/openapi.yaml"
+  },
+  "scripts": {
+    "lint": "redocly lint openapi/openapi.yaml --config redocly.yaml",
+    "generate": "node scripts/generate-client.mjs",
+    "check-generated": "node scripts/check-generated.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "validate": "pnpm run lint && pnpm run test && pnpm run check-generated && pnpm run typecheck"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "2.39.1",
+    "@redocly/cli": "2.39.0",
+    "typescript": "7.0.2",
+    "yaml": "2.9.0"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.7.0"
+}

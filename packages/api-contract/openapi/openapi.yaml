@@ -1,0 +1,1276 @@
+openapi: 3.0.3
+info:
+  title: E-menu Public API
+  version: 1.0.0
+  description: |
+    Публичный multi-tenant контракт электронной white-label платформы меню.
+    Tenant разрешается сервером по trusted host и `tenantSlug`; внутренние
+    идентификаторы tenant и конфигурация внешних integrations не раскрываются.
+  license:
+    name: Proprietary
+    url: https://platform.example.com/legal/api-license
+servers:
+  - url: https://platform.example.com
+    description: Production platform host; custom domains use the same paths.
+tags:
+  - name: Restaurant
+    description: Public restaurant configuration, branding and capabilities.
+  - name: Menu
+    description: Published public menu.
+  - name: Orders
+    description: Idempotent public order creation.
+security: []
+
+paths:
+  /api/v1/public/{tenantSlug}/restaurant:
+    get:
+      tags: [Restaurant]
+      summary: Get public restaurant configuration
+      description: Returns only public white-label configuration for the resolved active tenant.
+      operationId: getPublicRestaurant
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Public restaurant configuration.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestaurantResponse'
+              examples:
+                stambul:
+                  $ref: '#/components/examples/StambulRestaurant'
+                adamas:
+                  $ref: '#/components/examples/AdamasRestaurant'
+        '404':
+          $ref: '#/components/responses/TenantNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/public/{tenantSlug}/menu:
+    get:
+      tags: [Menu]
+      summary: Get published menu
+      description: Returns the current published menu for the resolved active tenant.
+      operationId: getPublicMenu
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+      responses:
+        '200':
+          description: Current published menu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuResponse'
+              examples:
+                stambul:
+                  $ref: '#/components/examples/StambulMenu'
+                adamas:
+                  $ref: '#/components/examples/AdamasMenu'
+        '404':
+          $ref: '#/components/responses/TenantNotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/public/{tenantSlug}/orders:
+    post:
+      tags: [Orders]
+      summary: Create an order
+      description: |
+        Creates exactly one order per tenant and idempotency key. Backend validates the
+        current published menu, item availability, quantities and total before persisting.
+      operationId: createPublicOrder
+      parameters:
+        - $ref: '#/components/parameters/TenantSlug'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              preorder:
+                $ref: '#/components/examples/PreorderRequest'
+              delivery:
+                $ref: '#/components/examples/DeliveryRequest'
+              pickup:
+                $ref: '#/components/examples/PickupRequest'
+      responses:
+        '201':
+          description: Order created, or the original result returned for an identical idempotent replay.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+              examples:
+                preorder:
+                  $ref: '#/components/examples/PreorderResponse'
+                delivery:
+                  $ref: '#/components/examples/DeliveryResponse'
+                pickup:
+                  $ref: '#/components/examples/PickupResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/TenantNotFound'
+        '409':
+          $ref: '#/components/responses/OrderConflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    TenantSlug:
+      name: tenantSlug
+      in: path
+      required: true
+      description: Public tenant slug resolved together with the trusted request host.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 63
+        pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+      example: adamas
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID reused only when retrying the same canonical order payload.
+      schema:
+        type: string
+        format: uuid
+      example: 6a43ed97-c755-4df2-a600-b4cf523f176c
+
+  responses:
+    TenantNotFound:
+      description: Tenant is unknown, inactive, or not confirmed for the request host.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            tenantNotFound:
+              $ref: '#/components/examples/TenantNotFoundError'
+    ValidationError:
+      description: Request structure or input format is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validationError:
+              $ref: '#/components/examples/ValidationError'
+    OrderConflict:
+      description: Current menu/order state conflicts with the submitted order or idempotency key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            menuChanged:
+              $ref: '#/components/examples/MenuChangedError'
+            itemUnavailable:
+              $ref: '#/components/examples/ItemUnavailableError'
+            totalMismatch:
+              $ref: '#/components/examples/TotalMismatchError'
+            idempotencyConflict:
+              $ref: '#/components/examples/IdempotencyConflictError'
+    RateLimited:
+      description: Too many requests for the tenant/client rate-limit scope.
+      headers:
+        Retry-After:
+          description: Seconds before the client should retry.
+          schema:
+            type: integer
+            minimum: 1
+          example: 30
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rateLimited:
+              $ref: '#/components/examples/RateLimitedError'
+    InternalError:
+      description: Unexpected server failure. The trace ID can be reported to support.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internalError:
+              $ref: '#/components/examples/InternalError'
+
+  schemas:
+    RestaurantResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - restaurantId
+        - slug
+        - branding
+        - seo
+        - profile
+        - features
+        - orderTypes
+        - limits
+        - locale
+        - currency
+        - timezone
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+          description: Stable public restaurant identifier.
+        slug:
+          type: string
+          minLength: 2
+          maxLength: 63
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        branding:
+          $ref: '#/components/schemas/Branding'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
+        profile:
+          $ref: '#/components/schemas/PublicProfile'
+        features:
+          $ref: '#/components/schemas/RestaurantFeatures'
+        orderTypes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AvailableOrderType'
+        limits:
+          $ref: '#/components/schemas/RestaurantLimits'
+        locale:
+          type: string
+          description: BCP 47 locale used by default for this restaurant.
+          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
+          example: ru-RU
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          pattern: '^[A-Z]{3}$'
+          example: RUB
+        timezone:
+          type: string
+          description: IANA timezone name used for business rules and display.
+          example: Europe/Moscow
+
+    Branding:
+      type: object
+      additionalProperties: false
+      required: [logoUrl, logoAlt, hero, designTokens, localizedTexts]
+      properties:
+        logoUrl:
+          type: string
+          format: uri
+        logoAlt:
+          type: string
+          minLength: 1
+          maxLength: 160
+        faviconUrl:
+          type: string
+          format: uri
+        hero:
+          $ref: '#/components/schemas/Hero'
+        designTokens:
+          $ref: '#/components/schemas/DesignTokens'
+        localizedTexts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/LocalizedRestaurantText'
+
+    Hero:
+      type: object
+      additionalProperties: false
+      required: [title, ctaLabel]
+      properties:
+        imageUrl:
+          type: string
+          format: uri
+        imageAlt:
+          type: string
+          maxLength: 160
+        eyebrow:
+          type: string
+          maxLength: 100
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        subtitle:
+          type: string
+          maxLength: 240
+        ctaLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        benefits:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/HeroBenefit'
+
+    HeroBenefit:
+      type: object
+      additionalProperties: false
+      required: [icon, text]
+      properties:
+        icon:
+          type: string
+          minLength: 1
+          maxLength: 16
+        text:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    DesignTokens:
+      type: object
+      additionalProperties: false
+      required:
+        - primaryColor
+        - secondaryColor
+        - accentColor
+        - backgroundColor
+        - surfaceColor
+        - textColor
+        - mutedTextColor
+        - borderRadius
+        - fontFamily
+      properties:
+        primaryColor:
+          $ref: '#/components/schemas/CssColor'
+        secondaryColor:
+          $ref: '#/components/schemas/CssColor'
+        accentColor:
+          $ref: '#/components/schemas/CssColor'
+        backgroundColor:
+          $ref: '#/components/schemas/CssColor'
+        surfaceColor:
+          $ref: '#/components/schemas/CssColor'
+        textColor:
+          $ref: '#/components/schemas/CssColor'
+        mutedTextColor:
+          $ref: '#/components/schemas/CssColor'
+        borderRadius:
+          type: string
+          pattern: '^[0-9]+(?:\.[0-9]+)?(?:px|rem)$'
+          example: 1rem
+        fontFamily:
+          type: string
+          minLength: 1
+          maxLength: 120
+
+    CssColor:
+      type: string
+      description: Six-digit hexadecimal CSS color.
+      pattern: '^#[0-9A-Fa-f]{6}$'
+      example: '#A33A2B'
+
+    LocalizedRestaurantText:
+      type: object
+      additionalProperties: false
+      required:
+        - locale
+        - displayName
+        - shortName
+        - businessTypeLabel
+        - cuisineText
+        - slogan
+        - introText
+        - menuSectionTitle
+        - cartTitle
+        - orderTypeLegend
+      properties:
+        locale:
+          type: string
+          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        shortName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        businessTypeLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        cuisineText:
+          type: string
+          maxLength: 160
+        slogan:
+          type: string
+          maxLength: 200
+        introText:
+          type: string
+          maxLength: 500
+        menuSectionTitle:
+          type: string
+          minLength: 1
+          maxLength: 120
+        cartTitle:
+          type: string
+          minLength: 1
+          maxLength: 120
+        orderTypeLegend:
+          type: string
+          minLength: 1
+          maxLength: 160
+
+    SeoMetadata:
+      type: object
+      additionalProperties: false
+      required: [title, description, canonicalUrl]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          minLength: 1
+          maxLength: 320
+        canonicalUrl:
+          type: string
+          format: uri
+        openGraphImageUrl:
+          type: string
+          format: uri
+
+    PublicProfile:
+      type: object
+      additionalProperties: false
+      required: [publicPhone, publicPhoneLabel, workingHoursText, socialLinks]
+      properties:
+        publicPhone:
+          type: string
+          minLength: 5
+          maxLength: 32
+        publicPhoneLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        address:
+          type: string
+          maxLength: 240
+        workingHoursText:
+          type: string
+          minLength: 1
+          maxLength: 240
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+        socialLinks:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/SocialLink'
+
+    GeoLocation:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude, label]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        label:
+          type: string
+          minLength: 1
+          maxLength: 240
+
+    SocialLink:
+      type: object
+      additionalProperties: false
+      required: [type, label, url]
+      properties:
+        type:
+          type: string
+          enum: [website, instagram, telegram, vk, facebook, other]
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        url:
+          type: string
+          format: uri
+
+    RestaurantFeatures:
+      type: object
+      additionalProperties: false
+      required:
+        - orders
+        - contacts
+        - geoLocation
+        - socialLinks
+        - delivery
+        - pickup
+        - preorder
+        - customTheme
+        - whatsappFallback
+        - promotions
+        - loyalty
+        - reservations
+        - deliveryBlocks
+      properties:
+        orders:
+          type: boolean
+        contacts:
+          type: boolean
+        geoLocation:
+          type: boolean
+        socialLinks:
+          type: boolean
+        delivery:
+          type: boolean
+        pickup:
+          type: boolean
+        preorder:
+          type: boolean
+        customTheme:
+          type: boolean
+        whatsappFallback:
+          type: boolean
+        promotions:
+          type: boolean
+        loyalty:
+          type: boolean
+        reservations:
+          type: boolean
+        deliveryBlocks:
+          type: boolean
+
+    AvailableOrderType:
+      type: object
+      additionalProperties: false
+      required: [code, label, isDefault]
+      properties:
+        code:
+          $ref: '#/components/schemas/OrderType'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        isDefault:
+          type: boolean
+
+    RestaurantLimits:
+      type: object
+      additionalProperties: false
+      required:
+        - maxItemQuantity
+        - maxTotalItems
+        - maxNameLength
+        - maxPhoneLength
+        - maxAddressLength
+        - maxCommentLength
+        - delayedOrderConfirmationMinutes
+      properties:
+        maxItemQuantity:
+          type: integer
+          minimum: 1
+          maximum: 999
+        maxTotalItems:
+          type: integer
+          minimum: 1
+          maximum: 9999
+        maxNameLength:
+          type: integer
+          minimum: 1
+          maximum: 500
+        maxPhoneLength:
+          type: integer
+          minimum: 5
+          maximum: 100
+        maxAddressLength:
+          type: integer
+          minimum: 1
+          maximum: 2000
+        maxCommentLength:
+          type: integer
+          minimum: 1
+          maximum: 5000
+        minOrderMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        freeDeliveryThresholdMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        delayedOrderConfirmationMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+
+    MenuResponse:
+      type: object
+      additionalProperties: false
+      required: [restaurantId, version, publishedAt, currency, categories, items]
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        publishedAt:
+          type: string
+          format: date-time
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuCategory'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+
+    MenuCategory:
+      type: object
+      additionalProperties: false
+      required: [categoryId, name, sortOrder]
+      properties:
+        categoryId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: Stable public category key scoped by tenant and menu version.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        imageUrl:
+          type: string
+          format: uri
+        sortOrder:
+          type: integer
+          minimum: 0
+
+    MenuItem:
+      type: object
+      additionalProperties: false
+      required:
+        - menuItemId
+        - categoryId
+        - name
+        - priceMinor
+        - available
+        - sortOrder
+      properties:
+        menuItemId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: Stable tenant-scoped public menu item key preserved across menu versions.
+        categoryId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: string
+          maxLength: 1000
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        imageUrl:
+          type: string
+          format: uri
+        available:
+          type: boolean
+        sortOrder:
+          type: integer
+          minimum: 0
+
+    CreateOrderRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - orderType
+        - customer
+        - items
+        - clientTotalMinor
+        - clientCreatedAt
+        - clientMenuVersion
+      properties:
+        orderType:
+          $ref: '#/components/schemas/OrderType'
+        customer:
+          $ref: '#/components/schemas/OrderCustomer'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/CreateOrderItem'
+        comment:
+          type: string
+          maxLength: 500
+        guestCount:
+          type: integer
+          minimum: 1
+          maximum: 99
+        clientTotalMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        clientCreatedAt:
+          type: string
+          format: date-time
+        clientMenuVersion:
+          type: integer
+          format: int64
+          minimum: 1
+
+    OrderType:
+      type: string
+      enum: [preorder, delivery, pickup]
+
+    OrderCustomer:
+      type: object
+      additionalProperties: false
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        phone:
+          type: string
+          minLength: 5
+          maxLength: 32
+          pattern: '^\+?[0-9 ()-]{5,32}$'
+        address:
+          type: string
+          minLength: 1
+          maxLength: 240
+
+    CreateOrderItem:
+      type: object
+      additionalProperties: false
+      required: [menuItemId, quantity]
+      properties:
+        menuItemId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    CreateOrderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - orderId
+        - orderNumber
+        - status
+        - serverTotalMinor
+        - currency
+        - serverReceivedAt
+        - needsConfirmation
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          minLength: 1
+          maxLength: 40
+        status:
+          type: string
+          enum: [new]
+        serverTotalMinor:
+          type: integer
+          format: int64
+          minimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        serverReceivedAt:
+          type: string
+          format: date-time
+        needsConfirmation:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message, details, traceId]
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+        traceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+
+    ErrorCode:
+      type: string
+      enum:
+        - TENANT_NOT_FOUND
+        - VALIDATION_ERROR
+        - MENU_CHANGED
+        - ITEM_UNAVAILABLE
+        - TOTAL_MISMATCH
+        - IDEMPOTENCY_CONFLICT
+        - RATE_LIMITED
+        - INTERNAL_ERROR
+
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [field, reason]
+      properties:
+        field:
+          type: string
+          minLength: 1
+          maxLength: 160
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 160
+
+  examples:
+    StambulRestaurant:
+      summary: Stambul restaurant public configuration
+      value:
+        restaurantId: 10000000-0000-4000-8000-000000000001
+        slug: stambul
+        branding:
+          logoUrl: https://cdn.platform.example.com/stambul/v1/logo.png
+          logoAlt: Логотип ресторан-кафе «У Ризвана»
+          faviconUrl: https://cdn.platform.example.com/stambul/v1/favicon.png
+          hero:
+            eyebrow: Наше меню
+            title: Вкус Стамбула рядом с вами
+            subtitle: Турецкая кухня
+            ctaLabel: Смотреть меню
+            benefits: []
+          designTokens:
+            primaryColor: '#8B2F25'
+            secondaryColor: '#D7B56D'
+            accentColor: '#C94B3A'
+            backgroundColor: '#FFF8ED'
+            surfaceColor: '#FFFFFF'
+            textColor: '#231B17'
+            mutedTextColor: '#74645C'
+            borderRadius: 1rem
+            fontFamily: Inter, sans-serif
+          localizedTexts:
+            - locale: ru-RU
+              displayName: Ресторан-кафе у Ризвана
+              shortName: у Ризвана
+              businessTypeLabel: Ресторан-кафе
+              cuisineText: Турецкая кухня
+              slogan: Вкус Стамбула рядом с вами
+              introText: Выбирайте любимые блюда — мы соберём заказ.
+              menuSectionTitle: Выберите блюда
+              cartTitle: Ваш заказ
+              orderTypeLegend: Как хотите получить заказ?
+        seo:
+          title: У Ризвана — электронное меню
+          description: Электронное меню ресторан-кафе «У Ризвана»
+          canonicalUrl: https://stambul.platform.example.com/
+          openGraphImageUrl: https://cdn.platform.example.com/stambul/v1/og.jpg
+        profile:
+          publicPhone: +7 (989) 442-81-81
+          publicPhoneLabel: Позвонить ресторану
+          workingHoursText: Ежедневно с 10:00 до 23:00
+          socialLinks: []
+        features:
+          orders: true
+          contacts: true
+          geoLocation: true
+          socialLinks: false
+          delivery: true
+          pickup: true
+          preorder: true
+          customTheme: true
+          whatsappFallback: true
+          promotions: false
+          loyalty: false
+          reservations: false
+          deliveryBlocks: false
+        orderTypes:
+          - code: preorder
+            label: Предзаказ
+            isDefault: true
+          - code: delivery
+            label: Доставка
+            isDefault: false
+          - code: pickup
+            label: Самовывоз
+            isDefault: false
+        limits:
+          maxItemQuantity: 99
+          maxTotalItems: 200
+          maxNameLength: 80
+          maxPhoneLength: 32
+          maxAddressLength: 240
+          maxCommentLength: 500
+          delayedOrderConfirmationMinutes: 15
+        locale: ru-RU
+        currency: RUB
+        timezone: Europe/Moscow
+
+    AdamasRestaurant:
+      summary: Adamas delivery public configuration
+      value:
+        restaurantId: 20000000-0000-4000-8000-000000000002
+        slug: adamas
+        branding:
+          logoUrl: https://cdn.platform.example.com/adamas/v1/logo.png
+          logoAlt: Логотип Адамас
+          faviconUrl: https://cdn.platform.example.com/adamas/v1/favicon.png
+          hero:
+            imageUrl: https://cdn.platform.example.com/adamas/v1/hero-burger.png
+            imageAlt: Аппетитный бургер с сыром и овощами
+            eyebrow: Доставка еды
+            title: ВКУСНАЯ ЕДА — БЫСТРАЯ ДОСТАВКА
+            subtitle: Пицца • Роллы • Бургеры • Гарниры
+            ctaLabel: Смотреть меню
+            benefits:
+              - icon: 🔥
+                text: Горячая еда
+              - icon: ⏱
+                text: От 40 минут
+              - icon: 🚗
+                text: Доставка от 1000 ₽ бесплатно
+          designTokens:
+            primaryColor: '#FF6A00'
+            secondaryColor: '#FFB000'
+            accentColor: '#FF3D00'
+            backgroundColor: '#101010'
+            surfaceColor: '#1C1C1C'
+            textColor: '#FFFFFF'
+            mutedTextColor: '#B8B8B8'
+            borderRadius: 1rem
+            fontFamily: Inter, sans-serif
+          localizedTexts:
+            - locale: ru-RU
+              displayName: Адамас
+              shortName: Адамас
+              businessTypeLabel: Служба доставки еды
+              cuisineText: Пицца • Роллы • Бургеры • Гарниры
+              slogan: ВКУСНАЯ ЕДА БЫСТРАЯ ДОСТАВКА
+              introText: Закажите любимые блюда — мы доставим быстро и горячо.
+              menuSectionTitle: Выберите блюда
+              cartTitle: Ваш заказ
+              orderTypeLegend: Как хотите получить заказ?
+        seo:
+          title: Адамас — доставка еды
+          description: Доставка еды Адамас — пицца, роллы, бургеры и гарниры.
+          canonicalUrl: https://adamas.platform.example.com/
+          openGraphImageUrl: https://cdn.platform.example.com/adamas/v1/og.jpg
+        profile:
+          publicPhone: +7 (999) 123-45-67
+          publicPhoneLabel: Позвонить ресторану
+          workingHoursText: Ежедневно с 10:00 до 23:00
+          socialLinks: []
+        features:
+          orders: true
+          contacts: true
+          geoLocation: false
+          socialLinks: false
+          delivery: true
+          pickup: true
+          preorder: true
+          customTheme: true
+          whatsappFallback: true
+          promotions: false
+          loyalty: false
+          reservations: false
+          deliveryBlocks: true
+        orderTypes:
+          - code: preorder
+            label: Предзаказ
+            isDefault: true
+          - code: delivery
+            label: Доставка
+            isDefault: false
+          - code: pickup
+            label: Самовывоз
+            isDefault: false
+        limits:
+          maxItemQuantity: 99
+          maxTotalItems: 200
+          maxNameLength: 80
+          maxPhoneLength: 32
+          maxAddressLength: 240
+          maxCommentLength: 500
+          minOrderMinor: 50000
+          freeDeliveryThresholdMinor: 100000
+          delayedOrderConfirmationMinutes: 15
+        locale: ru-RU
+        currency: RUB
+        timezone: Europe/Moscow
+
+    StambulMenu:
+      summary: Published Stambul menu
+      value:
+        restaurantId: 10000000-0000-4000-8000-000000000001
+        version: 1
+        publishedAt: '2026-07-14T09:00:00Z'
+        currency: RUB
+        categories:
+          - categoryId: rolls
+            name: Роллы
+            sortOrder: 10
+          - categoryId: pizza
+            name: Пицца
+            sortOrder: 20
+        items:
+          - menuItemId: cezar-roll-chicken
+            categoryId: rolls
+            name: Ролл Цезарь с курицей
+            description: Курица, салат, томат и соус
+            priceMinor: 25000
+            imageUrl: https://cdn.platform.example.com/stambul/menu/roll-caesar-chicken.jpg
+            available: true
+            sortOrder: 10
+          - menuItemId: pizza-pepperoni
+            categoryId: pizza
+            name: Пицца Пепперони
+            description: Пепперони, сыр и томатный соус
+            priceMinor: 35000
+            imageUrl: https://cdn.platform.example.com/stambul/menu/pizza-pepperoni.jpg
+            available: true
+            sortOrder: 20
+
+    AdamasMenu:
+      summary: Published Adamas menu
+      value:
+        restaurantId: 20000000-0000-4000-8000-000000000002
+        version: 1
+        publishedAt: '2026-07-14T09:05:00Z'
+        currency: RUB
+        categories:
+          - categoryId: pizza
+            name: Пицца
+            imageUrl: https://cdn.platform.example.com/adamas/categories/pizza.jpg
+            sortOrder: 10
+          - categoryId: burgers
+            name: Бургеры
+            imageUrl: https://cdn.platform.example.com/adamas/categories/burgers.jpg
+            sortOrder: 20
+        items:
+          - menuItemId: pizza-pepperoni
+            categoryId: pizza
+            name: Пицца Пепперони
+            description: Пепперони, моцарелла и фирменный соус
+            priceMinor: 59000
+            imageUrl: https://cdn.platform.example.com/adamas/menu/pizza-pepperoni.jpg
+            available: true
+            sortOrder: 10
+          - menuItemId: burger-classic
+            categoryId: burgers
+            name: Чизбургер
+            description: Говяжья котлета, сыр и овощи
+            priceMinor: 35000
+            imageUrl: https://cdn.platform.example.com/adamas/menu/cheeseburger.jpg
+            available: true
+            sortOrder: 20
+
+    PreorderRequest:
+      summary: Preorder for two guests
+      value:
+        orderType: preorder
+        customer:
+          name: Адам
+          phone: +7 (999) 111-22-33
+        items:
+          - menuItemId: cezar-roll-chicken
+            quantity: 2
+        comment: Столик у окна, пожалуйста
+        guestCount: 2
+        clientTotalMinor: 50000
+        clientCreatedAt: '2026-07-14T10:15:30Z'
+        clientMenuVersion: 1
+
+    DeliveryRequest:
+      summary: Delivery order
+      value:
+        orderType: delivery
+        customer:
+          name: Резван
+          phone: +7 (999) 444-55-66
+          address: ул. Центральная, д. 10, кв. 5
+        items:
+          - menuItemId: pizza-pepperoni
+            quantity: 1
+          - menuItemId: burger-classic
+            quantity: 1
+        comment: Позвонить за пять минут
+        clientTotalMinor: 94000
+        clientCreatedAt: '2026-07-14T10:16:00Z'
+        clientMenuVersion: 1
+
+    PickupRequest:
+      summary: Pickup order
+      value:
+        orderType: pickup
+        customer:
+          name: Мария
+          phone: +7 (999) 777-88-99
+        items:
+          - menuItemId: pizza-pepperoni
+            quantity: 1
+        clientTotalMinor: 35000
+        clientCreatedAt: '2026-07-14T10:17:00Z'
+        clientMenuVersion: 1
+
+    PreorderResponse:
+      summary: Created preorder
+      value:
+        orderId: 30000000-0000-4000-8000-000000000001
+        orderNumber: ST-1042
+        status: new
+        serverTotalMinor: 50000
+        currency: RUB
+        serverReceivedAt: '2026-07-14T10:15:31Z'
+        needsConfirmation: true
+
+    DeliveryResponse:
+      summary: Created delivery order
+      value:
+        orderId: 30000000-0000-4000-8000-000000000002
+        orderNumber: AD-2048
+        status: new
+        serverTotalMinor: 94000
+        currency: RUB
+        serverReceivedAt: '2026-07-14T10:16:01Z'
+        needsConfirmation: true
+
+    PickupResponse:
+      summary: Created pickup order
+      value:
+        orderId: 30000000-0000-4000-8000-000000000003
+        orderNumber: ST-1043
+        status: new
+        serverTotalMinor: 35000
+        currency: RUB
+        serverReceivedAt: '2026-07-14T10:17:01Z'
+        needsConfirmation: false
+
+    TenantNotFoundError:
+      summary: Tenant was not resolved
+      value:
+        code: TENANT_NOT_FOUND
+        message: Заведение не найдено
+        details:
+          - field: tenantSlug
+            reason: UNKNOWN_OR_INACTIVE
+        traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+
+    ValidationError:
+      summary: Invalid customer phone
+      value:
+        code: VALIDATION_ERROR
+        message: Некорректные данные заказа
+        details:
+          - field: customer.phone
+            reason: INVALID_FORMAT
+        traceId: 74c2e68d32584f20ad9e4ee45fc2bb0d
+
+    MenuChangedError:
+      summary: Client used an obsolete menu version
+      value:
+        code: MENU_CHANGED
+        message: Меню обновилось, проверьте корзину
+        details:
+          - field: clientMenuVersion
+            reason: CURRENT_VERSION_2
+        traceId: 15df4d7895dc4efabb785a7b7fd7a2ad
+
+    ItemUnavailableError:
+      summary: Item is no longer available
+      value:
+        code: ITEM_UNAVAILABLE
+        message: Некоторые позиции сейчас недоступны
+        details:
+          - field: items[0].menuItemId
+            reason: ITEM_NOT_AVAILABLE
+        traceId: 31829356b1fe4d9386e7eb43942d59c9
+
+    TotalMismatchError:
+      summary: Backend total differs from client total
+      value:
+        code: TOTAL_MISMATCH
+        message: Стоимость заказа изменилась
+        details:
+          - field: clientTotalMinor
+            reason: SERVER_TOTAL_59000
+        traceId: 56ed01128bd8411daa1f7906cd52919d
+
+    IdempotencyConflictError:
+      summary: Key was reused for another canonical payload
+      value:
+        code: IDEMPOTENCY_CONFLICT
+        message: Ключ повторной отправки уже использован для другого заказа
+        details:
+          - field: Idempotency-Key
+            reason: PAYLOAD_MISMATCH
+        traceId: 00a95c16099f44379b65932e2fd71f9c
+
+    RateLimitedError:
+      summary: Rate limit exceeded
+      value:
+        code: RATE_LIMITED
+        message: Слишком много запросов, повторите позже
+        details:
+          - field: request
+            reason: RETRY_AFTER_30_SECONDS
+        traceId: c70949b54e2c4fdf882cd8a107ce8b34
+
+    InternalError:
+      summary: Unexpected internal failure
+      value:
+        code: INTERNAL_ERROR
+        message: Не удалось обработать запрос
+        details: []
+        traceId: 9346a4e91ec84235aa2592fd1e831f84

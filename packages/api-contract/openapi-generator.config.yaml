@@ -1,0 +1,12 @@
+additionalProperties:
+  npmName: '@e-menu/public-api-client'
+  npmVersion: 0.1.0
+  supportsES6: true
+  typescriptThreePlus: true
+  useSingleRequestParameter: true
+  stringEnums: true
+  enumPropertyNaming: original
+  modelPropertyNaming: original
+  hideGenerationTimestamp: true
+  snapshot: false
+  withInterfaces: true

@@ -1,0 +1,15 @@
+extends:
+  - recommended
+
+apis:
+  public@v1:
+    root: ./openapi/openapi.yaml
+
+rules:
+  operation-operationId: error
+  operation-4xx-response: error
+  no-ambiguous-paths: error
+  no-identical-paths: error
+  no-invalid-media-type-examples: error
+  no-server-example.com: off # platform.example.com is an intentional non-routable documentation host.
+  security-defined: off # Every endpoint is intentionally public; tenant resolution and rate limiting are server concerns.

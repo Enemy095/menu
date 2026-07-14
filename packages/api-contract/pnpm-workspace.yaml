@@ -1,0 +1,4 @@
+allowBuilds:
+  '@openapitools/openapi-generator-cli': true
+minimumReleaseAgeExclude:
+  - '@redocly/cli@2.39.0'

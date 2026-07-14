@@ -1,6 +1,6 @@
 # ADR-0002: Staged provisioning для legacy import
 
-- Status: accepted
+- Status: superseded by ADR-0003
 - Date: 2026-07-14
 - Scope: MIG-001 Phase B, одноразовый перенос legacy tenants
 

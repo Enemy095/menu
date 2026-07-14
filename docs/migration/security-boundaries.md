@@ -1,5 +1,8 @@
 # Security boundaries for the migration platform
 
+> Historical tenant-boundary design, superseded by ADR-0003. Актуальные single-client
+> security rules находятся в корневом `AGENTS.md` и impact audit.
+
 ## Public and reserved routes
 
 The application security chain permits anonymous access only to these exact method and path combinations:

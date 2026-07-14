@@ -1,5 +1,8 @@
 # MIG-001 — legacy import preflight
 
+> Historical/superseded by ADR-0003. Материалы сохраняются только как evidence для
+> выбора и проверки одного клиентского dataset; two-tenant runtime import не реализуется.
+
 Этот каталог фиксирует Phase A для детерминированного импорта Stambul и Adamas. Он не является production seed и не изменяет legacy. Исходные файлы читаются как неизменяемые raw bytes, а private notification destinations намеренно отсутствуют в Git.
 
 ## Артефакты

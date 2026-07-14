@@ -1,6 +1,6 @@
 # ADR-0001: Public namespace для tenant assets
 
-- Status: accepted
+- Status: superseded by ADR-0003
 - Date: 2026-07-14
 - Scope: immutable tenant assets
 

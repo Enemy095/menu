@@ -2,9 +2,8 @@
 
 ## Цель
 
-Перенести существующее статическое электронное меню в одну multi-tenant white-label платформу без big-bang rewrite и без потери подтверждённого пользовательского поведения.
-
-Целевая система:
+Перенести существующее электронное меню в single-client приложение без big-bang
+rewrite и потери подтверждённого поведения.
 
 ```text
 CDN
@@ -12,213 +11,143 @@ CDN
   → Spring Boot MVC modular monolith / Java 25
   → PostgreSQL
   → transactional outbox worker
-  → tenant-specific WhatsApp / Telegram / email / POS
+  → configured WhatsApp / Telegram / email / POS destination
 ```
 
-Один frontend и один backend обслуживают много заведений. Tenant определяется по trusted host/path mapping и после resolution представлен внутренним immutable `tenantId`. Код, schema и deployment общие; branding, menu, features, contacts, order types, assets, locale, currency, timezone и notification destinations являются tenant data.
+Один deployment frontend/backend обслуживает одного клиента. Multi-tenancy,
+`tenantId`, resolver/context, tenant routes и tenant-scoped persistence удаляются.
 
-Полные архитектурные ограничения находятся в корневом [`AGENTS.md`](../../AGENTS.md).
+Источники решений:
 
-## Оркестрация
+- [`AGENTS.md`](../../AGENTS.md) — обязательные engineering rules;
+- [`ADR-0003`](../adr/0003-single-client-deployment.md) — single-client decision;
+- [`implementation-plan.md`](../architecture/single-client/implementation-plan.md) —
+  подробная последовательность;
+- [`tasks/README.md`](tasks/README.md) — executable task registry.
 
-- Одновременно выполняются не более трёх worker-задач.
-- Агент получает одну bounded-задачу и единоличное владение указанными путями.
-- Задача без закрытых dependencies не запускается.
-- Агент не расширяет scope и не меняет shared contracts без handoff оркестратору.
-- Оркестратор проверяет diff, запускает acceptance commands и только затем открывает следующий wave.
-- Каждый wave завершается integration checkpoint и осмысленным commit.
-- Legacy-каталог не меняется, пока task явно не разрешает это.
+## Current checkpoint
 
-## Зафиксированные решения
+Старые `TEN/AST/CFG/MENU/MIG` задачи были выполнены или начаты для multi-tenant target
+и теперь имеют status `superseded`. Их код является migration input для refactor, но не
+целевой архитектурой. Two-tenant importer не продолжается.
 
-- Backend: Java 25, Spring Boot 4.1, Spring MVC, Spring Data JPA, Spring Modulith.
-- Build: Gradle Wrapper, Gradle Kotlin DSL, version catalog.
-- Frontend: Next.js App Router, React, strict TypeScript, pnpm workspace.
-- Database: PostgreSQL 17; Flyway — единственный механизм schema migration.
-- API: OpenAPI 3.0.3 first, generated `typescript-fetch` client; Java server stubs не генерируются.
-- Public API namespace: `/api/v1/public/{tenantSlug}`.
-- Money: `bigint` minor units; timestamps: UTC/`timestamptz`.
-- `tenantId`: UUID, внутренний и не публикуется без необходимости.
-- В MVP один tenant имеет один default restaurant; schema допускает расширение.
-- Реальный заказ всегда создаётся backend. Legacy WhatsApp redirect не является целевой отправкой заказа.
-- Redis, broker, WebFlux, R2DBC, RLS, virtual threads и microservices не входят в MVP.
-- PostgreSQL является источником истины; CDN/cache ускоряет reads, но не подтверждает заказ.
+Сохраняются нейтральные foundations:
 
-## Public API v1
-
-```text
-GET  /api/v1/public/{tenantSlug}/restaurant
-GET  /api/v1/public/{tenantSlug}/menu
-POST /api/v1/public/{tenantSlug}/orders
-```
-
-Tenant resolution precedence:
-
-1. Нормализовать effective host: lowercase, strip port/trailing dot, IDN to ASCII.
-2. Forwarded headers принимать только от trusted ingress.
-3. Active verified custom domain или platform subdomain определяет tenant.
-4. На platform/local host tenant определяется через `{tenantSlug}`.
-5. Если host и slug определяют tenant одновременно, они обязаны совпасть.
-6. Unknown, pending, disabled domain и inactive tenant возвращают `404 TENANT_NOT_FOUND`.
-7. Query, arbitrary header и body `tenantId` не участвуют в resolution.
+- Java 25/Spring Boot/Gradle scaffold;
+- Spring Modulith verification;
+- PostgreSQL/Flyway/Testcontainers;
+- OpenAPI generation pipeline;
+- observability/CI/local infrastructure;
+- domain behavior menu/order/assets/notification, очищенное от tenant scope.
 
 ## Dependency graph
 
 ```text
-PLAN-001 + LEG-001
-        │
-        ├──────────────┬──────────────┐
-        ▼              ▼              ▼
- BE-001/MOD-001     API-001        INF-001
-        └──────────────┼──────────────┘
-                       ▼
-                    DB-001
-                 ┌─────┼───────────┐
-                 ▼     ▼           ▼
-              TEN-001 OBS-001    CI-001
-                 ├──────────────┐
-                 ▼              ▼
-              AST-001         SEC-001
-                 └──────┬───────┘
-                        ▼
-               CFG-001 + MENU-001
-                        │
-          ┌─────────────┼──────────────┐
-          ▼             ▼              ▼
-       MIG-001       WEB-001        ORD-001
-          │             ▼              │
-          │          WEB-002           ▼
-          │             ▼           OUT-001
-          │          CART-001          │
-          │             ▼              │
-          │        CHECKOUT-001 ◄──────┘
-          └─────────────┼──────────────┘
-                        ▼
-                     VAL-001
-                        ▼
-                   CUTOVER-001
+SC-000
+  ├── SC-DB-001 ──┐
+  └── SC-API-001 ─┴→ SC-BE-001 → SC-SEC-001
+                              └→ SC-DATA-001
+                                   ├→ SC-WEB-001 → SC-CART-001
+                                   └→ SC-ORD-001 → SC-OUT-001
+                                                     │
+                                      SC-VAL-001 ◄───┘
+                                           │
+                                      SC-CUTOVER-001
 ```
 
-## Waves
+## Waves and gates
 
-### Wave 0 — architecture and characterization
+### P0 — architecture reset
 
-- `PLAN-001`: архитектурные правила и данный master plan.
-- `LEG-001`: legacy parity, defects и golden scenarios.
+- ADR, AGENTS, impact audits, task registry.
+- Old multi-tenant work clearly marked historical/superseded.
 
-Gate: цели, non-goals, legacy defects и task ownership записаны в repository.
+Gate: architecture docs consistent and checkpoint commit created.
 
-### Wave 1 — независимые foundations
+### P1 — schema and public contract
 
-- `BE-001/MOD-001`: Spring Boot/Gradle scaffold и Modulith boundaries.
-- `API-001`: OpenAPI contract package и deterministic TS generation.
-- `INF-001`: PostgreSQL/MinIO/observability local infrastructure.
+- Append-only final schema without `tenant_id`.
+- Public OpenAPI routes without tenant slug.
 
-Gate: фиксируются package names, API schemas, dependency catalog и datasource conventions.
+Gate: Flyway clean/upgrade and contract generation pass independently.
 
-### Wave 2 — persistence and quality foundations
+### P2 — backend refactor
 
-- `DB-001`: V1–V4 Flyway schema, JPA mappings и tenant-aware constraints.
-- `OBS-001`: базовые logs/traces/health/metrics.
-- `CI-001`: build, contract, migration и security quality gates.
+- `site` and `asset` ownership extracted.
+- `tenancy` resolver/context/lifecycle and migration provisioning removed.
+- Config/menu reads switched to single-client persistence.
+- Public/admin security boundary rebuilt without tenant roles.
 
-Gate: clean PostgreSQL поднимается и мигрируется; module verification и baseline CI зелёные.
+Gate: module, PostgreSQL, MinIO, security and zero-tenant-runtime tests pass.
 
-### Wave 3 — tenant boundary and infrastructure adapters
+### P3 — selected content
 
-- `TEN-001`: trusted host/path resolver и immutable tenant context.
-- `AST-001`: S3-compatible asset adapter и CDN URL policy.
-- `SEC-001`: public/admin boundaries и rate limiting.
+- Owner selects exactly one production dataset.
+- One idempotent import/configuration operation loads it.
 
-Gate: host spoofing, unknown tenant и cross-tenant scenarios покрыты integration tests.
+Gate: public config/menu match the selected approved baseline; other dataset absent.
 
-### Wave 4 — tenant reads and deterministic import
+### P4 — frontend
 
-- `CFG-001`: restaurant/branding/profile/features read API.
-- `MENU-001`: published menu read API с bounded query count.
-- `MIG-001`: idempotent import Stambul/Adamas и assets.
+- Next.js SSR shell, branding, contacts and menu at `/`.
 
-Gate: API возвращает точные tenant fixtures; 23/19 items и category ordering совпадают с legacy.
+Gate: production build, SSR, visual and accessibility tests pass.
 
-### Wave 5 — SSR frontend and browsing
+### P5 — cart, checkout and ordering
 
-- `WEB-001`: Next.js/pnpm scaffold, tenant-aware SSR shell, metadata и errors.
-- `WEB-002`: branding, contacts, menu, filters и Adamas delivery widgets.
+- Versioned single-client cart.
+- RHF/Zod checkout.
+- Server totals, global idempotency, order snapshots and outbox event.
 
-Gate: HTML одного tenant не содержит данные другого; visual/a11y parity для обоих tenants.
+Gate: duplicate/concurrent submit creates one order.
 
-### Wave 6 — cart and checkout UI
+### P6 — external delivery
 
-- `CART-001`: единственный Zustand cart store и versioned tenant-scoped persistence.
-- `CHECKOUT-001`: RHF/Zod checkout, generated client, pending idempotent draft и result UX.
+- Outbox claiming, retries, backoff, dead-letter and configured destination.
 
-Gate: reload/switch/corruption/limits/double-submit scenarios проходят; PII не сохраняется.
+Gate: provider failure never loses a committed order.
 
-### Wave 7 — transactional ordering and delivery
+### P7/P8 — validation and cutover
 
-- `ORD-001`: server validation, totals, snapshots, idempotency, order transaction.
-- `OUT-001`: outbox polling, retries, destination resolution и delivery audit.
+- Contract, security, performance, visual, E2E и production-build gates.
+- Backup/rollback rehearsal, deployment, observation и legacy retirement.
 
-Gate: concurrent double submit создаёт один order; notification failure не теряет order.
-
-### Wave 8 — system validation and cutover
-
-- `VAL-001`: contract, isolation, E2E, visual, accessibility, failure и load validation.
-- `CUTOVER-001`: canary tenant, rollback rehearsal, production checklist и legacy retirement.
-
-Gate: zero cross-tenant reads, zero duplicate orders, green parity suite и подтверждённый rollback.
-
-## Scope boundaries
+## Scope
 
 В migration scope:
 
-- два tenant: `stambul` и `adamas`;
-- white-label configuration;
-- config/menu public reads;
-- menu browsing, contacts, responsive cart и checkout;
+- один клиентский dataset;
+- branding/config/menu/assets;
 - preorder/delivery/pickup;
-- secure backend order creation;
-- tenant-aware notifications;
-- custom/platform domain architecture;
-- assets, caching, observability и CI;
-- controlled legacy cutover.
+- responsive cart/checkout;
+- secure transactional order creation;
+- notification delivery through outbox;
+- CDN/cache/observability/CI;
+- controlled cutover.
 
-Не входят в первый migration release:
+Не входят в первый release:
 
-- полноценная tenant/platform admin UI;
+- multi-tenancy и platform administration;
 - online payment;
-- POS-specific production connector;
-- loyalty/reservations/promotions beyond current visible behavior;
-- multi-restaurant management inside one tenant;
-- Redis/Kafka/Kubernetes/microservice decomposition;
-- separate frontend deployment per tenant.
+- loyalty/reservations/promotions beyond approved behavior;
+- Redis/Kafka/Kubernetes/microservices;
+- параллельные Stambul/Adamas runtime modes.
 
-## Integration rules
+## Product decision gates
 
-- Не смешивать implementation wave с несвязанным legacy cleanup.
-- Не создавать business fixtures в production Flyway migrations.
-- Не коммитить реальные manager phones как public config.
-- Не обещать exactly-once external delivery: outbox даёт durable at-least-once processing; provider idempotency используется где доступно.
-- Не запускать `ORD-001` и `OUT-001` параллельно: они разделяют transaction/event contract.
-- Один агент владеет root Gradle setup; один — initial migrations; один — OpenAPI schema.
-- Frontend начинает real API integration после фиксации API-001; до этого разрешены contract fixtures.
+До production content import владелец должен выбрать ровно один dataset: Stambul,
+Adamas или новый approved bundle. До реальной notification delivery должен быть
+настроен opaque destination reference. Эти два gate не блокируют schema/API/backend
+framework/frontend scaffold work.
 
 ## Completion criteria
 
-Миграция завершена, когда:
-
-- Stambul и Adamas работают на общем codebase без slug-specific branches;
-- tenant определяется только trusted host/path mapping;
-- public API не раскрывает `tenantId`, manager destination или secrets;
-- 42 legacy menu items импортированы с корректными minor-unit prices;
+- runtime code, live schema и public API не содержат tenant abstraction;
+- выбранный config/menu отображается с подтверждённым поведением;
 - order создаётся transactionally с item snapshots и outbox event;
-- идентичный retry возвращает исходный order, конфликтный retry получает `409`;
-- notification failure не меняет успешный order result;
-- tenant data, cache, assets, jobs и logs не пересекаются;
-- legacy parity, security, contract, accessibility и E2E suites зелёные;
-- canary и rollback проверены;
-- legacy удаляется отдельным финальным изменением после rollback window.
-
-## Task registry
-
-Подробные задания находятся в [`tasks/`](./tasks/README.md). Legacy evidence и намеренно не переносимые дефекты описаны в [`legacy-parity.md`](./legacy-parity.md).
+- identical retry возвращает исходный order, conflicting retry получает `409`;
+- notification failure не меняет successful order result;
+- PII/secrets отсутствуют в logs и client bundle;
+- clean/upgrade database, production builds и E2E suites зелёные;
+- cutover/rollback проверены;
+- legacy удалён после observation window.

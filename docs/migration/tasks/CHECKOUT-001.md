@@ -1,6 +1,6 @@
 # CHECKOUT-001 — checkout form and order submission UI
 
-Status: `planned`  
+Status: `superseded`
 Wave: 6/7  
 Dependencies: `CART-001`, `API-001`, `ORD-001`
 

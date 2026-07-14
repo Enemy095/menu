@@ -1,6 +1,6 @@
 # MIG-001A — provisioning foundations
 
-Status: `done`
+Status: `superseded`
 Wave: 4B
 Dependencies: `DB-001`, `TEN-001`, `AST-001`, `CFG-001`, `MENU-001`
 

@@ -2,49 +2,57 @@
 
 ## 1. Назначение и область действия
 
-Этот файл обязателен для всех агентов и распространяется на весь monorepo. Он фиксирует целевую архитектуру multi-tenant white-label платформы и инженерные ограничения на время миграции.
+Этот файл обязателен для всего monorepo. Он фиксирует целевую single-client
+архитектуру и инженерные ограничения на время миграции.
 
-- Не меняйте утверждённые stack, tenancy model, persistence strategy или API style без отдельного решения и ADR.
-- Архитектурные отклонения документируйте в `docs/adr/` с причиной, последствиями и условиями отмены.
-- Не добавляйте преждевременно WebFlux, R2DBC, Kafka, Kubernetes, microservices, GraalVM или Redis.
-- Не создавайте инфраструктурные abstractions без реальной границы, альтернативной реализации или тестовой необходимости.
-- Каталог `Электронное меню/` является legacy-реализацией и источником существующего поведения. Изменяйте его только в рамках согласованного migration slice.
-- Этот документ описывает целевую архитектуру, но не заменяет отдельный пошаговый migration plan.
+Один deployment frontend/backend обслуживает ровно одного клиента. Multi-tenancy
+удаляется полностью: не добавляйте `tenantId`, tenant context/resolver, tenant-scoped
+таблицы, host-to-tenant mapping, tenant routes, tenant cache keys или hidden default
+tenant. ADR-0003 является источником решения.
+
+Агент не меняет утверждённый stack, persistence strategy или API style без отдельного
+ADR. Архитектурное отклонение требует сначала обновить ADR и migration plan.
+
+Запрещено преждевременно добавлять WebFlux, R2DBC, Kafka, Kubernetes, microservices,
+GraalVM, Redis или второй database. Legacy-каталог `Электронное меню/` остаётся
+read-only источником поведения до согласованного migration slice.
 
 ## 2. Утверждённый технологический стек
 
 ### Frontend
 
-- Next.js App Router и React.
-- Strict TypeScript.
-- pnpm workspace и единый lockfile.
-- Server Components по умолчанию; Client Components только для интерактивности и browser APIs.
-- Zustand для корзины и client workflow state.
-- React Hook Form для форм.
-- Zod для runtime validation на внешних границах.
+- Next.js App Router.
+- React и strict TypeScript.
+- pnpm workspace с единым lockfile.
+- Server Components по умолчанию.
+- Zod для browser/external boundaries.
 - TanStack Query только для действительно клиентского server state.
+- Zustand только для cart и client workflow state.
+- React Hook Form для форм.
 - Vitest, Testing Library и Playwright.
 
 ### Backend
 
-- Java 25 через Gradle toolchain.
-- Gradle Wrapper и Gradle Kotlin DSL.
-- Spring Boot, Spring MVC и Spring Modulith.
-- Spring Data JPA и блокирующий JDBC stack.
+- Java 25 toolchain.
+- Spring Boot и Spring MVC.
+- Blocking JDBC/JPA; Spring Data JPA является основной persistence-технологией.
+- Spring Modulith для module boundaries.
+- Gradle Wrapper и Kotlin DSL.
 - PostgreSQL и Flyway.
 - Spring Security.
-- Spring Boot Actuator, Micrometer и OpenTelemetry.
-- JUnit и Testcontainers.
+- Actuator, Micrometer и OpenTelemetry.
+- Testcontainers для PostgreSQL/object-storage integration tests.
+- OpenAPI-first public contract.
 
-### Инфраструктура
+### Infrastructure
 
-- OpenAPI-first контракт.
-- S3-compatible object storage и CDN для tenant assets.
-- Transactional outbox и worker для внешних уведомлений.
-- Redis только после появления измеримой потребности в shared cache, distributed rate limiting или coordination.
-- Начальная deployment-модель — modular monolith, а не microservices.
+- PostgreSQL является источником истины.
+- S3-compatible private object storage и CDN обслуживают assets.
+- Transactional outbox и отдельный worker выполняют внешние интеграции.
+- Redis допустим только после измеримой необходимости для shared cache/rate limit.
+- Начальная deployment-модель — modular monolith, не microservices.
 
-## 3. Целевая структура monorepo
+## 3. Структура monorepo
 
 ```text
 /
@@ -63,110 +71,77 @@
     architecture/
     adr/
     migration/
-  Электронное меню/       # legacy до отдельного migration step
+  Электронное меню/       # read-only legacy
 ```
 
-- `apps/web` — публичное white-label меню.
-- `apps/api` — multi-tenant backend и worker.
+- `apps/web` — публичное приложение единственного клиента.
+- `apps/api` — backend и outbox worker.
 - `packages/api-contract` — OpenAPI и generated TypeScript client.
-- `packages/shared-config` — общая tooling-конфигурация без бизнес-логики.
-- `infra` — local и deployment infrastructure.
+- `packages/shared-config` — tooling configuration без бизнес-логики.
+- `infra` — local/deployment infrastructure.
 - `docs/adr` — архитектурные решения.
-- `docs/migration` — карта и результаты переноса legacy-функций.
+- `docs/migration` — task registry, parity evidence и cutover plan.
 
-Не создавайте эти каталоги пустыми только ради соответствия схеме. Они появляются вместе с первым реальным содержимым.
+Generated code не редактируется вручную. Shared packages не должны превращаться в
+склад domain logic.
 
-## 4. Multi-tenant white-label модель
+## 4. Single-client модель
 
-Главный архитектурный принцип:
+Главный принцип:
 
 ```text
 Один codebase
-+ одно frontend-приложение
++ один frontend
 + один backend
-+ много заведений
++ один клиент на deployment
 ```
 
-Примеры адресации:
+Request host не выбирает business data. Он может проверяться ingress allowlist и
+использоваться для canonical URL, CSP/CORS/cookie policy, но не создаёт application
+context и не участвует в repository queries.
 
-```text
-adamas.platform.example
-stambul.platform.example
-custom-restaurant-domain.ru
-platform.example/adamas
-```
-
-Целевой request flow:
-
-```text
-HTTP request
-→ normalize host/path
-→ TenantResolver
-→ trusted domain/slug mapping
-→ tenantId
-→ immutable tenant context
-→ загрузка config/menu/features/theme по tenantId
-→ SSR/API response
-```
-
-### Tenant resolution
-
-- `tenantId` — внутренний неизменяемый идентификатор.
-- `slug`, platform subdomain и custom domain — изменяемые внешние identifiers.
-- Host/path разрешается в tenant только через серверный trusted registry.
-- Переданный клиентом `tenantId` не считается доверенным.
-- Query-параметр не может переопределять tenant.
-- После resolution внутренние операции используют `tenantId`, а не повторно разбирают host.
-- Tenant context создаётся на границе запроса, остаётся immutable и явно передаётся в application layer.
-- Resolver поддерживает platform subdomain, custom domain, platform path и локальный development mapping.
-- Неизвестный, неактивный или неподтверждённый domain возвращает контролируемый `404`; production fallback на default tenant запрещён.
-- Default tenant допустим только в local development или на явно настроенном platform landing route.
-- Custom domain активируется только после проверки владения.
-- Host header нормализуется и сверяется с registry; не доверяйте произвольному forwarded host без trusted proxy configuration.
-- Background jobs, scheduled jobs и outbox events всегда содержат `tenantId`.
-- Cache key, storage key и rate-limit key обязательно включают tenant scope.
-- Один tenant не может читать, изменять, инвалидировать или кэшировать данные другого.
-
-### White-label данные tenant
-
-По `tenantId` загружаются:
+Клиентские данные единственного deployment:
 
 - display name и business type;
-- logo, favicon и изображения;
+- branding, logo, favicon, hero и изображения;
 - theme и design tokens;
-- contacts, schedule и location;
-- custom domains и SEO metadata;
-- menu и menu version;
-- available order types;
-- feature flags;
-- locale, currency и timezone;
+- contacts, schedule, location и SEO metadata;
+- locale, currency и business timezone;
+- restaurant/service-point configuration;
+- versioned menu;
+- order types и default order type;
+- delivery/preorder/pickup rules;
+- feature configuration;
 - notification destinations;
-- operational limits;
-- delivery configuration.
+- operational limits.
 
-Программный код остаётся общим. Запрещено:
+Эти значения остаются typed configuration/domain data. Запрещено:
 
-- создавать отдельную копию frontend или backend для каждого заведения;
-- добавлять ветки вида `if (tenantSlug === "adamas")` в общий UI или domain logic;
-- хранить tenant-specific JSX либо бизнес-правила в shared code;
-- создавать отдельные таблицы на каждого tenant без ADR;
-- добавлять custom behavior, который нельзя выразить через config, feature module или domain policy.
+- хранить фиктивную единственную tenant row;
+- передавать constant tenant UUID;
+- сохранять `tenant_id` в новых таблицах, DTO, cache keys, jobs или events;
+- механически переименовывать `tenant` в `client` и сохранять прежнюю abstraction;
+- выбирать Stambul/Adamas через runtime slug/host/branch;
+- создавать второй dataset внутри production deployment без нового ADR.
+
+Stambul и Adamas — legacy reference datasets. Production import выбирает ровно один
+dataset явным deployment/migration decision; второй не становится runtime mode.
 
 ## 5. Общесистемная архитектура
 
 ```text
                          CDN
                           │
-               Next.js white-label frontend
-                    SSR / cached pages
+                 Next.js public frontend
+                   SSR / cached pages
                           │
                 Spring Boot modular monolith
                           │
        ┌──────────────────┼──────────────────┐
        │                  │                  │
    PostgreSQL        Object Storage       Redis
- tenant data,         tenant assets      optional:
- menus, orders          + CDN           cache/rate limit
+ config, menu,         immutable assets   optional only
+ orders, outbox             + CDN        after metrics
        │
  Transactional outbox
        │
@@ -175,32 +150,42 @@ HTTP request
  WhatsApp / Telegram / email / POS
 ```
 
-- Backend является источником истины для меню, цен, feature availability и заказов.
-- Frontend не является доверенной средой.
-- Публичные reads проектируются для server/CDN caching.
+- Backend является источником истины.
+- Frontend не считается доверенной средой.
+- Public reads проектируются для server/CDN caching.
 - Writes некэшируемы и идемпотентны.
-- Внешние integrations не выполняются внутри транзакции создания заказа.
-- Модули внутри monolith имеют проверяемые границы.
-- Используйте синхронный межмодульный вызов, если вызывающей стороне нужен немедленный результат.
-- Используйте domain/application events для независимых последствий уже совершённой операции.
-- Микросервис выделяется только по доказанной нагрузочной, deployment или ownership-причине.
+- Внешние интеграции не выполняются внутри transaction создания заказа.
+- Modular monolith разделён на проверяемые bounded modules.
+- Microservice выделяется только по доказанной нагрузочной/организационной причине.
 
 ## 6. Backend modules
 
-Целевые модули:
+Целевая package structure:
 
 ```text
 com.salamu.menu
-  tenancy
+  site
   restaurant
   menu
   ordering
+  asset
   notification
   identity
   shared
 ```
 
-Рекомендуемая структура модуля:
+Назначение:
+
+- `site` — branding, SEO, contacts, locale/timezone и feature configuration.
+- `restaurant` — service point, schedule и operational configuration.
+- `menu` — immutable/versioned published menu.
+- `ordering` — checkout validation, totals, orders и idempotency.
+- `asset` — immutable object metadata/storage operations.
+- `notification` — destinations, outbox delivery и retry audit.
+- `identity` — client-admin authentication/authorization.
+- `shared` — минимальные стабильные primitives без domain ownership.
+
+Внутри модуля:
 
 ```text
 module/
@@ -212,166 +197,162 @@ module/
     web/
 ```
 
-- `tenancy` владеет domain mapping и tenant resolution.
-- `api` — единственный публичный пакет модуля.
+Правила:
+
+- `api` — единственный публичный package модуля.
 - Другие модули не импортируют `internal`.
-- Domain не зависит от Spring MVC, JSON DTO или JPA entities.
+- Domain не зависит от controllers, JSON DTO или JPA entities.
 - Application layer содержит use cases и transaction boundaries.
-- Controllers выполняют HTTP mapping, validation и вызов use case; бизнес-логика в controller запрещена.
-- Repository abstractions принадлежат соответствующему domain/application module.
-- API DTO, domain object и JPA entity являются разными моделями.
-- Межмодульные циклы запрещены и проверяются Spring Modulith.
-- `shared` не используется как склад случайных utilities или business abstractions.
+- Controller выполняет mapping, validation и вызов use case.
+- API DTO, domain object и persistence entity разделены.
+- Межмодульные циклы запрещены.
+- Spring Modulith проверяет boundaries.
+- Модуль не читает напрямую таблицы другого bounded context.
+- `shared` не используется для обхода ownership.
 
-## 7. Spring MVC, concurrency и persistence
+## 7. Spring MVC, transactions и persistence
 
-### Web stack
-
-- Используйте Spring MVC и блокирующую JDBC/JPA модель.
-- WebFlux и R2DBC требуют отдельного ADR и подтверждённой нагрузочной необходимости.
-- Virtual threads включаются только после load tests и проверки pinned threads, pool limits и graceful shutdown.
-- Все executors, schedulers и workers имеют ограниченную concurrency, timeout и корректный shutdown.
-- Не запускайте business-critical работу через необслуживаемый `@Async` или fire-and-forget thread.
-
-### JPA и PostgreSQL
-
-- Open Session in View должен быть отключён.
-- JPA entities не сериализуются в API и не выходят за persistence boundary.
-- Associations и fetch strategy задаются осознанно.
-- N+1 контролируется integration tests, query counting и SQL monitoring.
-- Для read models используйте projections, DTO queries или отдельные query repositories.
-- Pagination обязательна для потенциально растущих коллекций.
+- Используйте Spring MVC и blocking JDBC/JPA.
+- WebFlux/R2DBC запрещены без ADR и нагрузочного доказательства.
+- Virtual threads включаются только после измерений.
+- Open Session in View отключён.
+- JPA entities не сериализуются в API.
+- Associations загружаются осознанно.
+- N+1 контролируется integration tests и SQL monitoring.
+- Read models используют projections/DTO queries.
+- Pagination обязательна для растущих коллекций.
 - Bulk operations не реализуются циклом `save`.
-- Денежные значения хранятся в integer minor units либо точном PostgreSQL `numeric`; `float`/`double` запрещены.
-- Время хранится в UTC; business timezone tenant хранится отдельно.
+- Деньги хранятся в integer minor units, не `double`.
+- Timestamps хранятся в UTC; business timezone хранится отдельно.
 - Все schema changes выполняются Flyway.
-- Применённые production migrations не редактируются; создавайте новую migration.
-- Индексы проектируются под реальные запросы и проверяются через query plans при необходимости.
+- Применённые migrations не редактируются; pivot выполняется append-only migration.
 
-Tenant-зависимые таблицы включают `tenant_id`. Целевая модель содержит как минимум:
+Целевая single-client schema содержит как минимум:
 
 ```text
-tenants
-tenant_domains
-tenant_branding
-tenant_features
+site_configuration
+site_branding
+site_features
 restaurants
 menu_versions
 menu_categories
 menu_items
+assets
+notification_destinations
 orders
 order_items
 outbox_events
+notification_deliveries
 ```
 
-- Уникальные ограничения tenant-owned данных обычно включают `tenant_id`.
-- Repository API для tenant-owned данных требует `TenantId` или tenant context.
-- Запрос без tenant scope запрещён, кроме явно обозначенного platform-admin use case.
-- Native queries проходят отдельную проверку tenant isolation.
-- PostgreSQL Row-Level Security может быть дополнительным слоем, но не заменяет application checks.
-- Создание order, order items и outbox event выполняется одной транзакцией.
+Ни одна целевая таблица не содержит `tenant_id`. Уникальность выражает business key,
+например `restaurant external key`, `(menu_version_id, external_id)` или global
+`idempotency_key`, а не scope фиктивного tenant.
 
-## 8. Security и tenant isolation
+Upgrade path V1–V5 → current и clean install должны проходить на PostgreSQL. После
+переключения code obsolete tenancy/import tables удаляются отдельной проверяемой
+migration. Business fixtures не добавляются в production Flyway.
 
-- Разделяйте public, tenant-admin и platform-admin security boundaries.
-- Tenant admin управляет только собственным tenant.
-- Platform admin имеет отдельную роль и audit trail.
-- Feature flag не заменяет authorization.
-- Все tenant-bound commands проверяют принадлежность ресурса tenant.
-- Знание ID ресурса не предоставляет доступ.
-- Исключите cross-tenant cache poisoning.
-- CORS, CSP, CSRF и cookie domain должны учитывать custom domains и deployment topology.
-- Admin authentication не должна зависеть только от подменяемого Host.
-- Секреты tenant не отправляются в Next.js client bundle.
-- Персональные данные не попадают в application logs, metric labels или traces.
-- Order creation и authentication endpoints защищаются rate limiting.
-- Input validation выполняется и на frontend, и на backend; backend всегда повторно проверяет business invariants.
+## 8. Security
 
-Обязательные security/integration tests:
+- Разделяйте public и client-admin contours.
+- Platform-admin и tenant-admin roles отсутствуют.
+- Feature configuration не является authorization.
+- ID ресурса сам по себе не даёт доступ.
+- Admin commands проверяют роль и resource ownership единственного приложения.
+- CORS, CSP, CSRF и cookie domain настраиваются для canonical deployment domain.
+- Forwarded headers доверяются только известному ingress.
+- Не отправляйте destination references/secrets в Next.js client bundle.
+- PII не попадает в logs, traces или metric labels.
+- Authentication и order creation rate-limited.
+- Public error не раскрывает SQL, object key, credentials или provider details.
 
-- tenant A не читает и не изменяет ресурс tenant B;
-- одинаковые slugs и resource identifiers не конфликтуют между tenant;
-- custom domain разрешается только в подтверждённый активный tenant;
-- неизвестный host не открывает default restaurant;
-- cache одного tenant не возвращается другому;
-- platform-admin и tenant-admin имеют разные границы доступа.
+Обязательные security tests:
 
-## 9. Order lifecycle, idempotency и outbox
+- public пользователь не вызывает admin operation;
+- unknown/forged Host не ослабляет CORS/cookie/canonical policy;
+- forged price/total/menu availability отклоняются;
+- ID другого resource type не проходит ownership check;
+- cache не смешивает версии config/menu;
+- secrets и PII отсутствуют в logs/responses;
+- повторный order request не создаёт duplicate.
+
+## 9. Order lifecycle и outbox
 
 ```text
 HTTP request
-→ tenant resolution
 → rate limit
 → schema validation
-→ idempotency lookup within tenant
+→ idempotency lookup
 → restaurant/menu validation
 → server-side price calculation
 → transaction:
      order
-     order_items with snapshots
-     outbox_event with tenantId
+     order_items snapshots
+     outbox_event
 → commit
 → response
 → worker
-→ tenant-specific notification/POS
+→ configured notification/POS destination
 ```
 
 - `clientTotal` не является источником истины.
-- Backend рассчитывает и сохраняет `serverTotal`.
-- `Idempotency-Key` обязателен для создания заказа.
-- Минимальная database uniqueness: `(tenant_id, idempotency_key)`.
-- Повтор идентичного запроса возвращает исходный результат.
-- Тот же ключ с другим canonical payload hash возвращает conflict.
-- `order_items` хранит snapshots названия, цены и выбранных модификаторов.
-- Destination внешнего уведомления определяется backend по tenant config.
-- Worker поддерживает retry, bounded exponential backoff, attempt count и dead-letter/failed state.
+- Backend рассчитывает `serverTotal`.
+- `Idempotency-Key` обязателен.
+- Global uniqueness: минимум `UNIQUE (idempotency_key)`.
+- Повтор идентичного payload возвращает исходный заказ.
+- Тот же key с другим payload возвращает `409 conflict`.
+- `order_items` хранит snapshot названия, цены и modifiers.
+- Destination определяется server-side configuration.
+- Worker поддерживает retry, backoff, attempt count и dead-letter state.
 - Ошибка уведомления не отменяет созданный заказ.
-- Side effects не выполняются до успешного commit.
+- Не обещайте exactly-once внешнюю доставку; outbox обеспечивает durable at-least-once.
 
 ## 10. OpenAPI-first
 
-Изменение API выполняется только в таком порядке:
+Workflow:
 
-1. Изменить OpenAPI в `packages/api-contract`.
-2. Выполнить lint и backward-compatibility check.
+1. Изменить OpenAPI.
+2. Выполнить lint и compatibility check.
 3. Сгенерировать TypeScript client.
 4. Обновить Spring implementation.
-5. Запустить contract и integration tests.
-6. Только затем использовать endpoint во frontend.
+5. Запустить contract/integration tests.
+6. Использовать endpoint во frontend.
+
+Целевые routes:
+
+```text
+GET  /api/v1/public/config
+GET  /api/v1/public/menu
+POST /api/v1/public/orders
+```
 
 Правила:
 
-- Используйте один versioned public API namespace.
-- Generated code не редактируется вручную.
-- Ошибка имеет единый envelope с `code`, `message`, `details` и `traceId`.
-- Tenant-aware routes используют host/slug context согласованно.
-- Внутренний `tenantId` не раскрывается без необходимости.
-- Breaking change требует новой API version либо явно согласованной migration strategy.
-- Устраните legacy-расхождение между `/api/public/orders` и `/api/v1/public/{slug}/orders`; не переносите оба варианта в новый API.
-- Java controllers реализуют контракт, но не определяют его независимо от OpenAPI.
+- Один versioned public namespace.
+- Generated code не редактируется.
+- Единый error envelope: `code`, `message`, `details`, `traceId`.
+- Public DTO не содержит tenant slug/ID/context.
+- Breaking change требует новой версии или явной compatibility migration.
+- Public routes без tenant slug являются canonical contract.
 
-## 11. Next.js white-label frontend
+## 11. Next.js frontend
 
-- Используйте App Router.
-- Platform route — `/[tenantSlug]`.
-- Custom domains разрешаются server-side до загрузки tenant data.
+- Next.js App Router.
+- Главный public route — `/`.
 - Server Components используются по умолчанию.
-- Client Components создаются только для state, event handlers, forms и browser APIs.
-- Tenant config, branding, menu и features загружаются на сервере.
-- Данные других tenant не включаются в HTML, RSC payload или client bundle.
-- Metadata, canonical URL, sitemap и Open Graph формируются по tenant и canonical domain.
-- Кэширование и revalidation задаются явно по типу данных.
-- TanStack Query не дублирует уже полученный server state без реальной клиентской необходимости.
-- Zustand содержит только cart и client workflow state.
-- React Hook Form владеет состоянием формы.
-- Zod проверяет данные на внешних runtime boundaries.
-- Tenant branding выражается через typed config, design tokens и CSS variables.
-- Feature flags типизированы и поступают с backend.
-- Tenant-specific JSX, CSS forks и hardcoded slug branches запрещены.
-- Не обращайтесь к DOM напрямую, если поведение можно выразить React component/state.
-- Не импортируйте server-only modules в Client Components.
+- Client Components — только cart, forms и browser APIs.
+- Config, branding и menu загружаются server-side.
+- Metadata, canonical URL, sitemap и Open Graph формируются для deployment domain.
+- TanStack Query применяется только для клиентского server state.
+- Zustand содержит cart и client workflow state.
+- React Hook Form управляет checkout form.
+- Zod проверяет browser/external boundaries.
+- Server state не копируется в Zustand.
+- Branding выражается typed design tokens/CSS variables.
+- Feature configuration типизирована и поступает с backend.
 
-Целевые frontend layers:
+Frontend layers:
 
 ```text
 src/
@@ -383,7 +364,7 @@ src/
   shared/
 ```
 
-Разрешённое направление зависимостей:
+Зависимости:
 
 ```text
 app/pages
@@ -393,20 +374,13 @@ app/pages
 → shared
 ```
 
-- `entities` не зависят от `features`, `widgets` или `pages`.
-- Feature представляет законченное пользовательское действие.
-- UI components не выполняют скрытые API calls.
-- Формирование order payload изолировано от rendering.
-- Денежное и локализованное форматирование централизовано.
+Не создавайте tenant-aware routes, stores, providers или client branches.
 
 ## 12. Cart persistence
-
-Целевая persisted-модель:
 
 ```ts
 type PersistedCart = {
   schemaVersion: number;
-  tenantId: string;
   restaurantId: string;
   menuVersion: number;
   orderType: OrderType;
@@ -417,108 +391,101 @@ type PersistedCart = {
 };
 ```
 
-- Storage key scoped по tenant и restaurant.
-- Корзина одного tenant не открывается у другого.
-- Персональные данные по умолчанию не сохраняются.
+- Storage key versioned, но не tenant-scoped.
+- PII по умолчанию не сохраняется.
 - Повреждённое состояние удаляется безопасно.
-- Неизвестная `schemaVersion` не интерпретируется без migration.
-- При восстановлении позиции проверяются по актуальному меню.
-- Persisted price и name не являются доверенными полями.
-- Недоступные позиции удаляются с понятным уведомлением.
-- Quantity limits проверяются в UI/store и повторно на backend.
+- Неизвестная schema version не интерпретируется.
+- Items проверяются по актуальному menu.
+- Persisted price/name не считаются доверенными.
+- Недоступные items удаляются с уведомлением.
+- Quantity limits повторно проверяются backend.
 
 ## 13. Cache, CDN и assets
 
 - Static assets и versioned images обслуживаются CDN.
-- Cache key включает tenant, locale и menu version.
-- Host/path участвует в tenant resolution до обращения к tenant cache.
-- Cache invalidation всегда ограничивается конкретным tenant.
-- Custom domains не создают независимые несогласованные копии tenant cache.
-- Публикация меню инвалидирует только страницы и данные соответствующего tenant.
-- Redis не является обязательной зависимостью MVP.
-- Redis разрешён для distributed rate limiting, shared cache или coordination после измерений.
-- Redis никогда не является единственным источником истины заказа.
-- Tenant assets хранятся в S3-compatible object storage.
-- Object keys включают tenant scope и content/version hash.
-- Upload authorization проверяет tenant ownership.
+- Cache key включает resource, locale и menu/config version.
+- Публикация menu/config инвалидирует только соответствующие versioned entries.
+- Redis не обязателен для MVP.
+- Redis разрешён после измерений для distributed rate limit/shared cache/coordination.
+- Redis не является источником истины orders.
+- Assets хранятся в private S3-compatible storage.
+- Canonical object key: `assets/{kind}/{sha256}.{ext}`.
+- Public URL: `{cdnBase}/assets/{kind}/{sha256}.{ext}`.
+- Upload проверяет media type, magic bytes, size и declared kind.
+- Content-addressed object immutable; другие bytes не записываются по тому же hash key.
+- Bucket listing, credentials и signed origin URLs не раскрываются.
 
 ## 14. Observability
 
-- Используйте structured JSON logs.
-- Correlation/trace ID проходит через web, API, database-related spans и worker.
-- Безопасный `tenantId` или slug включается в tracing context.
-- Не используйте phone, user ID или order ID как metric labels.
-- Actuator endpoints разделяются на internal и public exposure.
+- Structured JSON logs.
+- Correlation/trace ID проходит через web, API и worker.
+- Tenant/client dimension отсутствует.
+- Phone, user ID и order ID не используются как metric labels.
+- Actuator endpoints разделяются на internal/public.
 - Micrometer собирает HTTP, JVM, DB pool и business metrics.
-- OpenTelemetry используется для distributed traces.
+- OpenTelemetry используется для traces.
 - Sentry или эквивалент собирает frontend/backend exceptions.
-- Health и readiness не смешиваются: instance не ready, если не может обслужить обязательные зависимости.
 
-Минимальные business metrics:
+Business metrics:
 
 - orders created/rejected;
 - idempotent replays;
 - outbox backlog;
-- notification attempts/failures;
-- tenant resolution failures;
+- notification failures;
 - menu load latency;
 - cache hit ratio;
-- checkout conversion events.
+- checkout conversion.
 
-Следите за cardinality при добавлении tenant dimension; не добавляйте unbounded tenant labels без оценки стоимости monitoring backend.
+## 15. Тестирование
 
-## 15. Тестовая стратегия
+Backend:
 
-### Backend
+- unit domain tests;
+- Spring Modulith module tests;
+- PostgreSQL integration tests через Testcontainers;
+- JPA query/N+1 tests;
+- API contract tests;
+- idempotency/concurrency tests;
+- outbox recovery tests;
+- security and log-redaction tests;
+- clean/upgrade Flyway tests.
 
-- Unit tests для domain policies.
-- Spring Modulith module tests и verification.
-- PostgreSQL integration tests через Testcontainers.
-- Repository tests для tenant isolation и SQL behavior.
-- JPA query/N+1 tests.
-- OpenAPI contract tests.
-- Idempotency и concurrency tests.
-- Outbox retry/recovery tests.
-- Public/admin security tests.
+Frontend:
 
-### Frontend
+- Vitest unit tests;
+- Testing Library component tests;
+- Zod/schema tests;
+- Zustand persistence tests;
+- Playwright E2E;
+- accessibility tests;
+- visual regression;
+- SSR, metadata и cache tests.
 
-- Unit tests на Vitest.
-- Component tests через Testing Library.
-- Zod/schema tests.
-- Zustand persistence и migration tests.
-- Playwright E2E.
-- Accessibility checks.
-- Visual regression для tenant themes.
-- SSR, host resolution, metadata и cache tests.
+E2E:
 
-### Обязательные E2E-сценарии
-
-- открыть tenant по platform URL;
-- открыть tenant по custom domain;
-- получить `404` для неизвестного domain;
-- отфильтровать меню и изменить корзину;
-- восстановить корзину после reload;
-- убедиться, что смена tenant не переносит корзину;
-- оформить preorder, delivery и pickup согласно tenant features;
-- корректно обработать validation error и устаревшее меню;
-- двойной submit создаёт один order;
-- tenant branding и features применяются корректно;
-- data и cache не пересекаются между tenant;
-- падение внешнего уведомления не приводит к потере заказа.
+- открыть `/` и получить correct branding/menu;
+- добавить items и восстановить cart;
+- оформить preorder/delivery/pickup согласно configuration;
+- double submit создаёт один order;
+- stale menu обрабатывается безопасно;
+- forged total игнорируется/отклоняется;
+- notification failure не теряет order;
+- admin/public boundaries не пересекаются;
+- sensitive data отсутствует в browser bundle/logs.
 
 ## 16. Tooling и CI
 
-- Java 25 задаётся через Gradle toolchain.
-- Используется только Gradle Wrapper и `build.gradle.kts`.
-- Frontend использует pnpm workspace и единый lockfile.
-- TypeScript работает в strict mode.
-- Используются ESLint и Prettier.
-- Docker Compose поднимает PostgreSQL и только реально необходимые локальные зависимости.
-- `.env.example` содержит имена переменных и безопасные примеры, но не secrets.
-- Generated sources проверяются в CI.
+- Java 25 toolchain.
+- Gradle Wrapper и Kotlin DSL.
+- pnpm workspace и единый lockfile.
+- TypeScript strict.
+- ESLint и Prettier.
+- Docker Compose для local dependencies.
+- `.env.example` без secrets.
+- OpenAPI generation check.
+- Secret/dependency/container scanning.
 
-Целевые команды после появления соответствующего scaffolding:
+Целевые команды:
 
 ```text
 pnpm install
@@ -531,9 +498,7 @@ pnpm --filter web test:e2e
 docker compose up
 ```
 
-Не утверждайте, что целевая команда уже работает, пока соответствующий build file не создан и команда не проверена.
-
-Минимальный CI pipeline:
+CI:
 
 ```text
 OpenAPI lint/compatibility
@@ -543,35 +508,43 @@ OpenAPI lint/compatibility
 → PostgreSQL integration tests
 → production builds
 → Playwright E2E
-→ dependency/secret/container scans
-→ preview или staging deployment
+→ security scans
+→ preview/staging deployment
 ```
 
-Merge блокируется при нарушении module boundaries, рассинхронизации generated client, Flyway validation error, failing tenant isolation/idempotency test, failing production build или обнаруженном committed secret.
+Merge блокируется при нарушении module boundaries, generated-client drift, Flyway
+validation error, failing idempotency/security test, production build failure или
+committed secret.
 
 ## 17. Migration guardrails
 
-- Legacy остаётся поведенческим эталоном, но не архитектурным образцом.
-- Сначала зафиксируйте существующие пользовательские сценарии E2E-тестами.
-- Перенос выполняйте vertical slices, а не одновременной заменой всех слоёв.
-- Первый фундаментальный slice — tenant resolution и immutable tenant context.
-- Старый и новый frontend не должны параллельно создавать реальные дублирующиеся заказы.
-- Каждая перенесённая функция получает acceptance tests.
-- Не переносите глобальные `window.*`, двойной state и legacy API inconsistencies.
-- Tenant-specific legacy branches преобразуйте в config, feature modules или domain policies.
-- Любое временное compatibility behavior документируйте в `docs/migration/`.
-- Legacy удаляется только после production validation, observability review и rollback window.
+- Legacy остаётся поведенческим эталоном до production validation.
+- Сначала существующие сценарии фиксируются acceptance/E2E tests.
+- Перенос выполняется vertical slices.
+- ADR-0003 отменяет multi-tenant target и двух-tenant importer.
+- V1–V5 не редактируются; single-client pivot append-only.
+- Сначала вводится single-client replacement, затем переключаются callers, затем
+  удаляются tenancy/migration structures.
+- Не оставляйте constant/default tenant compatibility layer.
+- Legacy Stambul/Adamas branches преобразуются в выбранные client configuration,
+  feature modules или честный client-specific code, но не runtime tenant switch.
+- Один production dataset выбирается до content import.
+- Старый и новый frontend не создают параллельные реальные orders.
+- Каждая функция получает acceptance tests.
+- Не переносите global `window.*`, двойной state и API inconsistencies.
+- Legacy удаляется после production validation и rollback window.
 
-## 18. Definition of Done для архитектурных изменений
+## 18. Definition of Done
 
-Архитектурное изменение завершено, когда:
+Изменение завершено, если:
 
-- соблюдены tenant boundaries во всех queries, caches, storage keys, jobs и events;
-- OpenAPI, generated client и Spring implementation синхронизированы;
-- добавлены unit/integration/E2E tests соразмерно риску;
-- проверены security, idempotency и failure paths;
-- миграции Flyway проходят на чистой и существующей schema;
-- добавлена необходимая observability без утечки PII;
-- документация и ADR обновлены;
-- relevant build, tests и `git diff --check` проходят;
-- legacy behavior не изменён случайно.
+- соблюдены module ownership и dependency direction;
+- отсутствуют `tenantId`, tenant context/resolver и tenant-scoped persistence/runtime;
+- public contract соответствует single-client routes;
+- schema работает на clean PostgreSQL и upgrade V1–V5;
+- security, idempotency и transaction invariants покрыты tests;
+- logs/metrics не раскрывают PII/secrets и не содержат obsolete tenant context;
+- OpenAPI/generated client синхронизированы;
+- backend/frontend production builds проходят;
+- docs/task registry отражают фактическое состояние;
+- `git diff --check` чист.

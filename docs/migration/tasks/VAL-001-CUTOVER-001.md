@@ -1,6 +1,6 @@
 # VAL-001/CUTOVER-001 — system validation, canary and legacy retirement
 
-Status: `planned`  
+Status: `superseded`
 Wave: 8  
 Dependencies: all implementation tasks
 

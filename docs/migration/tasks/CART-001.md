@@ -1,6 +1,6 @@
 # CART-001 — tenant-scoped persisted cart
 
-Status: `planned`  
+Status: `superseded`
 Wave: 6  
 Dependencies: `WEB-002`
 

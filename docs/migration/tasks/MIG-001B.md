@@ -1,6 +1,6 @@
 # MIG-001B — manifest parser and zero-write dry-run
 
-Status: `ready`
+Status: `superseded`
 Wave: 4B
 Dependencies: `MIG-001A`, `MIG-001` Phase A, `ADR-0002`
 

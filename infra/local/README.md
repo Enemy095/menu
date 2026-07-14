@@ -2,15 +2,15 @@
 
 This Compose stack is for local development only. It deliberately contains no
 production credentials, Redis, message broker, external telemetry exporter or
-tenant production data.
+production business data.
 
 ## Services and ports
 
 | Service | Profile | Host ports | Purpose |
 |---|---|---|---|
 | `postgres` | default | `5432` | PostgreSQL 17 database `emenu` |
-| `minio` | `assets` | `9000`, `9001` | S3-compatible tenant assets and console |
-| `minio-init` | `assets` | none | One-shot creation of `tenant-assets-local` |
+| `minio` | `assets` | `9000`, `9001` | S3-compatible single-client assets and console |
+| `minio-init` | `assets` | none | One-shot creation of `menu-assets-local` |
 | `otel-collector` | `observability` | `4317`, `4318`, `13133` | Local OTLP and health endpoints |
 | `prometheus` | `observability` | `9090` | Local metrics storage and UI |
 
@@ -62,7 +62,7 @@ docker compose logs --tail 100 postgres
 docker compose logs -f postgres
 ```
 
-## Optional tenant assets
+## Optional single-client assets
 
 Start MinIO and run the idempotent bucket initializer:
 
@@ -76,6 +76,39 @@ docker compose --profile assets ps
 MinIO API is at `http://localhost:9000`; its console is at
 `http://localhost:9001`. The bucket is private by default. The local access
 values live in `.env.example` and are not production credentials.
+
+### Existing local MinIO volume
+
+The canonical local bucket is `menu-assets-local` in Compose, `.env.example` and the
+Spring `local` profile. Changing this default does not rename a bucket already stored in
+the named `minio-data` volume. An existing `.env` also continues to override the new
+default until it is updated.
+
+For an empty/disposable local asset store, use the destructive reset documented below and
+then run `minio-init`. To preserve objects, start MinIO, copy each legacy bucket into the
+new private bucket, verify the copy, and retain the source bucket for rollback:
+
+```powershell
+docker compose --profile assets up -d --wait minio
+$env:SOURCE_BUCKET = "emenu-assets-local" # repeat with tenant-assets-local if it exists
+$env:TARGET_BUCKET = "menu-assets-local"
+docker compose --profile assets run --rm `
+  -e SOURCE_BUCKET -e TARGET_BUCKET `
+  --entrypoint /bin/sh minio-init -ec '
+    mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+    mc mb --ignore-existing "local/$TARGET_BUCKET"
+    mc anonymous set none "local/$TARGET_BUCKET"
+    mc stat "local/$SOURCE_BUCKET"
+    mc mirror --overwrite "local/$SOURCE_BUCKET" "local/$TARGET_BUCKET"
+    mc du "local/$SOURCE_BUCKET"
+    mc du "local/$TARGET_BUCKET"
+  '
+```
+
+After verifying object counts and hashes required by the selected dataset, update the
+existing `.env` values `MINIO_BUCKET`, `ASSET_STORAGE_BUCKET` and `ASSET_BASE_URL` to
+`menu-assets-local`, restart the API, and keep the source bucket through the rollback
+window. The procedure never deletes the source bucket automatically.
 
 ## Optional observability
 

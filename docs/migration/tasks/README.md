@@ -28,10 +28,10 @@
 | SC-SEC-001 | Single-client public/admin security boundary | SC-API-001 | P2 | done |
 | SC-DATA-001 | Dataset inventory готов; выбор и import одного legacy dataset | SC-BE-001, client selection | P3 | blocked |
 | SC-WEB-001 | Next.js SSR config/menu frontend | SC-API-001; content cutover waits for SC-DATA-001 | P4 | done |
-| SC-CART-001 | Single-client persisted cart и checkout | SC-WEB-001 | P5 | blocked |
+| SC-CART-001 | Single-client persisted cart и checkout | SC-WEB-001, SC-ORD-001 | P5 | done |
 | SC-ORD-001 | Orders, global idempotency и totals | SC-BE-001, SC-API-001, SC-SEC-001 | P5 | done |
 | SC-OUT-001 | Transactional outbox worker | SC-ORD-001 | P6 | done |
-| SC-VAL-001 | Full-system validation | all SC implementation tasks | P7 | blocked |
+| SC-VAL-001 | Full-system validation foundation; data/cart acceptance pending | all SC implementation tasks | P7 | in_progress |
 | SC-CUTOVER-001 | Production cutover и legacy retirement | SC-VAL-001 | P8 | blocked |
 | WEB-001 | Next.js SSR tenant shell | API-001 | 5 | superseded |
 | WEB-002 | Branding/menu/contact/delivery UI | WEB-001, CFG-001, MENU-001 | 5 | superseded |
@@ -45,6 +45,11 @@
 `SC-DATA-001` находится в состоянии `decision-required`: inventories и final mapping
 зафиксированы, но владелец ещё не выбрал `Stambul`, `Adamas` или новый approved bundle.
 До явного решения импорт production content запрещён.
+
+`SC-VAL-001` находится в `in_progress`: нейтральные contract/web/backend/architecture
+gates и disposable PostgreSQL smoke исполнимы без production dataset. Полная release
+acceptance остаётся заблокирована до завершения `SC-DATA-001`, `SC-CART-001` и проверки
+на выбранном staging dataset; статус `done` до этого запрещён.
 
 ## Agent contract
 

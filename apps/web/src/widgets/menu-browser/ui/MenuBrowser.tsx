@@ -1,6 +1,7 @@
 import type { MenuCategory, MenuItem } from "@e-menu/api-contract/generated";
 
 import { CategoryFilter } from "@/features/category-filter/ui/CategoryFilter";
+import { AddToCartControl } from "@/features/cart/ui/AddToCartControl";
 import { formatMoney } from "@/shared/lib/format-money";
 
 type MenuBrowserProps = {
@@ -9,9 +10,17 @@ type MenuBrowserProps = {
   items: MenuItem[];
   locale: string;
   currency: string;
+  orderingEnabled?: boolean;
 };
 
-export function MenuBrowser({ title, categories, items, locale, currency }: MenuBrowserProps) {
+export function MenuBrowser({
+  title,
+  categories,
+  items,
+  locale,
+  currency,
+  orderingEnabled = false,
+}: MenuBrowserProps) {
   const orderedCategories = [...categories].sort((left, right) => left.sortOrder - right.sortOrder);
   const orderedItems = [...items].sort((left, right) => left.sortOrder - right.sortOrder);
   const filterCategories = orderedCategories.map((category) => ({
@@ -42,6 +51,13 @@ export function MenuBrowser({ title, categories, items, locale, currency }: Menu
                   </div>
                   {item.description ? <p>{item.description}</p> : null}
                   {!item.available ? <span className="availability">Временно недоступно</span> : null}
+                  {orderingEnabled && item.available ? (
+                    <AddToCartControl
+                      menuItemId={item.menuItemId}
+                      locale={locale}
+                      currency={currency}
+                    />
+                  ) : null}
                 </div>
               </li>
             ))}

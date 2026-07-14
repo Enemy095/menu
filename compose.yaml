@@ -52,7 +52,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-emenu-local}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
-      MINIO_BUCKET: ${MINIO_BUCKET:-tenant-assets-local}
+      MINIO_BUCKET: ${MINIO_BUCKET:-menu-assets-local}
     entrypoint:
       - /bin/sh
       - -ec

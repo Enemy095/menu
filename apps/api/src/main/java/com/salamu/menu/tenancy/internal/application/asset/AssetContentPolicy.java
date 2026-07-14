@@ -18,6 +18,8 @@ final class AssetContentPolicy {
     private static final Map<AssetKind, Policy> POLICIES = Map.of(
             AssetKind.LOGO, new Policy(5 * MEBIBYTE, Set.of("image/png", "image/jpeg", "image/webp")),
             AssetKind.FAVICON, new Policy(1 * MEBIBYTE, Set.of("image/png", "image/x-icon", "image/vnd.microsoft.icon")),
+            AssetKind.HERO, new Policy(10 * MEBIBYTE, Set.of("image/png", "image/jpeg", "image/webp")),
+            AssetKind.OPEN_GRAPH, new Policy(10 * MEBIBYTE, Set.of("image/png", "image/jpeg", "image/webp")),
             AssetKind.MENU_CATEGORY_IMAGE,
                     new Policy(10 * MEBIBYTE, Set.of("image/png", "image/jpeg", "image/webp")),
             AssetKind.MENU_ITEM_IMAGE,

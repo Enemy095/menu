@@ -46,6 +46,17 @@ class AssetContentPolicyTests {
     }
 
     @Test
+    void acceptsDedicatedHeroAndOpenGraphImageKinds() {
+        for (AssetKind kind : new AssetKind[] {AssetKind.HERO, AssetKind.OPEN_GRAPH}) {
+            ValidatedAssetContent validated = contentPolicy.validate(
+                    new TenantAssetImportRequest(kind, "image/png", "png", pngContent()));
+
+            assertThat(validated.kind()).isEqualTo(kind);
+            assertThat(validated.extension()).isEqualTo("png");
+        }
+    }
+
+    @Test
     void rejectsUnknownTypeMismatchedExtensionAndSpoofedBytes() {
         assertThatThrownBy(() -> contentPolicy.validate(
                         new TenantAssetImportRequest(AssetKind.LOGO, "text/html", "html", pngContent())))

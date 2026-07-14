@@ -26,6 +26,7 @@ provider payloads, destination locators and provider message identifiers.
 | Command | Exit | Duration | Safe artifact/log link | Notes |
 |---|---:|---:|---|---|
 | `pnpm validate:full` | `<code>` | `<duration>` | `<link>` | `<first failure or pass>` |
+| `pnpm validate:acceptance` | `<code>` | `<duration>` | `<link>` | `<bundle/oracle hash, dry-run/apply, exact API/SSR, order/outbox result>` |
 | `docker compose config --quiet` | `<code>` | `<duration>` | `<link>` | |
 | all-profile Compose validation | `<code>` | `<duration>` | `<link>` | |
 | security workflow | `<status>` | `<duration>` | `<link>` | `<findings>` |
@@ -46,7 +47,7 @@ replace missing evidence or an unexecuted test.
 | Assertion | Result/evidence |
 |---|---|
 | Unique tmpfs-only database container removed | `<result>` |
-| Flyway current version | `8` / `<actual>` |
+| Flyway current version | `9` / `<actual>` |
 | Liveness/readiness | `<status>` |
 | Empty config/menu fail-closed | `<HTTP/code/cache/trace result>` |
 | Exact public schema set | `<18 expected application tables + flyway_schema_history; no missing/unexpected>` |
@@ -65,6 +66,13 @@ replace missing evidence or an unexecuted test.
 - Checkout order-type and double-submit evidence: `<links>`
 - Responsive viewport and visual baseline evidence: `<links>`
 - Keyboard/screen-reader/axe evidence: `<links>`
+
+For local approved-dataset evidence, also record the pinned PostgreSQL/MinIO images,
+loopback/tmpfs assertions, importer dry-run zero-write result, deterministic ID anchors,
+production/acceptance JAR isolation result, synthetic destination insertion point,
+notification audit sequence, final order/outbox counts and post-run owned-container count.
+Never record disposable credentials, phone/address/comment payloads, destination locators
+or provider identifiers.
 
 ## Performance and resilience
 

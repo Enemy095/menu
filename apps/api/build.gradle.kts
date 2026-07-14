@@ -14,6 +14,16 @@ java {
     }
 }
 
+val acceptance = sourceSets.create("acceptance") {
+    java.srcDir("src/acceptance/java")
+    resources.srcDir("src/acceptance/resources")
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += output + compileClasspath
+}
+
+configurations[acceptance.implementationConfigurationName].extendsFrom(configurations.implementation.get())
+configurations[acceptance.runtimeOnlyConfigurationName].extendsFrom(configurations.runtimeOnly.get())
+
 dependencies {
     implementation(platform(libs.aws.sdk.bom))
     implementation(platform(libs.spring.boot.bom))
@@ -60,4 +70,33 @@ tasks.withType<Test>().configureEach {
 
 tasks.named<BootJar>("bootJar") {
     archiveFileName = "menu-platform-api.jar"
+}
+
+val acceptanceBootJar = tasks.register<BootJar>("acceptanceBootJar") {
+    group = "verification"
+    description = "Builds a local-only API jar with deterministic no-network acceptance support."
+    archiveFileName = "menu-platform-api-acceptance.jar"
+    mainClass = "com.salamu.menu.MenuPlatformApplication"
+    targetJavaVersion = JavaVersion.VERSION_25
+    classpath(acceptance.runtimeClasspath)
+}
+
+tasks.register<JavaExec>("verifyAcceptanceArtifactIsolation") {
+    group = "verification"
+    description = "Proves local acceptance support is absent from the production executable jar."
+    dependsOn(tasks.named("bootJar"), acceptanceBootJar)
+    classpath = acceptance.runtimeClasspath
+    mainClass = "com.salamu.menu.acceptance.AcceptanceArtifactVerifier"
+    args(
+        layout.buildDirectory.file("libs/menu-platform-api.jar").get().asFile.absolutePath,
+        layout.buildDirectory.file("libs/menu-platform-api-acceptance.jar").get().asFile.absolutePath,
+    )
+}
+
+tasks.register<JavaExec>("runDataImport") {
+    group = "application"
+    description = "Validates or applies the pinned owner-approved Stambul dataset."
+    workingDir(rootProject.projectDir)
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "com.salamu.menu.dataimport.api.StambulDataImportCommand"
 }

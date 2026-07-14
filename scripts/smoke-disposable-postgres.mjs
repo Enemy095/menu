@@ -73,7 +73,7 @@ if (failure) {
   process.exitCode = process.exitCode || 1;
 } else if (smokeAssertionsPassed) {
   console.log(
-    "Disposable smoke passed: V8 schema, healthy probes, fail-closed public reads, "
+    "Disposable smoke passed: V9 schema, healthy probes, fail-closed public reads, "
       + "exact public schema and every discovered application table empty, process/container cleanup proven.",
   );
 }
@@ -303,7 +303,7 @@ function assertDatabaseState() {
     "SELECT 'version=' || version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1;",
   ].join("\n"), "Disposable database identity assertions");
   const identity = new Set(outputLines(identityOutput));
-  for (const assertion of [`database=${databaseName},user=${databaseUser}`, "version=8"]) {
+  for (const assertion of [`database=${databaseName},user=${databaseUser}`, "version=9"]) {
     assert(identity.has(assertion), `database assertion missing ${assertion}; received ${[...identity].join(", ")}`);
   }
 

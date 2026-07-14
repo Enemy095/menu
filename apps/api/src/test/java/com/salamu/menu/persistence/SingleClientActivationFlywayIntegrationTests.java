@@ -69,7 +69,7 @@ class SingleClientActivationFlywayIntegrationTests {
         assertThat(flyway.migrate().success).isTrue();
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
 
-        assertThat(currentVersion(schema)).isEqualTo("8");
+        assertThat(currentVersion(schema)).isEqualTo("9");
         assertThat(tableExists(schema, "site_configuration")).isTrue();
         assertThat(tableExists(schema, "menu_modifier_groups")).isTrue();
         assertThat(tableExists(schema, "menu_modifier_options")).isTrue();
@@ -99,7 +99,7 @@ class SingleClientActivationFlywayIntegrationTests {
 
         assertThat(approvedFlyway(schema, approvedFingerprint, RUNTIME_ROLE).migrate().success).isTrue();
 
-        assertThat(currentVersion(schema)).isEqualTo("8");
+        assertThat(currentVersion(schema)).isEqualTo("9");
         assertThat(count(schema, "restaurants")).isOne();
         assertThat(count(schema, "menu_versions")).isEqualTo(2);
         assertThat(count(schema, "orders")).isOne();
@@ -113,6 +113,8 @@ class SingleClientActivationFlywayIntegrationTests {
                 .isEqualTo("[{\"name\": \"extra cheese\"}]");
         assertThat(queryString(schema, "SELECT object_key FROM assets WHERE id = '" + ASSET + "'"))
                 .isEqualTo("assets/logo/" + "a".repeat(64) + ".png");
+        assertThat(queryString(schema, "SELECT logo_alt FROM site_branding"))
+                .isEqualTo("Single site");
         assertThat(queryString(schema, "SELECT currency FROM menu_versions WHERE id = '" + MENU_VERSION + "'"))
                 .isEqualTo("RUB");
         assertThat(queryString(schema, "SELECT currency FROM menu_versions WHERE id = '"

@@ -20,6 +20,7 @@ class ModularityTests {
                 .collect(Collectors.toSet()))
                 .isEqualTo(Set.of(
                         "asset",
+                        "dataimport",
                         "restaurant",
                         "site",
                         "menu",

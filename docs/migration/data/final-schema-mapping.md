@@ -1,13 +1,13 @@
 # Legacy to final single-client mapping
 
-Status: `proposed; blocked by owner decision`
+Status: `implemented for STAMBUL_APPROVED; production values gated`
 Task: [SC-DATA-001](../tasks/SC-DATA-001.md)
 Contract: `packages/api-contract/openapi/openapi.yaml`
 Schema: Flyway V6 shadow model activated/finalized by V7
 
 ## Mapping rules
 
-- Import exactly one dataset; rows from the other dataset are absent.
+- Import exactly the owner-selected Stambul dataset; Adamas rows/assets/runtime branches are absent.
 - Raw source text is preserved unless this document marks an owner-approved
   normalization.
 - Legacy whole-ruble integer `price` becomes `price_minor = price * 100` using integer
@@ -19,8 +19,9 @@ Schema: Flyway V6 shadow model activated/finalized by V7
 - Empty strings representing missing optional data become SQL `NULL`, not public empty
   placeholders.
 - `(latitude, longitude) = (0, 0)` with empty label becomes absent location.
-- Raw manager phone is not imported. Deployment supplies a valid opaque secret-manager
-  locator and only its fingerprint may appear in evidence.
+- Raw manager phone is not imported. No notification destination is created by this
+  slice and the worker remains disabled. A later delivery slice may supply a valid
+  opaque secret-manager locator.
 
 ## Relational graph
 
@@ -36,7 +37,7 @@ Schema: Flyway V6 shadow model activated/finalized by V7
 | items | `menu_items` | ordered within category, `price*100`, available, no images |
 | no legacy modifiers | `menu_modifier_groups/options` | zero rows |
 | branding PNG(s) | `assets` | unique bytes only, active, canonical hash key |
-| WhatsApp assumption | `notification_destinations` | one active metadata row with opaque locator |
+| WhatsApp assumption | `notification_destinations` | zero rows; destination intentionally deferred |
 | none | order/outbox tables | zero rows; content import never creates runtime history |
 
 ### `site_configuration`
@@ -47,13 +48,15 @@ Schema: Flyway V6 shadow model activated/finalized by V7
 | `status` | `active` | `active` | owner confirms publication |
 | `locale` | `ru-RU` | `ru-RU` | confirm normalized assumption |
 | `currency` | `RUB` | `RUB` | confirm normalized assumption |
-| `timezone` | unresolved | unresolved | owner supplies IANA zone; do not infer from locale |
+| `timezone` | `Europe/Moscow` for local/test | not selected | production requires explicit IANA override |
 
 ### `site_branding`
 
 Common:
 
 - `favicon_asset_id = NULL`;
+- `logo_alt` is persisted separately from display name and is required for an active
+  public projection;
 - no Open Graph asset unless separately approved;
 - `localized_texts` contains one `ru-RU` object;
 - target JSON uses exact camelCase fields accepted by the current backend.
@@ -63,6 +66,7 @@ Stambul:
 ```json
 {
   "display_name": "Ресторан-кафе у Ризвана",
+  "logo_alt": "Логотип ресторан-кафе «У Ризвана»",
   "business_type": "Ресторан-кафе",
   "design_tokens": {
     "primaryColor": "#721F2A",
@@ -71,9 +75,9 @@ Stambul:
     "backgroundColor": "#F7F0E3",
     "surfaceColor": "#FFFDF8",
     "textColor": "#2E2020",
-    "mutedTextColor": "#7E6C66",
+    "mutedTextColor": "#7C6A64",
     "borderRadius": "21px",
-    "fontFamily": "Georgia, \"Times New Roman\", serif"
+    "fontFamily": "Georgia, Times New Roman, serif"
   },
   "localized_texts": [{
     "locale": "ru-RU",
@@ -96,7 +100,7 @@ Stambul:
   "seo_metadata": {
     "title": "У ризвана — электронное меню",
     "description": "Электронное меню ресторан-кафе «У Ризвана»",
-    "canonicalUrl": "<owner-approved HTTPS URL>"
+    "canonicalUrl": "https://stambul.localhost"
   }
 }
 ```
@@ -182,7 +186,9 @@ If owner confirms the text literally, `working_hours` becomes seven rows:
 ]
 ```
 
-This projection is blocked until timezone and schedule are confirmed.
+This projection is approved for local/test with `Europe/Moscow`. Production requires
+an explicit timezone and schedule approval; the local value is never a production
+default.
 
 ### `site_features`
 
@@ -286,19 +292,10 @@ only CDN URLs; object keys never enter the client response.
 
 ### Notification destination
 
-At most one selected row:
-
-```text
-channel = whatsapp
-status = active
-display_name = legacy-public-menu
-secret_reference = <deployment supplied secret://... or vault://...>
-metadata = {}
-```
-
-The legacy manager phone is evidence that a WhatsApp destination existed, not an
-approved destination value. Import output/logging contains only destination ID,
-readiness and reference fingerprint.
+The approved graph contains zero `notification_destinations`. The legacy manager phone
+is only evidence that a WhatsApp destination once existed; it is not an approved
+destination value. Worker remains disabled. Enabling delivery later requires a separate
+approved slice with an opaque `secret://...` or `vault://...` reference.
 
 ## OpenAPI projection
 
@@ -327,16 +324,15 @@ Canonical order request differences from legacy:
 - each item contains a `modifiers` array, empty for these source menus;
 - server resolves restaurant/menu, recalculates all totals and creates order/outbox.
 
-## Unresolved mapping gates
+## Remaining production gates
 
-1. Owner dataset selection.
-2. IANA timezone and confirmation of seven-day schedule.
-3. Canonical HTTPS URL and approved SEO copy.
-4. Real public contact confirmation.
-5. Delivery policy/Adamas threshold copy decision.
-6. Opaque notification destination readiness.
-7. Asset rights and Adamas dual logo/hero kind treatment.
-8. Deterministic UUID namespace/algorithm.
-9. Stambul repeated-space content normalization decision.
+Dataset, local/test values, UUID namespace, exact repeated-space text, Stambul logo and
+fee policy are resolved in the approved bundle. Production still requires an explicit
+real IANA timezone, canonical HTTPS origin, contact/schedule/asset-rights approvals and
+acknowledgement that notification remains disabled. No importer may convert local/test
+values into production defaults.
 
-No importer may convert these gates into defaults.
+UUIDv5 namespace is `e9b2ab7a-0a0a-5309-9403-39ed9ec91d4b`. The current
+`category:<publicId>` and `item:<publicId>` names are frozen only for immutable menu v1;
+future menu versions include version in those names, asset names include kind + SHA-256,
+and the restaurant name remains stable.

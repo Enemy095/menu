@@ -13,7 +13,7 @@ The backend smoke harness starts the built jar with its worker explicitly disabl
 unique PostgreSQL container with an ephemeral data `tmpfs` and no bind, named or anonymous
 volume. It removes inherited Spring/application/JVM
 option configuration and supplies authoritative datasource/worker values as command-line
-arguments. It verifies Flyway V8, liveness/readiness, fail-closed empty config/menu
+arguments. It verifies Flyway V9, liveness/readiness, fail-closed empty config/menu
 responses, the exact reviewed public schema and zero rows in every discovered application
 table. Every synchronous Docker/Java/psql/taskkill command is time-bounded. It performs no
 order write, provider call or production dataset import, discovers cleanup targets by a

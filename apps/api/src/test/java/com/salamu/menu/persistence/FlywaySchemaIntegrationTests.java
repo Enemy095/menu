@@ -18,6 +18,7 @@ class FlywaySchemaIntegrationTests {
     private static final String MIGRATION_SCHEMA = "migration_sequence";
     private static final String CONSTRAINT_SCHEMA = "final_constraint_test";
     private static final String ORDER_CONTRACT_UPGRADE_SCHEMA = "order_contract_upgrade";
+    private static final String BRANDING_ALT_UPGRADE_SCHEMA = "branding_alt_upgrade";
 
     @Test
     void migratesAnEmptyDatabaseSequentiallyThroughFinalVersion() throws SQLException {
@@ -29,9 +30,10 @@ class FlywaySchemaIntegrationTests {
                 5, "legacy_import_runs",
                 6, "sc_site_configuration",
                 7, "site_configuration",
-                8, "orders");
+                8, "orders",
+                9, "site_branding");
 
-        for (int version = 1; version <= 8; version++) {
+        for (int version = 1; version <= 9; version++) {
             var flyway = flyway(MIGRATION_SCHEMA, MigrationVersion.fromVersion(Integer.toString(version)));
             flyway.migrate();
 
@@ -47,6 +49,33 @@ class FlywaySchemaIntegrationTests {
         assertThat(tableExists(MIGRATION_SCHEMA, "menu_modifier_groups")).isTrue();
         assertThat(tableExists(MIGRATION_SCHEMA, "menu_modifier_options")).isTrue();
         assertThat(flyway(MIGRATION_SCHEMA, null).validateWithResult().validationSuccessful).isTrue();
+    }
+
+    @Test
+    void v9BackfillsExistingLogoAltAndRejectsBlankValues() throws SQLException {
+        resetSchema(BRANDING_ALT_UPGRADE_SCHEMA);
+        flyway(BRANDING_ALT_UPGRADE_SCHEMA, MigrationVersion.fromVersion("8")).migrate();
+        try (var connection = connection(BRANDING_ALT_UPGRADE_SCHEMA)) {
+            execute(connection, """
+                    INSERT INTO site_configuration (singleton_id, status, locale, currency, timezone)
+                    VALUES (1, 'active', 'ru-RU', 'RUB', 'Europe/Moscow')
+                    """);
+            execute(connection, """
+                    INSERT INTO site_branding (singleton_id, display_name, business_type)
+                    VALUES (1, 'Existing restaurant', 'restaurant')
+                    """);
+        }
+
+        assertThat(flyway(BRANDING_ALT_UPGRADE_SCHEMA, null).migrate().success).isTrue();
+        assertThat(currentVersion(BRANDING_ALT_UPGRADE_SCHEMA)).isEqualTo("9");
+        assertThat(queryString(BRANDING_ALT_UPGRADE_SCHEMA, "SELECT logo_alt FROM site_branding"))
+                .isEqualTo("Existing restaurant");
+        try (var connection = connection(BRANDING_ALT_UPGRADE_SCHEMA)) {
+            expectSqlState(connection, "23514", "UPDATE site_branding SET logo_alt = '   '");
+            execute(connection, "UPDATE site_branding SET logo_alt = NULL");
+        }
+        assertThat(queryString(BRANDING_ALT_UPGRADE_SCHEMA,
+                "SELECT logo_alt IS NULL FROM site_branding")).isEqualTo("t");
     }
 
     @Test
@@ -205,7 +234,7 @@ class FlywaySchemaIntegrationTests {
         }
 
         assertThat(flyway(ORDER_CONTRACT_UPGRADE_SCHEMA, null).migrate().success).isTrue();
-        assertThat(currentVersion(ORDER_CONTRACT_UPGRADE_SCHEMA)).isEqualTo("8");
+        assertThat(currentVersion(ORDER_CONTRACT_UPGRADE_SCHEMA)).isEqualTo("9");
         assertThat(columnExists(ORDER_CONTRACT_UPGRADE_SCHEMA, "orders", "client_total_minor")).isFalse();
         assertThat(columnExists(ORDER_CONTRACT_UPGRADE_SCHEMA, "orders", "client_created_at")).isFalse();
         try (var connection = connection(ORDER_CONTRACT_UPGRADE_SCHEMA);
@@ -250,6 +279,28 @@ class FlywaySchemaIntegrationTests {
                 var statement = connection.createStatement();
                 var result = statement.executeQuery(
                         "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank DESC LIMIT 1")) {
+            assertThat(result.next()).isTrue();
+            return result.getString(1);
+        }
+    }
+
+    private static void resetSchema(String schema) throws SQLException {
+        if (!schema.matches("[a-z0-9_]+")) {
+            throw new IllegalArgumentException("Unsafe test schema name");
+        }
+        try (var connection = DriverManager.getConnection(
+                        PostgreSqlTestContainer.INSTANCE.getJdbcUrl(),
+                        PostgreSqlTestContainer.INSTANCE.getUsername(),
+                        PostgreSqlTestContainer.INSTANCE.getPassword());
+                var statement = connection.createStatement()) {
+            statement.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+        }
+    }
+
+    private static String queryString(String schema, String sql) throws SQLException {
+        try (var connection = connection(schema);
+                var statement = connection.createStatement();
+                var result = statement.executeQuery(sql)) {
             assertThat(result.next()).isTrue();
             return result.getString(1);
         }

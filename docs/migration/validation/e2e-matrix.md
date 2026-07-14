@@ -27,10 +27,10 @@ not production acceptance.
 | ID | Scenario and invariant | Method/evidence | Current automation | Release blocker |
 |---|---|---|---|---|
 | CFG-01 | Empty database has the exact reviewed public schema, every discovered application table is empty, config returns `503 SITE_NOT_READY`, `no-store`, trace ID and readiness remains UP | `pnpm validate:smoke` | automated | yes |
-| CFG-02 | Approved site config, contacts, locale, currency, timezone and feature flags match mapping | API snapshot + source mapping | blocked by SC-DATA-001 | yes |
+| CFG-02 | Approved site config, contacts, locale, currency, timezone and feature flags match mapping | independent normalized oracle + `pnpm validate:acceptance` | automated | yes |
 | CFG-03 | Missing/inactive configuration never falls back to fabricated content | backend tests + smoke | automated | yes |
 | MENU-01 | Empty/unpublished menu is explicit and never fabricates dishes | backend/web tests + smoke | automated | yes |
-| MENU-02 | Published categories/items/modifiers/order types match approved dataset | API/UI snapshot + import report | blocked by SC-DATA-001 | yes |
+| MENU-02 | Published categories/items/modifiers/order types match approved dataset | independent normalized oracle, import report, API/SSR assertions via `pnpm validate:acceptance` | automated | yes |
 | MENU-03 | Config/menu restaurant, currency and version consistency fails closed | web/backend tests | automated | yes |
 | WEB-01 | SSR uses canonical config/menu, metadata and branding without browser API duplication | `pnpm --filter web check` | automated | yes |
 | WEB-02 | Warm ISR never masks current upstream outage; route returns 503/no-store/noindex | `pnpm --filter web test:integration` | automated | yes |
@@ -45,7 +45,7 @@ not production acceptance.
 | ORD-04 | Validation/rate-limit/transaction failure creates no partial order/outbox rows | Gradle security/order tests | automated | yes |
 | OUT-01 | Order and `order.created` outbox event commit atomically | Gradle PostgreSQL tests | automated | yes |
 | OUT-02 | Claim/retry/backoff/lease reclaim/attempt fence/dead-letter are bounded | Gradle outbox tests | automated | yes |
-| OUT-03 | Provider failure never rolls back order; no real provider is used in validation | fake-provider tests + staging no-send evidence | automated/manual | yes |
+| OUT-03 | Provider failure never rolls back order; no real provider is used in validation | isolated acceptance provider, DB delivery/outbox assertions via `pnpm validate:acceptance`; staging no-send evidence | automated/manual | yes |
 
 ## Security, privacy and resilience
 
@@ -98,7 +98,9 @@ docker compose --profile assets --profile observability config --quiet
 
 ### Dataset/cart acceptance
 
-Run after `SC-DATA-001` and `SC-CART-001` on an isolated staging database with provider
+Run `pnpm validate:acceptance` locally for the approved Stambul import, exact public
+content, SSR, idempotent order and deterministic no-network worker path. Run the remaining
+cart/browser scenarios after `SC-CART-001` on an isolated staging database with provider
 delivery disabled or a deterministic fake. Record approved dataset manifest hash, browser
 version, viewport matrix, generated request IDs only where safe, final order/outbox counts
 and cleanup outcome. Dataset, cart, checkout, order and outbox rows are non-waivable.

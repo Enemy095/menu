@@ -13,7 +13,11 @@ Authoritative sources are the files under `Электронное меню/`. Hi
 `docs/migration/import/**` was used only as a cross-check; it belongs to the superseded
 two-tenant design. A checksum mismatch invalidates this snapshot.
 
-SHA-256 is calculated over raw file bytes and rendered lowercase.
+SHA-256 is rendered lowercase. Unselected evidence remains a raw-byte snapshot. For the
+owner-approved Stambul set, the five text files use canonical Git blob LF bytes so the
+same approval survives `core.autocrlf` and old CRLF worktrees; the PNG remains raw
+binary. `.gitattributes` pins future checkouts and the verifier compares `git show
+HEAD:<path>` with normalized checkout bytes.
 
 ## Shared browser behavior
 
@@ -98,11 +102,11 @@ that path are not trustworthy migration data for Adamas.
 
 | Kind | Source | Bytes | SHA-256 |
 |---|---|---:|---|
-| config | `Электронное меню/restaurants/stambul/config.js` | 4,696 | `3110348a95b27ec008fc46910ca205606090a54f4641b5abb613a277f1f5d7c3` |
-| features | `Электронное меню/restaurants/stambul/features.js` | 713 | `8d9282273f257803e0b901cf7a233943ea874fdd0a0f71964cb6ed3bd719aa1c` |
-| order types | `Электронное меню/restaurants/stambul/order-types.js` | 744 | `bb2489ca8416792192ed755b0c0490df1a3136e4b76bf3eea25a6072e4a15503` |
-| menu | `Электронное меню/restaurants/stambul/menu.js` | 7,333 | `242954101114d367af2fb863a216785f8b35ffd45faa11cdb7d3d521e9562495` |
-| theme | `Электронное меню/themes/stambul/theme.css` | 538 | `619a529a3a24a8e3617972c72e6dccb08a59ee97540157b3fa28d29ab9f2c217` |
+| config | `Электронное меню/restaurants/stambul/config.js` | 4,589 | `99e636d9c8528f27586f5101bb7bfccd65609c89f4d0d2e71aec77e98db04d52` |
+| features | `Электронное меню/restaurants/stambul/features.js` | 684 | `03ff360aa55e0e4d2b9b8799491ddc2e1832eeb407710095e31cf3ed483f7dfa` |
+| order types | `Электронное меню/restaurants/stambul/order-types.js` | 727 | `be26e63d26d504234e987d760f429b0798d26bf425748c6f471a19c28932dd7a` |
+| menu | `Электронное меню/restaurants/stambul/menu.js` | 7,085 | `9fdedb8be5882a04aa824c5b9618a755716447a0dc077b2e6b78726e039eb8ec` |
+| theme | `Электронное меню/themes/stambul/theme.css` | 519 | `07b9cc54fc6ecb669d3daeff97f8c8b5c25804cde1816dee0186a094ecc29b9c` |
 | logo | `Электронное меню/restaurants/stambul/branding/logo.png` | 43,728 | `90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b` |
 
 Logo: PNG, 197×179, 24-bit RGB. `Электронное меню/images/logo-stambul.png`

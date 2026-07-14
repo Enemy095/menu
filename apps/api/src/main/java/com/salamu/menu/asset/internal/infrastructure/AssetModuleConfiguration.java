@@ -1,12 +1,15 @@
 package com.salamu.menu.asset.internal.infrastructure;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.salamu.menu.asset.api.AssetCatalog;
+import com.salamu.menu.asset.api.AssetImporter;
 import com.salamu.menu.asset.internal.application.AssetCatalogService;
 import com.salamu.menu.asset.internal.application.AssetContentPolicy;
+import com.salamu.menu.asset.internal.application.AssetImportService;
 import com.salamu.menu.asset.internal.application.AssetMetadataRepository;
 import com.salamu.menu.asset.internal.application.AssetObjectStorage;
 import com.salamu.menu.asset.internal.application.AssetObjectWriter;
@@ -19,6 +22,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 
 @Configuration(proxyBeanMethods = true)
+@EnableConfigurationProperties(AssetProperties.class)
 class AssetModuleConfiguration {
 
     static final String S3_CLIENT_BEAN_NAME = "assetModuleS3Client";
@@ -71,5 +75,12 @@ class AssetModuleConfiguration {
             AssetContentPolicy contentPolicy,
             AssetObjectStorage objectStorage) {
         return new AssetObjectWriter(contentPolicy, objectStorage);
+    }
+
+    @Bean
+    AssetImporter assetImporter(
+            AssetContentPolicy contentPolicy,
+            AssetObjectWriter objectWriter) {
+        return new AssetImportService(contentPolicy, objectWriter);
     }
 }

@@ -1,11 +1,13 @@
 package com.salamu.menu.ordering.internal.application;
 
 import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.UUID;
 
 import com.salamu.menu.ordering.api.OrderApiException;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -24,7 +26,7 @@ public class PublicOrderApplicationService {
             OrderPayloadHasher hasher,
             OrderPreparationService preparation,
             OrderCreationTransaction transaction,
-            Clock clock) {
+            @Qualifier("orderClock") Clock clock) {
         this.store = store;
         this.hasher = hasher;
         this.preparation = preparation;
@@ -43,7 +45,8 @@ public class PublicOrderApplicationService {
 
         var prepared = preparation.prepare(command);
         try {
-            var result = transaction.create(idempotencyKey, payloadHash, prepared, clock.instant());
+            var receivedAt = clock.instant().truncatedTo(ChronoUnit.MICROS);
+            var result = transaction.create(idempotencyKey, payloadHash, prepared, receivedAt);
             if (!result.created()) {
                 return replay(result.order(), payloadHash);
             }

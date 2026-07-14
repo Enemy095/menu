@@ -23,6 +23,7 @@ public interface SiteConfigurationRepository {
             String timezone,
             String displayName,
             String businessType,
+            String logoAlt,
             UUID logoAssetId,
             UUID faviconAssetId,
             String designTokensJson,

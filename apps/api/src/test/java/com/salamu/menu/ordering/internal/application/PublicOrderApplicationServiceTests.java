@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -23,7 +25,7 @@ import org.springframework.dao.DataAccessResourceFailureException;
 
 class PublicOrderApplicationServiceTests {
 
-    private static final Instant NOW = Instant.parse("2026-07-14T12:00:00Z");
+    private static final Instant NOW = Instant.parse("2026-07-14T12:00:00.123456789Z");
     private static final String KEY = "10000000-0000-4000-8000-000000000001";
 
     private final OrderStore store = mock(OrderStore.class);
@@ -56,6 +58,12 @@ class PublicOrderApplicationServiceTests {
                 .thenThrow(new DataAccessResourceFailureException("password=private customer=secret"));
 
         assertSafeDependencyFailure(() -> service.create(KEY, command));
+
+        verify(transaction).create(
+                eq(KEY),
+                anyString(),
+                any(),
+                eq(NOW.truncatedTo(ChronoUnit.MICROS)));
     }
 
     private static void assertSafeDependencyFailure(Runnable action) {

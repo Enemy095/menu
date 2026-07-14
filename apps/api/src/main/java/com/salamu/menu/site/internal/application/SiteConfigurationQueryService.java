@@ -145,7 +145,7 @@ public class SiteConfigurationQueryService implements SiteConfigurationQuery {
 
             var branding = new Branding(
                     logo.publicUrl(),
-                    requiredText(configuration.displayName(), 1, 160),
+                    requiredText(configuration.logoAlt(), 1, 160),
                     publicUrl(favicon),
                     new Hero(
                             publicUrl(heroAsset),
@@ -207,6 +207,7 @@ public class SiteConfigurationQueryService implements SiteConfigurationQuery {
             throw new SiteNotReadyException();
         }
         requiredText(configuration.businessType(), 1, 80);
+        requiredText(configuration.logoAlt(), 1, 160);
         if (configuration.logoAssetId() == null) {
             throw new SiteNotReadyException();
         }

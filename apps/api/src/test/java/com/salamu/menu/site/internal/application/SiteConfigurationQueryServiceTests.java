@@ -79,6 +79,7 @@ class SiteConfigurationQueryServiceTests {
 
         assertThat(result.restaurantId()).isEqualTo(new RestaurantId(RESTAURANT_ID));
         assertThat(result.branding().logoUrl()).hasToString(assetUrl(AssetKind.LOGO, "a", "png").toString());
+        assertThat(result.branding().logoAlt()).isEqualTo("Restaurant logo");
         assertThat(result.branding().faviconUrl()).isNotNull();
         assertThat(result.branding().hero().imageUrl()).isNotNull();
         assertThat(result.seo().openGraphImageUrl()).isNotNull();
@@ -185,6 +186,18 @@ class SiteConfigurationQueryServiceTests {
     }
 
     @Test
+    void activeSiteWithoutApprovedLogoAltFailsBeforeRestaurantAndAssetLookup() {
+        when(repository.load()).thenReturn(Optional.of(new StoredSiteData(
+                configuration(defaultWorkingHours(), null),
+                features(defaultLimits(), false))));
+
+        assertNotReady(query::current);
+
+        verifyNoInteractions(restaurantQuery);
+        verifyNoInteractions(assetCatalog);
+    }
+
+    @Test
     void unavailableDefaultRestaurantMapsToSiteNotReadyBeforeAssetLookup() {
         when(repository.load()).thenReturn(Optional.of(data(defaultWorkingHours(), features(defaultLimits(), false))));
         when(restaurantQuery.requireActiveDefault()).thenThrow(new DefaultRestaurantUnavailableException());
@@ -199,6 +212,10 @@ class SiteConfigurationQueryServiceTests {
     }
 
     private static StoredSiteConfiguration configuration(String workingHours) {
+        return configuration(workingHours, "Restaurant logo");
+    }
+
+    private static StoredSiteConfiguration configuration(String workingHours, String logoAlt) {
         return new StoredSiteConfiguration(
                 (short) 1,
                 "active",
@@ -207,6 +224,7 @@ class SiteConfigurationQueryServiceTests {
                 "Europe/Moscow",
                 "Restaurant",
                 "restaurant",
+                logoAlt,
                 LOGO_ID,
                 FAVICON_ID,
                 """

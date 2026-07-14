@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "selection": "STAMBUL_APPROVED",
+  "datasetKey": "stambul",
+  "uuidNamespace": "e9b2ab7a-0a0a-5309-9403-39ed9ec91d4b",
+  "approval": {
+    "decisionArtifact": "owner-directive:codex-thread:2026-07-14",
+    "decisionDate": "2026-07-14",
+    "preserveLegacyItemText": true,
+    "approvedLocalNormalizations": [
+      "mutedTextColor #7E6C66 -> #7C6A64 for WCAG contrast",
+      "fontFamily quotes removed for the public design-token contract"
+    ]
+  },
+  "sources": [
+    {
+      "kind": "config",
+      "path": "Электронное меню/restaurants/stambul/config.js",
+      "sizeBytes": 4589,
+      "sha256": "99e636d9c8528f27586f5101bb7bfccd65609c89f4d0d2e71aec77e98db04d52"
+    },
+    {
+      "kind": "features",
+      "path": "Электронное меню/restaurants/stambul/features.js",
+      "sizeBytes": 684,
+      "sha256": "03ff360aa55e0e4d2b9b8799491ddc2e1832eeb407710095e31cf3ed483f7dfa"
+    },
+    {
+      "kind": "order-types",
+      "path": "Электронное меню/restaurants/stambul/order-types.js",
+      "sizeBytes": 727,
+      "sha256": "be26e63d26d504234e987d760f429b0798d26bf425748c6f471a19c28932dd7a"
+    },
+    {
+      "kind": "menu",
+      "path": "Электронное меню/restaurants/stambul/menu.js",
+      "sizeBytes": 7085,
+      "sha256": "9fdedb8be5882a04aa824c5b9618a755716447a0dc077b2e6b78726e039eb8ec"
+    },
+    {
+      "kind": "theme",
+      "path": "Электронное меню/themes/stambul/theme.css",
+      "sizeBytes": 519,
+      "sha256": "07b9cc54fc6ecb669d3daeff97f8c8b5c25804cde1816dee0186a094ecc29b9c"
+    },
+    {
+      "kind": "logo",
+      "path": "Электронное меню/restaurants/stambul/branding/logo.png",
+      "sizeBytes": 43728,
+      "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b"
+    }
+  ],
+  "localTestBaseline": {
+    "locale": "ru-RU",
+    "currency": "RUB",
+    "timezone": "Europe/Moscow",
+    "canonicalUrl": "https://stambul.localhost",
+    "scheduleApproved": true,
+    "publicContactApproved": true,
+    "assetRightsApprovedForLocalTest": true,
+    "feePolicy": "none",
+    "minimumOrderMinor": null,
+    "freeDeliveryThresholdMinor": null,
+    "notificationDestination": null,
+    "workerEnabled": false
+  },
+  "asset": {
+    "name": "logo",
+    "kind": "LOGO",
+    "sourcePath": "Электронное меню/restaurants/stambul/branding/logo.png",
+    "contentType": "image/png",
+    "extension": "png",
+    "sizeBytes": 43728,
+    "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b",
+    "altText": "Логотип ресторан-кафе «У Ризвана»"
+  },
+  "site": {
+    "displayName": "Ресторан-кафе у Ризвана",
+    "businessType": "Ресторан-кафе",
+    "designTokens": {
+      "primaryColor": "#721F2A",
+      "secondaryColor": "#4B1018",
+      "accentColor": "#C8A467",
+      "backgroundColor": "#F7F0E3",
+      "surfaceColor": "#FFFDF8",
+      "textColor": "#2E2020",
+      "mutedTextColor": "#7C6A64",
+      "borderRadius": "21px",
+      "fontFamily": "Georgia, Times New Roman, serif"
+    },
+    "localizedTexts": [
+      {
+        "locale": "ru-RU",
+        "displayName": "Ресторан-кафе у Ризвана",
+        "shortName": "у Ризвана",
+        "businessTypeLabel": "Ресторан-кафе",
+        "cuisineText": "Турецкая кухня",
+        "slogan": "Вкус Стамбула рядом с вами",
+        "introText": "Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.",
+        "menuSectionTitle": "Выберите блюда",
+        "cartTitle": "Ваш заказ",
+        "orderTypeLegend": "Как хотите получить заказ?"
+      }
+    ],
+    "hero": {
+      "title": "Вкус Стамбула рядом с вами",
+      "subtitle": "Турецкая кухня",
+      "ctaLabel": "Смотреть меню",
+      "benefits": []
+    },
+    "seo": {
+      "title": "У ризвана — электронное меню",
+      "description": "Электронное меню ресторан-кафе «У Ризвана»"
+    },
+    "profile": {
+      "publicPhone": "+7 (989) 442-81-81",
+      "publicPhoneLabel": "Позвонить ресторану",
+      "publicEmail": null,
+      "address": null,
+      "workingHoursText": "Ежедневно с 10:00 до 23:00",
+      "workingHours": [
+        { "day": "monday", "opensAt": "10:00", "closesAt": "23:00" },
+        { "day": "tuesday", "opensAt": "10:00", "closesAt": "23:00" },
+        { "day": "wednesday", "opensAt": "10:00", "closesAt": "23:00" },
+        { "day": "thursday", "opensAt": "10:00", "closesAt": "23:00" },
+        { "day": "friday", "opensAt": "10:00", "closesAt": "23:00" },
+        { "day": "saturday", "opensAt": "10:00", "closesAt": "23:00" },
+        { "day": "sunday", "opensAt": "10:00", "closesAt": "23:00" }
+      ],
+      "socialLinks": []
+    },
+    "features": [
+      {
+        "key": "orders",
+        "enabled": true,
+        "config": {
+          "limits": {
+            "maxItemQuantity": 99,
+            "maxTotalItems": 200,
+            "maxNameLength": 80,
+            "maxPhoneLength": 32,
+            "maxAddressLength": 240,
+            "maxCommentLength": 500,
+            "delayedOrderConfirmationMinutes": 15
+          }
+        }
+      },
+      { "key": "contacts", "enabled": true, "config": {} },
+      { "key": "geo_location", "enabled": false, "config": {} },
+      { "key": "social_links", "enabled": false, "config": {} },
+      { "key": "delivery", "enabled": true, "config": { "label": "Доставка", "default": false } },
+      { "key": "pickup", "enabled": true, "config": { "label": "Самовывоз", "default": false } },
+      { "key": "preorder", "enabled": true, "config": { "label": "Предзаказ", "default": true } },
+      { "key": "custom_theme", "enabled": true, "config": {} },
+      { "key": "whatsapp_fallback", "enabled": true, "config": {} },
+      { "key": "promotions", "enabled": false, "config": {} },
+      { "key": "loyalty", "enabled": false, "config": {} },
+      { "key": "reservations", "enabled": false, "config": {} },
+      { "key": "delivery_blocks", "enabled": false, "config": {} }
+    ]
+  },
+  "restaurant": {
+    "externalKey": "stambul",
+    "slug": "stambul",
+    "displayName": "Ресторан-кафе у Ризвана"
+  },
+  "menu": {
+    "version": 1,
+    "publishedAt": "2026-07-01T00:00:00Z",
+    "currency": "RUB",
+    "categories": [
+      {
+        "publicId": "rolls",
+        "name": "Роллы",
+        "items": [
+          { "publicId": "cezar-roll-chicken", "name": "Ролл Цезарь с курицей", "description": "Ролл с курицей, свежими овощами и соусом Цезарь", "priceMinor": 25000 },
+          { "publicId": "cezar-roll-shrimp", "name": "Ролл Цезарь с креветкой", "description": "Ролл с креветкой, овощами и фирменным соусом", "priceMinor": 30000 },
+          { "publicId": "sake-maki", "name": "Ролл Горячий шик", "description": "Классический ролл с лососем", "priceMinor": 30000 },
+          { "publicId": "hot-roll-salmon", "name": "Горячий ролл с лососем", "description": "Запечённый ролл с лососем и нежной начинкой", "priceMinor": 35000 },
+          { "publicId": "cheese-baked-roll", "name": "Ролл Сырный запечённые", "description": "Запечённые роллы с сырной начинкой", "priceMinor": 30000 },
+          { "publicId": "bonito-roll", "name": "Ролл Ойси", "description": "Ролл с традиционной японской начинкой и стружкой тунца", "priceMinor": 40000 },
+          { "publicId": "philadelphia-chicken-roll", "name": "Ролл Ойси с курицей", "description": "Ролл с курицей и сливочным сыром", "priceMinor": 35000 },
+          { "publicId": "philadelphia-roll", "name": "Ролл Филадельфия", "description": "Классический ролл с лососем и сливочным сыром", "priceMinor": 40000 }
+        ]
+      },
+      {
+        "publicId": "pizza",
+        "name": "Пицца",
+        "items": [
+          { "publicId": "pizza-caesar", "name": "Пицца Цезарь", "description": "Пицца с курицей, сыром и соусом Цезарь", "priceMinor": 35000 },
+          { "publicId": "pizza-pepperoni", "name": "Пицца Пепперони", "description": "Классическая пицца с колбасками пепперони", "priceMinor": 35000 },
+          { "publicId": "pizza-mushroom", "name": "Пицца Грибная", "description": "Пицца с грибами и сыром", "priceMinor": 35000 },
+          { "publicId": "pizza-cheese", "name": "Пицца Сырная", "description": "Пицца с несколькими видами сыра", "priceMinor": 35000 },
+          { "publicId": "pizza-julienne", "name": "Пицца Жульен", "description": "Пицца с курицей, грибами и сливочным соусом", "priceMinor": 35000 },
+          { "publicId": "pizza-assorti", "name": "Пицца Ассорти", "description": "Пицца с разнообразной начинкой", "priceMinor": 35000 },
+          { "publicId": "pizza-margherita", "name": "Пицца Маргарита", "description": "Классическая пицца с томатами, сыром и соусом", "priceMinor": 35000 },
+          { "publicId": "pizza-chicken", "name": "Пицца Куриная", "description": "Пицца с курицей и сыром", "priceMinor": 35000 },
+          { "publicId": "pizza-four-cheese", "name": "Пицца    4 сыра", "description": "Пицца с четырьмя видами сыра", "priceMinor": 35000 },
+          { "publicId": "pizza-hunter", "name": "Пицца Охотничья", "description": "Пицца с мясными ингредиентами и сыром", "priceMinor": 35000 }
+        ]
+      },
+      {
+        "publicId": "sides",
+        "name": "Гарниры",
+        "items": [
+          { "publicId": "french-fries", "name": "Картофель фри", "description": "Хрустящий картофель фри", "priceMinor": 12000 },
+          { "publicId": "village-potato", "name": "Картофель по-деревенски", "description": "Картофельные дольки со специями", "priceMinor": 12000 },
+          { "publicId": "nuggets", "name": "Наггетсы", "description": "Куриные наггетсы с хрустящей корочкой", "priceMinor": 20000 }
+        ]
+      },
+      {
+        "publicId": "burgers",
+        "name": "Бургеры",
+        "items": [
+          { "publicId": "burger-beef", "name": "Бургер говяжий", "description": "Сочный бургер с говяжьей котлетой и фирменным соусом", "priceMinor": 27000 },
+          { "publicId": "burger-chicken", "name": "Бургер куриный", "description": "Бургер с куриной котлетой и свежими овощами", "priceMinor": 27000 }
+        ]
+      }
+    ]
+  }
+}

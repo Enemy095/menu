@@ -19,6 +19,17 @@ The canonical local command is:
 pnpm validate:full
 ```
 
+After the owner-approved Stambul dataset exists, its additive disposable full-stack
+acceptance command is:
+
+```text
+pnpm validate:acceptance
+```
+
+This second command does not replace the neutral gate. It validates only the pinned
+local-test dataset and uses a separately built acceptance JAR whose deterministic
+notification provider is proven absent from the production JAR.
+
 It performs a frozen workspace install, architecture guard, OpenAPI/generated-client
 validation, frontend production-shaped checks, complete backend checks and `bootJar`, a
 real-jar disposable PostgreSQL smoke, then `git diff --check`.
@@ -109,8 +120,8 @@ unique postgres:17.5-alpine3.21 container, tmpfs data and no Docker volume/bind
 → worker explicitly false; no usable provider/object-storage destination
 → assert liveness/readiness UP
 → assert empty config/menu fail closed with 503/no-store/traceId
-→ assert Flyway current version V8
-→ assert selected database/user and V8
+→ assert Flyway current version V9
+→ assert selected database/user and V9
 → discover the complete public schema table set and count every application table
 → require exactly 18 current application tables + Flyway metadata, all application counts zero
 → terminate application and discover/remove by unique run label/name
@@ -119,6 +130,22 @@ unique postgres:17.5-alpine3.21 container, tmpfs data and no Docker volume/bind
 
 The harness never performs a POST and is therefore safe to run repeatedly. Testcontainers
 coverage inside Gradle remains responsible for order/outbox write and concurrency cases.
+
+### Approved Stambul disposable acceptance
+
+`pnpm validate:acceptance` is intentionally local and destructive only to containers it
+creates and labels with its unique run ID. Its complete contract is documented in
+[the Stambul disposable acceptance runbook](../validation/stambul-disposable-acceptance.md).
+
+In summary, it verifies the independent normalized oracle, builds production and
+acceptance artifacts, proves acceptance-only classes are absent from the production JAR,
+starts loopback/tmpfs PostgreSQL and MinIO, pre-migrates the schema, executes importer
+dry-run and apply, boots the real API and production Next.js build, then asserts exact
+configuration/menu/SSR content and one idempotent order through the web route. A
+test-source-only provider deterministically fails once and succeeds on retry, allowing
+database assertions for order survival, delivery audit and terminal outbox state without
+network, file, subprocess or real provider access. Cleanup runs on pass, failure and
+interruption and proves that no owned container remains.
 
 ### Detailed scenario and evidence contracts
 
@@ -193,6 +220,7 @@ coverage inside Gradle remains responsible for order/outbox write and concurrenc
 
 ```text
 pnpm validate:full
+pnpm validate:acceptance
 docker compose config --quiet
 docker compose --profile assets --profile observability config --quiet
 git diff --check

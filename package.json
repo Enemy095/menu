@@ -12,6 +12,7 @@
     "test": "pnpm --filter web test",
     "typecheck": "pnpm --filter @e-menu/api-contract typecheck && pnpm --filter web typecheck",
     "validate:architecture": "node scripts/check-forbidden-runtime-scope.mjs",
+    "validate:acceptance": "node scripts/accept-stambul-full-stack.mjs",
     "validate:smoke": "node scripts/smoke-disposable-postgres.mjs",
     "validate:web": "pnpm --filter web check",
     "validate:full": "node scripts/validate.mjs"

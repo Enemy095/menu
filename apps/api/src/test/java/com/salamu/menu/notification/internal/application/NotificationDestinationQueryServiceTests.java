@@ -78,6 +78,10 @@ class NotificationDestinationQueryServiceTests {
         assertThat(valid.toString()).doesNotContain(RAW_REFERENCE);
         assertThat(valid.fingerprint()).isEqualTo(new OpaqueSecretReference(RAW_REFERENCE).fingerprint());
         assertThat(valid.fingerprint()).isNotEqualTo(invalid.fingerprint());
+        var destinationId = new NotificationDestinationId(new UUID(0, 99));
+        assertThat(destinationId.toString())
+                .isEqualTo("NotificationDestinationId[redacted]")
+                .doesNotContain(destinationId.value().toString());
     }
 
     private static StoredDestination destination(

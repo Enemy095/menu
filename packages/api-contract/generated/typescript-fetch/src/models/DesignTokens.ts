@@ -68,7 +68,7 @@ export interface DesignTokens {
      */
     borderRadius: string;
     /**
-     *
+     * Safe comma-separated CSS font family names; CSS functions and declarations are forbidden.
      * @type {string}
      * @memberof DesignTokens
      */

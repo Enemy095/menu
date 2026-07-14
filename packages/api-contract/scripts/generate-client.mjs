@@ -6,6 +6,11 @@ import path from "node:path";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const output = path.resolve(process.argv[2] ?? path.join(packageRoot, "generated/typescript-fetch"));
 const cli = path.join(packageRoot, "node_modules", "@openapitools", "openapi-generator-cli", "main.js");
+const generatorEnvironment = {
+  ...process.env,
+  INIT_CWD: packageRoot,
+  PWD: packageRoot,
+};
 
 await rm(output, { recursive: true, force: true });
 await mkdir(path.dirname(output), { recursive: true });
@@ -24,7 +29,7 @@ const result = spawnSync(
     "--output",
     output,
   ],
-  { cwd: packageRoot, stdio: "inherit" },
+  { cwd: packageRoot, env: generatorEnvironment, stdio: "inherit" },
 );
 
 if (result.error) {

@@ -21,6 +21,7 @@ import com.salamu.menu.menu.api.PublishedMenuSnapshot;
 import com.salamu.menu.restaurant.api.DefaultRestaurantQuery;
 
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,6 +93,8 @@ public class PublishedMenuQueryService implements PublishedMenuQuery {
                     itemProjection,
                     hash);
         } catch (PublishedMenuNotFoundException | InvalidPublishedMenuException exception) {
+            throw exception;
+        } catch (DataAccessException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             throw new InvalidPublishedMenuException(exception);

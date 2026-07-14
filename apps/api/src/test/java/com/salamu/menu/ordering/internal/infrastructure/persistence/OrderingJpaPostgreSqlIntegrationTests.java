@@ -124,12 +124,11 @@ class OrderingJpaPostgreSqlIntegrationTests {
                 INSERT INTO orders (
                     id, restaurant_id, menu_version_id, order_number, idempotency_key,
                     idempotency_payload_hash, status, order_type, channel,
-                    customer_name, customer_phone, client_total_minor, server_total_minor,
-                    currency, client_created_at, client_menu_version, needs_confirmation
+                    customer_name, customer_phone, server_total_minor,
+                    currency, client_menu_version, needs_confirmation
                 ) VALUES (
                     ?, ?, ?, 42, 'idem-1', ?, 'new', 'preorder', 'web',
-                    'Customer', '+79990000000', 12500, 12500,
-                    'RUB', now(), 1, false
+                    'Customer', '+79990000000', 12500, 'RUB', 1, false
                 )
                 """, ORDER, RESTAURANT, MENU_VERSION, "a".repeat(64));
         jdbc.update("""

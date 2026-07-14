@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import com.salamu.menu.restaurant.api.RestaurantId;
@@ -22,6 +23,11 @@ public record PublishedMenuSnapshot(
         List<Category> categories,
         List<Item> items,
         String representationHash) {
+
+    /** Persistence-safe scalar for consumers that do not otherwise depend on restaurant API types. */
+    public UUID restaurantUuid() {
+        return restaurantId.value();
+    }
 
     public static final int MAX_CATEGORIES = 500;
     public static final int MAX_ITEMS = 10_000;

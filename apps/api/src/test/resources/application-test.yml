@@ -30,6 +30,18 @@ app:
     cdn-base-url: https://assets.example.test
   worker:
     enabled: false
+    worker-id: test-worker
+    poll-interval: 1s
+    batch-size: 4
+    concurrency: 2
+    max-destinations: 2
+    lease-duration: 30s
+    provider-timeout: 5s
+    max-attempts: 4
+    initial-backoff: 1s
+    max-backoff: 1m
+    jitter-ratio: 0
+    shutdown-timeout: 5s
   external:
     public-base-url: https://example.test
     asset-base-url: https://assets.example.test

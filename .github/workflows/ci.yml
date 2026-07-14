@@ -54,9 +54,10 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: packages/api-contract/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install contract dependencies
+      - name: Install root workspace dependencies
+        working-directory: ${{ github.workspace }}
         run: pnpm install --frozen-lockfile
 
       - name: Lint OpenAPI
@@ -104,6 +105,46 @@ jobs:
             packages/api-contract/openapi/openapi.yaml
           if-no-files-found: error
           retention-days: 7
+
+  frontend:
+    name: Frontend
+    needs: api-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install root workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint frontend
+        run: pnpm --filter web lint
+
+      - name: Type-check frontend
+        run: pnpm --filter web typecheck
+
+      - name: Run frontend unit and accessibility tests
+        run: pnpm --filter web test
+
+      - name: Build on-demand ISR frontend
+        run: pnpm --filter web build
+
+      - name: Verify production HTTP 503 outage response
+        run: pnpm --filter web test:integration
 
   backend:
     name: Backend

@@ -17,6 +17,7 @@ class FlywaySchemaIntegrationTests {
 
     private static final String MIGRATION_SCHEMA = "migration_sequence";
     private static final String CONSTRAINT_SCHEMA = "final_constraint_test";
+    private static final String ORDER_CONTRACT_UPGRADE_SCHEMA = "order_contract_upgrade";
 
     @Test
     void migratesAnEmptyDatabaseSequentiallyThroughFinalVersion() throws SQLException {
@@ -27,9 +28,10 @@ class FlywaySchemaIntegrationTests {
                 4, "outbox_events",
                 5, "legacy_import_runs",
                 6, "sc_site_configuration",
-                7, "site_configuration");
+                7, "site_configuration",
+                8, "orders");
 
-        for (int version = 1; version <= 7; version++) {
+        for (int version = 1; version <= 8; version++) {
             var flyway = flyway(MIGRATION_SCHEMA, MigrationVersion.fromVersion(Integer.toString(version)));
             flyway.migrate();
 
@@ -165,6 +167,60 @@ class FlywaySchemaIntegrationTests {
         }
     }
 
+    @Test
+    void orderContractMigrationDropsUntrustedClientValuesAndPreservesAuthoritativeHistory() throws SQLException {
+        flyway(ORDER_CONTRACT_UPGRADE_SCHEMA, MigrationVersion.fromVersion("7")).migrate();
+        try (var connection = connection(ORDER_CONTRACT_UPGRADE_SCHEMA)) {
+            execute(connection, """
+                    INSERT INTO restaurants (
+                        id, external_key, slug, display_name, status, is_default
+                    ) VALUES (
+                        '71000000-0000-4000-8000-000000000001',
+                        'main', 'main', 'Main', 'active', true
+                    )
+                    """);
+            execute(connection, """
+                    INSERT INTO menu_versions (
+                        id, restaurant_id, version, status, published_at, currency
+                    ) VALUES (
+                        '72000000-0000-4000-8000-000000000001',
+                        '71000000-0000-4000-8000-000000000001',
+                        1, 'published', now(), 'RUB'
+                    )
+                    """);
+            execute(connection, """
+                    INSERT INTO orders (
+                        id, restaurant_id, menu_version_id, order_number,
+                        idempotency_key, idempotency_payload_hash, status, order_type, channel,
+                        customer_name, customer_phone, client_total_minor, server_total_minor,
+                        currency, client_created_at, client_menu_version, needs_confirmation
+                    ) VALUES (
+                        '73000000-0000-4000-8000-000000000001',
+                        '71000000-0000-4000-8000-000000000001',
+                        '72000000-0000-4000-8000-000000000001',
+                        1, 'order-contract-mismatch', repeat('a', 64), 'new', 'pickup', 'web',
+                        'Customer', '+79990000000', 1, 2, 'RUB', now(), 1, true
+                    )
+                    """);
+        }
+
+        assertThat(flyway(ORDER_CONTRACT_UPGRADE_SCHEMA, null).migrate().success).isTrue();
+        assertThat(currentVersion(ORDER_CONTRACT_UPGRADE_SCHEMA)).isEqualTo("8");
+        assertThat(columnExists(ORDER_CONTRACT_UPGRADE_SCHEMA, "orders", "client_total_minor")).isFalse();
+        assertThat(columnExists(ORDER_CONTRACT_UPGRADE_SCHEMA, "orders", "client_created_at")).isFalse();
+        try (var connection = connection(ORDER_CONTRACT_UPGRADE_SCHEMA);
+                var statement = connection.createStatement();
+                var result = statement.executeQuery("""
+                        SELECT server_total_minor, needs_confirmation
+                        FROM orders
+                        WHERE id = '73000000-0000-4000-8000-000000000001'
+                        """)) {
+            assertThat(result.next()).isTrue();
+            assertThat(result.getLong("server_total_minor")).isEqualTo(2);
+            assertThat(result.getBoolean("needs_confirmation")).isTrue();
+        }
+    }
+
     private static Flyway flyway(String schema, MigrationVersion target) {
         var configuration = Flyway.configure()
                 .dataSource(
@@ -203,6 +259,25 @@ class FlywaySchemaIntegrationTests {
         try (var connection = connection(schema);
                 var statement = connection.prepareStatement("SELECT to_regclass(?) IS NOT NULL")) {
             statement.setString(1, schema + "." + table);
+            try (var result = statement.executeQuery()) {
+                assertThat(result.next()).isTrue();
+                return result.getBoolean(1);
+            }
+        }
+    }
+
+    private static boolean columnExists(String schema, String table, String column) throws SQLException {
+        try (var connection = connection(schema);
+                var statement = connection.prepareStatement("""
+                        SELECT EXISTS (
+                            SELECT 1
+                            FROM information_schema.columns
+                            WHERE table_schema = ? AND table_name = ? AND column_name = ?
+                        )
+                        """)) {
+            statement.setString(1, schema);
+            statement.setString(2, table);
+            statement.setString(3, column);
             try (var result = statement.executeQuery()) {
                 assertThat(result.next()).isTrue();
                 return result.getBoolean(1);

@@ -26,11 +26,11 @@
 | SC-API-001 | Single-client OpenAPI и generated client | SC-000 | P1 | done |
 | SC-BE-001 | Site/asset modules и удаление tenancy runtime | SC-DB-001, SC-API-001 | P2 | done |
 | SC-SEC-001 | Single-client public/admin security boundary | SC-API-001 | P2 | done |
-| SC-DATA-001 | Импорт одного выбранного legacy dataset | SC-BE-001, client selection | P3 | blocked |
-| SC-WEB-001 | Next.js SSR config/menu frontend | SC-API-001, SC-DATA-001 | P4 | blocked |
+| SC-DATA-001 | Dataset inventory готов; выбор и import одного legacy dataset | SC-BE-001, client selection | P3 | blocked |
+| SC-WEB-001 | Next.js SSR config/menu frontend | SC-API-001; content cutover waits for SC-DATA-001 | P4 | done |
 | SC-CART-001 | Single-client persisted cart и checkout | SC-WEB-001 | P5 | blocked |
-| SC-ORD-001 | Orders, global idempotency и totals | SC-BE-001, SC-API-001, SC-SEC-001 | P5 | blocked |
-| SC-OUT-001 | Transactional outbox worker | SC-ORD-001 | P6 | blocked |
+| SC-ORD-001 | Orders, global idempotency и totals | SC-BE-001, SC-API-001, SC-SEC-001 | P5 | done |
+| SC-OUT-001 | Transactional outbox worker | SC-ORD-001 | P6 | done |
 | SC-VAL-001 | Full-system validation | all SC implementation tasks | P7 | blocked |
 | SC-CUTOVER-001 | Production cutover и legacy retirement | SC-VAL-001 | P8 | blocked |
 | WEB-001 | Next.js SSR tenant shell | API-001 | 5 | superseded |
@@ -41,6 +41,10 @@
 | OUT-001 | Transactional outbox worker | ORD-001 | 7 | superseded |
 | VAL-001 | Full system validation | all implementation tasks | 8 | superseded |
 | CUTOVER-001 | Canary, rollback и legacy retirement | VAL-001 | 8 | superseded |
+
+`SC-DATA-001` находится в состоянии `decision-required`: inventories и final mapping
+зафиксированы, но владелец ещё не выбрал `Stambul`, `Adamas` или новый approved bundle.
+До явного решения импорт production content запрещён.
 
 ## Agent contract
 

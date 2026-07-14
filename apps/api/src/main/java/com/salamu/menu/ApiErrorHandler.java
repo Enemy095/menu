@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
 import com.salamu.menu.menu.api.PublishedMenuNotFoundException;
+import com.salamu.menu.ordering.api.OrderApiException;
 import com.salamu.menu.restaurant.api.DefaultRestaurantUnavailableException;
 import com.salamu.menu.site.api.SiteNotReadyException;
 
@@ -22,6 +23,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -65,6 +67,34 @@ public class ApiErrorHandler {
                 request);
     }
 
+    @ExceptionHandler(OrderApiException.class)
+    public ResponseEntity<ApiErrorResponse> handleOrderFailure(
+            OrderApiException exception,
+            HttpServletRequest request) {
+        var status = switch (exception.code()) {
+            case VALIDATION_ERROR -> HttpStatus.BAD_REQUEST;
+            case MENU_CHANGED, ITEM_UNAVAILABLE, MODIFIER_UNAVAILABLE, IDEMPOTENCY_CONFLICT ->
+                    HttpStatus.CONFLICT;
+            case DEPENDENCY_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+        };
+        var message = switch (exception.code()) {
+            case VALIDATION_ERROR -> VALIDATION_ERROR_MESSAGE;
+            case MENU_CHANGED -> "Меню изменилось, обновите страницу";
+            case ITEM_UNAVAILABLE -> "Одна из позиций недоступна";
+            case MODIFIER_UNAVAILABLE -> "Один из модификаторов недоступен";
+            case IDEMPOTENCY_CONFLICT -> "Ключ повторного запроса уже использован";
+            case DEPENDENCY_UNAVAILABLE -> "Создание заказа временно недоступно";
+        };
+        return createResponse(
+                status,
+                exception.code().name(),
+                message,
+                exception.details().stream()
+                        .map(detail -> new ApiErrorDetail(detail.field(), detail.reason()))
+                        .toList(),
+                request);
+    }
+
     @ExceptionHandler(ErrorResponseException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatus(
             ErrorResponseException exception,
@@ -79,7 +109,8 @@ public class ApiErrorHandler {
             BindException.class,
             HandlerMethodValidationException.class,
             ConstraintViolationException.class,
-            HttpMessageNotReadableException.class
+            HttpMessageNotReadableException.class,
+            MissingRequestHeaderException.class
     })
     public ResponseEntity<ApiErrorResponse> handleValidation(HttpServletRequest request) {
         return createResponse(
@@ -112,11 +143,20 @@ public class ApiErrorHandler {
             String code,
             String message,
             HttpServletRequest request) {
+        return createResponse(status, code, message, List.of(), request);
+    }
+
+    private ResponseEntity<ApiErrorResponse> createResponse(
+            HttpStatusCode status,
+            String code,
+            String message,
+            List<ApiErrorDetail> details,
+            HttpServletRequest request) {
         var traceId = traceIdAccessor.currentTraceId(request);
         var headers = new HttpHeaders();
         headers.set(TRACE_ID_HEADER, traceId);
         headers.setCacheControl("no-store");
-        var body = new ApiErrorResponse(code, message, List.of(), traceId);
+        var body = new ApiErrorResponse(code, message, details, traceId);
         return new ResponseEntity<>(body, headers, status);
     }
 

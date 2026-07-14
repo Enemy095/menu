@@ -131,11 +131,11 @@ export interface PublicConfigurationResponse {
      */
     deliveryConfiguration: DeliveryConfiguration;
     /**
-     * Default BCP 47 locale.
-     * @type {string}
+     * The first public-web release supports Russian localization only.
+     * @type {PublicConfigurationResponseLocaleEnum}
      * @memberof PublicConfigurationResponse
      */
-    locale: string;
+    locale: PublicConfigurationResponseLocaleEnum;
     /**
      * ISO 4217 currency code.
      * @type {string}
@@ -149,6 +149,15 @@ export interface PublicConfigurationResponse {
      */
     timezone: string;
 }
+
+/**
+* @export
+* @enum {string}
+*/
+export enum PublicConfigurationResponseLocaleEnum {
+    ru_RU = 'ru-RU'
+}
+
 
 /**
  * Check if a given object implements the PublicConfigurationResponse interface.

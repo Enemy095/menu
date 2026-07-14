@@ -69,7 +69,7 @@ class SingleClientActivationFlywayIntegrationTests {
         assertThat(flyway.migrate().success).isTrue();
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
 
-        assertThat(currentVersion(schema)).isEqualTo("7");
+        assertThat(currentVersion(schema)).isEqualTo("8");
         assertThat(tableExists(schema, "site_configuration")).isTrue();
         assertThat(tableExists(schema, "menu_modifier_groups")).isTrue();
         assertThat(tableExists(schema, "menu_modifier_options")).isTrue();
@@ -99,7 +99,7 @@ class SingleClientActivationFlywayIntegrationTests {
 
         assertThat(approvedFlyway(schema, approvedFingerprint, RUNTIME_ROLE).migrate().success).isTrue();
 
-        assertThat(currentVersion(schema)).isEqualTo("7");
+        assertThat(currentVersion(schema)).isEqualTo("8");
         assertThat(count(schema, "restaurants")).isOne();
         assertThat(count(schema, "menu_versions")).isEqualTo(2);
         assertThat(count(schema, "orders")).isOne();
@@ -107,6 +107,8 @@ class SingleClientActivationFlywayIntegrationTests {
         assertThat(count(schema, "outbox_events")).isOne();
         assertThat(queryLong(schema, "SELECT server_total_minor FROM orders WHERE id = '" + ORDER + "'"))
                 .isEqualTo(15_000L);
+        assertThat(columnExists(schema, "orders", "client_total_minor")).isFalse();
+        assertThat(columnExists(schema, "orders", "client_created_at")).isFalse();
         assertThat(queryString(schema, "SELECT modifier_snapshot::text FROM order_items WHERE order_id = '" + ORDER + "'"))
                 .isEqualTo("[{\"name\": \"extra cheese\"}]");
         assertThat(queryString(schema, "SELECT object_key FROM assets WHERE id = '" + ASSET + "'"))

@@ -20,6 +20,7 @@ dist/
 build/
 .next/
 .turbo/
+*.tsbuildinfo
 
 # Java / Gradle backend
 .gradle/
@@ -29,6 +30,8 @@ out/
 # Docker / database local data
 postgres_data/
 data/
+!docs/migration/data/
+!docs/migration/data/**
 tmp/
 
 # Coverage

@@ -30,9 +30,9 @@ class OrderingPersistenceMappingTests {
         assertThat(fields(OrderEntity.class)).containsExactlyInAnyOrder(
                 "id", "restaurantId", "menuVersionId", "orderNumber", "idempotencyKey",
                 "idempotencyPayloadHash", "status", "orderType", "channel", "customerName",
-                "customerPhone", "customerAddress", "comment", "guestCount", "clientTotalMinor",
-                "serverTotalMinor", "currency", "clientCreatedAt", "serverReceivedAt",
-                "clientMenuVersion", "needsConfirmation", "createdAt", "updatedAt");
+                "customerPhone", "customerAddress", "comment", "guestCount", "serverTotalMinor",
+                "currency", "serverReceivedAt", "clientMenuVersion", "needsConfirmation",
+                "createdAt", "updatedAt");
         assertThat(fields(OrderItemEntity.class)).containsExactlyInAnyOrder(
                 "id", "orderId", "menuVersionId", "menuItemId", "menuItemPublicId", "itemName",
                 "unitPriceMinor", "modifierSnapshot", "quantity", "lineTotalMinor", "sortOrder");

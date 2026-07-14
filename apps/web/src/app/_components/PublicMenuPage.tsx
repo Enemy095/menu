@@ -1,0 +1,46 @@
+import type { MenuResponse, PublicConfigurationResponse } from "@e-menu/api-contract/generated";
+
+import { selectLocalizedText } from "@/entities/site/model/select-localized-text";
+import { themeStyle } from "@/shared/lib/theme-style";
+import { Contacts } from "@/widgets/contacts/ui/Contacts";
+import { Hero } from "@/widgets/hero/ui/Hero";
+import { MenuBrowser } from "@/widgets/menu-browser/ui/MenuBrowser";
+import { SiteHeader } from "@/widgets/site-header/ui/SiteHeader";
+
+type PublicMenuPageProps = {
+  configuration: PublicConfigurationResponse;
+  menu: MenuResponse | null;
+};
+
+export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
+  const text = selectLocalizedText(configuration.branding.localizedTexts, configuration.locale);
+
+  return (
+    <div className="site" style={themeStyle(configuration.branding.designTokens)}>
+      <SiteHeader
+        branding={configuration.branding}
+        text={text}
+        profile={configuration.profile}
+        features={configuration.features}
+      />
+      <main>
+        <Hero hero={configuration.branding.hero} text={text} />
+        <MenuBrowser
+          title={text.menuSectionTitle}
+          categories={menu?.categories ?? []}
+          items={menu?.items ?? []}
+          locale={configuration.locale}
+          currency={configuration.currency}
+        />
+        <Contacts
+          profile={configuration.profile}
+          features={configuration.features}
+          schedule={configuration.schedule}
+        />
+      </main>
+      <footer className="site-footer">
+        <div className="shell">{text.displayName}</div>
+      </footer>
+    </div>
+  );
+}

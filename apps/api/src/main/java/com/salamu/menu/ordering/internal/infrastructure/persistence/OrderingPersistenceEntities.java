@@ -77,17 +77,11 @@ class OrderEntity {
     @Column(name = "guest_count")
     Integer guestCount;
 
-    @Column(name = "client_total_minor", nullable = false)
-    long clientTotalMinor;
-
     @Column(name = "server_total_minor", nullable = false)
     long serverTotalMinor;
 
     @Column(nullable = false, length = 3)
     String currency;
-
-    @Column(name = "client_created_at", nullable = false)
-    OffsetDateTime clientCreatedAt;
 
     @Column(name = "server_received_at", nullable = false)
     OffsetDateTime serverReceivedAt;

@@ -292,6 +292,13 @@ test("config and request limits exactly match confirmed legacy bounds", () => {
   assert.equal(spec.components.schemas.CreateOrderItem.properties.quantity.maximum, expected.maxItemQuantity);
   assert.equal(spec.components.schemas.OrderCustomer.properties.name.maxLength, expected.maxNameLength);
   assert.equal(spec.components.schemas.OrderCustomer.properties.phone.maxLength, expected.maxPhoneLength);
+  const phonePattern = new RegExp(spec.components.schemas.OrderCustomer.properties.phone.pattern);
+  for (const accepted of ["12345", "+7 (999) 000-00-00", "123456789012345"]) {
+    assert.equal(phonePattern.test(accepted), true, `accepted phone ${accepted}`);
+  }
+  for (const rejected of ["( )--", "1234", "1234567890123456"]) {
+    assert.equal(phonePattern.test(rejected), false, `rejected phone ${rejected}`);
+  }
   assert.equal(spec.components.schemas.DeliveryFulfillment.properties.address.maxLength, expected.maxAddressLength);
   for (const name of ["DeliveryOrderRequest", "PreorderOrderRequest", "PickupOrderRequest"]) {
     const properties = spec.components.schemas[name].properties;

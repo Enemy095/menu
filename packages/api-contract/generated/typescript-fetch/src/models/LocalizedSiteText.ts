@@ -21,10 +21,10 @@ import { mapValues } from '../runtime';
 export interface LocalizedSiteText {
     /**
      *
-     * @type {string}
+     * @type {LocalizedSiteTextLocaleEnum}
      * @memberof LocalizedSiteText
      */
-    locale: string;
+    locale: LocalizedSiteTextLocaleEnum;
     /**
      *
      * @type {string}
@@ -80,6 +80,15 @@ export interface LocalizedSiteText {
      */
     orderTypeLegend: string;
 }
+
+/**
+* @export
+* @enum {string}
+*/
+export enum LocalizedSiteTextLocaleEnum {
+    ru_RU = 'ru-RU'
+}
+
 
 /**
  * Check if a given object implements the LocalizedSiteText interface.

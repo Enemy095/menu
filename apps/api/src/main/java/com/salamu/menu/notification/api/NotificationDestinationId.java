@@ -8,4 +8,9 @@ public record NotificationDestinationId(UUID value) {
     public NotificationDestinationId {
         Objects.requireNonNull(value, "value");
     }
+
+    @Override
+    public String toString() {
+        return "NotificationDestinationId[redacted]";
+    }
 }

@@ -350,8 +350,8 @@ components:
           $ref: '#/components/schemas/DeliveryConfiguration'
         locale:
           type: string
-          description: Default BCP 47 locale.
-          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
+          description: The first public-web release supports Russian localization only.
+          enum: [ru-RU]
           example: ru-RU
         currency:
           type: string
@@ -371,6 +371,7 @@ components:
         logoUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
           description: Immutable content-addressed public asset URL.
         logoAlt:
           type: string
@@ -379,6 +380,7 @@ components:
         faviconUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
           description: Immutable content-addressed public asset URL.
         hero:
           $ref: '#/components/schemas/Hero'
@@ -398,6 +400,7 @@ components:
         imageUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
           description: Immutable content-addressed public asset URL.
         imageAlt:
           type: string
@@ -472,6 +475,8 @@ components:
           type: string
           minLength: 1
           maxLength: 120
+          pattern: '^[A-Za-z_-][A-Za-z0-9 _-]*(?:,\s*[A-Za-z_-][A-Za-z0-9 _-]*)*$'
+          description: Safe comma-separated CSS font family names; CSS functions and declarations are forbidden.
 
     CssColor:
       type: string
@@ -496,7 +501,7 @@ components:
       properties:
         locale:
           type: string
-          pattern: '^[a-z]{2,3}(?:-[A-Z]{2})?$'
+          enum: [ru-RU]
         displayName:
           type: string
           minLength: 1
@@ -547,9 +552,11 @@ components:
         canonicalUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
         openGraphImageUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
           description: Immutable content-addressed public asset URL.
 
     PublicProfile:
@@ -689,6 +696,7 @@ components:
         url:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
 
     SiteFeatures:
       type: object
@@ -840,6 +848,7 @@ components:
         imageUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
           description: Immutable content-addressed public asset URL.
         sortOrder:
           type: integer
@@ -883,6 +892,7 @@ components:
         imageUrl:
           type: string
           format: uri
+          pattern: '^https?://(?![^/?#]*@)'
           description: Immutable content-addressed public asset URL.
         available:
           type: boolean
@@ -1066,7 +1076,7 @@ components:
           type: string
           minLength: 5
           maxLength: 32
-          pattern: '^\+?[0-9 ()-]{5,32}$'
+          pattern: '^\+?(?=(?:[ ()-]*[0-9]){5,15}[ ()-]*$)[0-9 ()-]{5,32}$'
 
     DeliveryFulfillment:
       type: object

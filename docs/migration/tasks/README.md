@@ -15,9 +15,9 @@
 | TEN-001 | Trusted tenant resolver и context | DB-001, MOD-001 | 3 | done |
 | AST-001 | S3-compatible tenant asset adapter | DB-001, TEN-001, INF-001 | 3 | done |
 | SEC-001 | Security boundaries и rate limiting | BE-001, TEN-001 | 3 | done |
-| CFG-001 | Restaurant/config public read API | API-001, TEN-001, DB-001 | 4 | ready |
-| MENU-001 | Published menu public read API | API-001, TEN-001, DB-001 | 4 | ready |
-| MIG-001 | Idempotent legacy tenant import | CFG-001, MENU-001, AST-001 | 4 | planned |
+| CFG-001 | Restaurant/config public read API | API-001, TEN-001, DB-001 | 4 | review |
+| MENU-001 | Published menu public read API | API-001, TEN-001, DB-001 | 4 | review |
+| MIG-001 | Idempotent legacy tenant import | CFG-001, MENU-001, AST-001 | 4 | in_progress |
 | WEB-001 | Next.js SSR tenant shell | API-001 | 5 | planned |
 | WEB-002 | Branding/menu/contact/delivery UI | WEB-001, CFG-001, MENU-001 | 5 | planned |
 | CART-001 | Tenant-scoped persisted cart | WEB-002 | 6 | planned |

@@ -28,6 +28,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import com.salamu.menu.tenancy.api.AssetKind;
 import com.salamu.menu.tenancy.api.TenantAsset;
+import com.salamu.menu.tenancy.api.TenantAssetId;
 import com.salamu.menu.tenancy.api.TenantAssetImportRequest;
 import com.salamu.menu.tenancy.api.TenantAssetNotFoundException;
 import com.salamu.menu.tenancy.api.TenantAssetService;
@@ -203,6 +204,31 @@ class TenantAssetMinioIntegrationTests {
     }
 
     @Test
+    void batchLookupOmitsDeletedUnknownAndCrossTenantAssets() {
+        TenantAsset active = assetService.importAsset(TENANT_A, pngLogo());
+        TenantAsset deleted = assetService.importAsset(
+                TENANT_A,
+                new TenantAssetImportRequest(
+                        AssetKind.MENU_ITEM_IMAGE,
+                        "image/png",
+                        "png",
+                        pngBytes()));
+        TenantAsset tenantB = assetService.importAsset(TENANT_B, pngLogo());
+        jdbcTemplate.update(
+                "UPDATE tenant_assets SET status = 'deleted' WHERE tenant_id = ? AND id = ?",
+                TENANT_A.value(),
+                deleted.id().value());
+        TenantAssetId unknown = new TenantAssetId(UUID.fromString("dddddddd-dddd-dddd-dddd-dddddddddddd"));
+
+        var assets = assetService.getActiveAssets(
+                TENANT_A,
+                List.of(active.id(), active.id(), deleted.id(), tenantB.id(), unknown));
+
+        assertThat(assets).containsOnlyKeys(active.id());
+        assertThat(assets.get(active.id())).isEqualTo(active);
+    }
+
+    @Test
     void unknownTenantIsRejectedBeforeCreatingARecordOrObject() {
         TenantId unknown = new TenantId(UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc"));
 
@@ -235,7 +261,11 @@ class TenantAssetMinioIntegrationTests {
                 AssetKind.LOGO,
                 "image/png",
                 "png",
-                new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01});
+                pngBytes());
+    }
+
+    private static byte[] pngBytes() {
+        return new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01};
     }
 
     private static String expectedKey(TenantId tenantId, AssetKind kind, String sha256, String extension) {

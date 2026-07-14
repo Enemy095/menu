@@ -1,7 +1,13 @@
 package com.salamu.menu.tenancy.internal.application.asset;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -17,6 +23,8 @@ import com.salamu.menu.tenancy.api.TenantId;
 @Service
 @Lazy
 final class TenantAssetApplicationService implements TenantAssetService {
+
+    private static final int MAX_BATCH_SIZE = 500;
 
     private final AssetContentPolicy contentPolicy;
     private final AssetKeyPolicy keyPolicy;
@@ -71,6 +79,31 @@ final class TenantAssetApplicationService implements TenantAssetService {
                 .orElseThrow(TenantAssetNotFoundException::new);
     }
 
+    @Override
+    public Map<TenantAssetId, TenantAsset> getActiveAssets(
+            TenantId tenantId,
+            Collection<TenantAssetId> assetIds) {
+        Objects.requireNonNull(tenantId, "tenantId");
+        Objects.requireNonNull(assetIds, "assetIds");
+        if (assetIds.isEmpty()) {
+            return Map.of();
+        }
+        if (assetIds.size() > MAX_BATCH_SIZE) {
+            throw new IllegalArgumentException("At most " + MAX_BATCH_SIZE + " tenant assets can be resolved at once");
+        }
+
+        Set<TenantAssetId> uniqueIds = new LinkedHashSet<>();
+        for (TenantAssetId assetId : assetIds) {
+            uniqueIds.add(Objects.requireNonNull(assetId, "assetIds must not contain null"));
+        }
+
+        persistence.requireActiveTenant(tenantId);
+        return persistence.findAllActiveByIds(tenantId, Set.copyOf(uniqueIds)).stream()
+                .peek(record -> requireValidBatchRecord(tenantId, uniqueIds, record))
+                .map(this::toApi)
+                .collect(Collectors.toUnmodifiableMap(TenantAsset::id, Function.identity()));
+    }
+
     private AssetRecord registerOrFind(
             TenantId tenantId,
             ValidatedAssetContent validated,
@@ -107,5 +140,16 @@ final class TenantAssetApplicationService implements TenantAssetService {
                 record.sizeBytes(),
                 record.sha256().value(),
                 publicUrl);
+    }
+
+    private static void requireValidBatchRecord(
+            TenantId tenantId,
+            Set<TenantAssetId> requestedIds,
+            AssetRecord record) {
+        if (!tenantId.equals(record.tenantId())
+                || !requestedIds.contains(record.id())
+                || record.status() != AssetStatus.ACTIVE) {
+            throw new IllegalStateException("Asset persistence returned data outside the requested tenant batch");
+        }
     }
 }

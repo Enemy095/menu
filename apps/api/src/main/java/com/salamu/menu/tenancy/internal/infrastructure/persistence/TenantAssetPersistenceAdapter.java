@@ -5,7 +5,9 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityManager;
 
@@ -100,6 +102,33 @@ class TenantAssetPersistenceAdapter implements AssetPersistence {
         return assetRepository.findByTenantIdAndId(tenantId.value(), assetId.value())
                 .filter(entity -> AssetStatus.ACTIVE.databaseValue().equals(entity.status))
                 .map(TenantAssetPersistenceAdapter::toRecord);
+    }
+
+    @Override
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    public List<AssetRecord> findAllActiveByIds(TenantId tenantId, Set<TenantAssetId> assetIds) {
+        if (assetIds.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> ids = assetIds.stream()
+                .map(TenantAssetId::value)
+                .collect(Collectors.toUnmodifiableSet());
+        return entityManager.createQuery(
+                        """
+                        select asset
+                        from TenantAssetPersistenceEntity asset
+                        where asset.tenantId = :tenantId
+                          and asset.id in :assetIds
+                          and asset.status = :activeStatus
+                        """,
+                        TenantAssetEntity.class)
+                .setParameter("tenantId", tenantId.value())
+                .setParameter("assetIds", ids)
+                .setParameter("activeStatus", AssetStatus.ACTIVE.databaseValue())
+                .getResultList()
+                .stream()
+                .map(TenantAssetPersistenceAdapter::toRecord)
+                .toList();
     }
 
     @Override

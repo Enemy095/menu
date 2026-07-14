@@ -1,6 +1,7 @@
 # Public API contract
 
-Единственный source of truth для публичного restaurant, menu и order API multi-tenant платформы. Внутренние `tenantId`, notification destinations, storage keys и secrets в контракт не входят.
+Единственный source of truth для публичных config, menu и order API одного deployment.
+Routing identifiers, notification destinations, storage keys и secrets в контракт не входят.
 
 ## Команды
 
@@ -17,8 +18,9 @@ pnpm validate
 ```
 
 - `lint` проверяет OpenAPI через Redocly.
-- `test` проверяет обязательные endpoints, examples, schema boundaries и forbidden public fields.
-- `generate` полностью пересоздаёт `generated/typescript-fetch` посредством OpenAPI Generator 7.22.0 и детерминированно удаляет шаблонный trailing whitespace.
+- `test` проверяет canonical endpoints, examples, schema boundaries и forbidden public fields.
+- `generate` полностью пересоздаёт `generated/typescript-fetch` посредством OpenAPI Generator и
+  детерминированно удаляет шаблонный trailing whitespace.
 - `check-generated` генерирует client во временный каталог и побайтово сравнивает его с сохранённым результатом.
 - `typecheck` компилирует сгенерированный client в strict TypeScript без emit.
 
@@ -30,8 +32,7 @@ pnpm validate
 4. Выполнить `pnpm check-generated` и `pnpm typecheck`.
 5. Затем синхронизировать Spring implementation и frontend usage.
 
-Файлы в `generated/typescript-fetch` не редактируются вручную. Генерация детерминирована, timestamp banner отключён. Java server stubs намеренно не генерируются.
+Файлы в `generated/typescript-fetch` не редактируются вручную. Генерация детерминирована,
+timestamp banner отключён. Java server stubs намеренно не генерируются.
 
-Пакет подготовлен к последующему подключению в корневой pnpm workspace, но не изменяет root workspace wiring.
-
-Архитектурное решение о генерации описано в [DECISIONS.md](./DECISIONS.md).
+Архитектурные решения пакета описаны в [DECISIONS.md](./DECISIONS.md).

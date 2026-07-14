@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -16,69 +16,57 @@ import { mapValues } from '../runtime';
 /**
  *
  * @export
- * @interface RestaurantLimits
+ * @interface OrderLimits
  */
-export interface RestaurantLimits {
+export interface OrderLimits {
     /**
-     *
+     * Maximum quantity of one menu item in an order.
      * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     maxItemQuantity: number;
     /**
-     *
+     * Maximum sum of all item quantities in an order.
      * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     maxTotalItems: number;
     /**
      *
      * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     maxNameLength: number;
     /**
      *
      * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     maxPhoneLength: number;
     /**
      *
      * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     maxAddressLength: number;
     /**
      *
      * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     maxCommentLength: number;
     /**
      *
      * @type {number}
-     * @memberof RestaurantLimits
-     */
-    minOrderMinor?: number;
-    /**
-     *
-     * @type {number}
-     * @memberof RestaurantLimits
-     */
-    freeDeliveryThresholdMinor?: number;
-    /**
-     *
-     * @type {number}
-     * @memberof RestaurantLimits
+     * @memberof OrderLimits
      */
     delayedOrderConfirmationMinutes: number;
 }
 
 /**
- * Check if a given object implements the RestaurantLimits interface.
+ * Check if a given object implements the OrderLimits interface.
  */
-export function instanceOfRestaurantLimits(value: object): value is RestaurantLimits {
+export function instanceOfOrderLimits(value: object): value is OrderLimits {
     if (!('maxItemQuantity' in value) || value['maxItemQuantity'] === undefined) return false;
     if (!('maxTotalItems' in value) || value['maxTotalItems'] === undefined) return false;
     if (!('maxNameLength' in value) || value['maxNameLength'] === undefined) return false;
@@ -89,11 +77,11 @@ export function instanceOfRestaurantLimits(value: object): value is RestaurantLi
     return true;
 }
 
-export function RestaurantLimitsFromJSON(json: any): RestaurantLimits {
-    return RestaurantLimitsFromJSONTyped(json, false);
+export function OrderLimitsFromJSON(json: any): OrderLimits {
+    return OrderLimitsFromJSONTyped(json, false);
 }
 
-export function RestaurantLimitsFromJSONTyped(json: any, ignoreDiscriminator: boolean): RestaurantLimits {
+export function OrderLimitsFromJSONTyped(json: any, ignoreDiscriminator: boolean): OrderLimits {
     if (json == null) {
         return json;
     }
@@ -105,17 +93,15 @@ export function RestaurantLimitsFromJSONTyped(json: any, ignoreDiscriminator: bo
         'maxPhoneLength': json['maxPhoneLength'],
         'maxAddressLength': json['maxAddressLength'],
         'maxCommentLength': json['maxCommentLength'],
-        'minOrderMinor': json['minOrderMinor'] == null ? undefined : json['minOrderMinor'],
-        'freeDeliveryThresholdMinor': json['freeDeliveryThresholdMinor'] == null ? undefined : json['freeDeliveryThresholdMinor'],
         'delayedOrderConfirmationMinutes': json['delayedOrderConfirmationMinutes'],
     };
 }
 
-export function RestaurantLimitsToJSON(json: any): RestaurantLimits {
-    return RestaurantLimitsToJSONTyped(json, false);
+export function OrderLimitsToJSON(json: any): OrderLimits {
+    return OrderLimitsToJSONTyped(json, false);
 }
 
-export function RestaurantLimitsToJSONTyped(value?: RestaurantLimits | null, ignoreDiscriminator: boolean = false): any {
+export function OrderLimitsToJSONTyped(value?: OrderLimits | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }
@@ -128,8 +114,6 @@ export function RestaurantLimitsToJSONTyped(value?: RestaurantLimits | null, ign
         'maxPhoneLength': value['maxPhoneLength'],
         'maxAddressLength': value['maxAddressLength'],
         'maxCommentLength': value['maxCommentLength'],
-        'minOrderMinor': value['minOrderMinor'],
-        'freeDeliveryThresholdMinor': value['freeDeliveryThresholdMinor'],
         'delayedOrderConfirmationMinutes': value['delayedOrderConfirmationMinutes'],
     };
 }

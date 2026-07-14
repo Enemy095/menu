@@ -8,8 +8,8 @@ Name | Type
 ------------ | -------------
 `publicPhone` | string
 `publicPhoneLabel` | string
+`publicEmail` | string
 `address` | string
-`workingHoursText` | string
 `location` | [GeoLocation](GeoLocation.md)
 `socialLinks` | [Array&lt;SocialLink&gt;](SocialLink.md)
 
@@ -22,8 +22,8 @@ import type { PublicProfile } from '@e-menu/public-api-client'
 const example = {
   "publicPhone": null,
   "publicPhoneLabel": null,
+  "publicEmail": null,
   "address": null,
-  "workingHoursText": null,
   "location": null,
   "socialLinks": null,
 } satisfies PublicProfile

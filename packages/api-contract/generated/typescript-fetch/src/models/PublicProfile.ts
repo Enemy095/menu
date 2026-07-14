@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -51,13 +51,13 @@ export interface PublicProfile {
      * @type {string}
      * @memberof PublicProfile
      */
-    address?: string;
+    publicEmail?: string;
     /**
      *
      * @type {string}
      * @memberof PublicProfile
      */
-    workingHoursText: string;
+    address?: string;
     /**
      *
      * @type {GeoLocation}
@@ -78,7 +78,6 @@ export interface PublicProfile {
 export function instanceOfPublicProfile(value: object): value is PublicProfile {
     if (!('publicPhone' in value) || value['publicPhone'] === undefined) return false;
     if (!('publicPhoneLabel' in value) || value['publicPhoneLabel'] === undefined) return false;
-    if (!('workingHoursText' in value) || value['workingHoursText'] === undefined) return false;
     if (!('socialLinks' in value) || value['socialLinks'] === undefined) return false;
     return true;
 }
@@ -95,8 +94,8 @@ export function PublicProfileFromJSONTyped(json: any, ignoreDiscriminator: boole
 
         'publicPhone': json['publicPhone'],
         'publicPhoneLabel': json['publicPhoneLabel'],
+        'publicEmail': json['publicEmail'] == null ? undefined : json['publicEmail'],
         'address': json['address'] == null ? undefined : json['address'],
-        'workingHoursText': json['workingHoursText'],
         'location': json['location'] == null ? undefined : GeoLocationFromJSON(json['location']),
         'socialLinks': ((json['socialLinks'] as Array<any>).map(SocialLinkFromJSON)),
     };
@@ -115,8 +114,8 @@ export function PublicProfileToJSONTyped(value?: PublicProfile | null, ignoreDis
 
         'publicPhone': value['publicPhone'],
         'publicPhoneLabel': value['publicPhoneLabel'],
+        'publicEmail': value['publicEmail'],
         'address': value['address'],
-        'workingHoursText': value['workingHoursText'],
         'location': GeoLocationToJSON(value['location']),
         'socialLinks': ((value['socialLinks'] as Array<any>).map(SocialLinkToJSON)),
     };

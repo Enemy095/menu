@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -12,99 +12,34 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { OrderCustomer } from './OrderCustomer';
+import type { DeliveryOrderRequest } from './DeliveryOrderRequest';
 import {
-    OrderCustomerFromJSON,
-    OrderCustomerFromJSONTyped,
-    OrderCustomerToJSON,
-    OrderCustomerToJSONTyped,
-} from './OrderCustomer';
-import type { OrderType } from './OrderType';
+    instanceOfDeliveryOrderRequest,
+    DeliveryOrderRequestFromJSON,
+    DeliveryOrderRequestFromJSONTyped,
+    DeliveryOrderRequestToJSON,
+} from './DeliveryOrderRequest';
+import type { PickupOrderRequest } from './PickupOrderRequest';
 import {
-    OrderTypeFromJSON,
-    OrderTypeFromJSONTyped,
-    OrderTypeToJSON,
-    OrderTypeToJSONTyped,
-} from './OrderType';
-import type { CreateOrderItem } from './CreateOrderItem';
+    instanceOfPickupOrderRequest,
+    PickupOrderRequestFromJSON,
+    PickupOrderRequestFromJSONTyped,
+    PickupOrderRequestToJSON,
+} from './PickupOrderRequest';
+import type { PreorderOrderRequest } from './PreorderOrderRequest';
 import {
-    CreateOrderItemFromJSON,
-    CreateOrderItemFromJSONTyped,
-    CreateOrderItemToJSON,
-    CreateOrderItemToJSONTyped,
-} from './CreateOrderItem';
+    instanceOfPreorderOrderRequest,
+    PreorderOrderRequestFromJSON,
+    PreorderOrderRequestFromJSONTyped,
+    PreorderOrderRequestToJSON,
+} from './PreorderOrderRequest';
 
 /**
+ * @type CreateOrderRequest
  *
  * @export
- * @interface CreateOrderRequest
  */
-export interface CreateOrderRequest {
-    /**
-     *
-     * @type {OrderType}
-     * @memberof CreateOrderRequest
-     */
-    orderType: OrderType;
-    /**
-     *
-     * @type {OrderCustomer}
-     * @memberof CreateOrderRequest
-     */
-    customer: OrderCustomer;
-    /**
-     *
-     * @type {Array<CreateOrderItem>}
-     * @memberof CreateOrderRequest
-     */
-    items: Array<CreateOrderItem>;
-    /**
-     *
-     * @type {string}
-     * @memberof CreateOrderRequest
-     */
-    comment?: string;
-    /**
-     *
-     * @type {number}
-     * @memberof CreateOrderRequest
-     */
-    guestCount?: number;
-    /**
-     *
-     * @type {number}
-     * @memberof CreateOrderRequest
-     */
-    clientTotalMinor: number;
-    /**
-     *
-     * @type {Date}
-     * @memberof CreateOrderRequest
-     */
-    clientCreatedAt: Date;
-    /**
-     *
-     * @type {number}
-     * @memberof CreateOrderRequest
-     */
-    clientMenuVersion: number;
-}
-
-
-
-/**
- * Check if a given object implements the CreateOrderRequest interface.
- */
-export function instanceOfCreateOrderRequest(value: object): value is CreateOrderRequest {
-    if (!('orderType' in value) || value['orderType'] === undefined) return false;
-    if (!('customer' in value) || value['customer'] === undefined) return false;
-    if (!('items' in value) || value['items'] === undefined) return false;
-    if (!('clientTotalMinor' in value) || value['clientTotalMinor'] === undefined) return false;
-    if (!('clientCreatedAt' in value) || value['clientCreatedAt'] === undefined) return false;
-    if (!('clientMenuVersion' in value) || value['clientMenuVersion'] === undefined) return false;
-    return true;
-}
+export type CreateOrderRequest = { orderType: 'delivery' } & DeliveryOrderRequest | { orderType: 'pickup' } & PickupOrderRequest | { orderType: 'preorder' } & PreorderOrderRequest;
 
 export function CreateOrderRequestFromJSON(json: any): CreateOrderRequest {
     return CreateOrderRequestFromJSONTyped(json, false);
@@ -114,20 +49,19 @@ export function CreateOrderRequestFromJSONTyped(json: any, ignoreDiscriminator: 
     if (json == null) {
         return json;
     }
-    return {
-
-        'orderType': OrderTypeFromJSON(json['orderType']),
-        'customer': OrderCustomerFromJSON(json['customer']),
-        'items': ((json['items'] as Array<any>).map(CreateOrderItemFromJSON)),
-        'comment': json['comment'] == null ? undefined : json['comment'],
-        'guestCount': json['guestCount'] == null ? undefined : json['guestCount'],
-        'clientTotalMinor': json['clientTotalMinor'],
-        'clientCreatedAt': (new Date(json['clientCreatedAt'])),
-        'clientMenuVersion': json['clientMenuVersion'],
-    };
+    switch (json['orderType']) {
+        case 'delivery':
+            return Object.assign({}, DeliveryOrderRequestFromJSONTyped(json, true), { orderType: 'delivery' } as const);
+        case 'pickup':
+            return Object.assign({}, PickupOrderRequestFromJSONTyped(json, true), { orderType: 'pickup' } as const);
+        case 'preorder':
+            return Object.assign({}, PreorderOrderRequestFromJSONTyped(json, true), { orderType: 'preorder' } as const);
+        default:
+            return json;
+    }
 }
 
-export function CreateOrderRequestToJSON(json: any): CreateOrderRequest {
+export function CreateOrderRequestToJSON(json: any): any {
     return CreateOrderRequestToJSONTyped(json, false);
 }
 
@@ -135,16 +69,14 @@ export function CreateOrderRequestToJSONTyped(value?: CreateOrderRequest | null,
     if (value == null) {
         return value;
     }
-
-    return {
-
-        'orderType': OrderTypeToJSON(value['orderType']),
-        'customer': OrderCustomerToJSON(value['customer']),
-        'items': ((value['items'] as Array<any>).map(CreateOrderItemToJSON)),
-        'comment': value['comment'],
-        'guestCount': value['guestCount'],
-        'clientTotalMinor': value['clientTotalMinor'],
-        'clientCreatedAt': value['clientCreatedAt'].toISOString(),
-        'clientMenuVersion': value['clientMenuVersion'],
-    };
+    switch (value['orderType']) {
+        case 'delivery':
+            return Object.assign({}, DeliveryOrderRequestToJSON(value), { orderType: 'delivery' } as const);
+        case 'pickup':
+            return Object.assign({}, PickupOrderRequestToJSON(value), { orderType: 'pickup' } as const);
+        case 'preorder':
+            return Object.assign({}, PreorderOrderRequestToJSON(value), { orderType: 'preorder' } as const);
+        default:
+            return value;
+    }
 }

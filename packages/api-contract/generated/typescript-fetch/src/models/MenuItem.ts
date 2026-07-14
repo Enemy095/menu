@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { MenuModifierGroup } from './MenuModifierGroup';
+import {
+    MenuModifierGroupFromJSON,
+    MenuModifierGroupFromJSONTyped,
+    MenuModifierGroupToJSON,
+    MenuModifierGroupToJSONTyped,
+} from './MenuModifierGroup';
+
 /**
  *
  * @export
@@ -20,7 +28,7 @@ import { mapValues } from '../runtime';
  */
 export interface MenuItem {
     /**
-     * Stable tenant-scoped public menu item key preserved across menu versions.
+     * Stable public item key preserved across menu versions.
      * @type {string}
      * @memberof MenuItem
      */
@@ -50,7 +58,7 @@ export interface MenuItem {
      */
     priceMinor: number;
     /**
-     * Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
+     * Immutable content-addressed public asset URL.
      * @type {string}
      * @memberof MenuItem
      */
@@ -67,6 +75,12 @@ export interface MenuItem {
      * @memberof MenuItem
      */
     sortOrder: number;
+    /**
+     *
+     * @type {Array<MenuModifierGroup>}
+     * @memberof MenuItem
+     */
+    modifierGroups: Array<MenuModifierGroup>;
 }
 
 /**
@@ -79,6 +93,7 @@ export function instanceOfMenuItem(value: object): value is MenuItem {
     if (!('priceMinor' in value) || value['priceMinor'] === undefined) return false;
     if (!('available' in value) || value['available'] === undefined) return false;
     if (!('sortOrder' in value) || value['sortOrder'] === undefined) return false;
+    if (!('modifierGroups' in value) || value['modifierGroups'] === undefined) return false;
     return true;
 }
 
@@ -100,6 +115,7 @@ export function MenuItemFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'imageUrl': json['imageUrl'] == null ? undefined : json['imageUrl'],
         'available': json['available'],
         'sortOrder': json['sortOrder'],
+        'modifierGroups': ((json['modifierGroups'] as Array<any>).map(MenuModifierGroupFromJSON)),
     };
 }
 
@@ -122,5 +138,6 @@ export function MenuItemToJSONTyped(value?: MenuItem | null, ignoreDiscriminator
         'imageUrl': value['imageUrl'],
         'available': value['available'],
         'sortOrder': value['sortOrder'],
+        'modifierGroups': ((value['modifierGroups'] as Array<any>).map(MenuModifierGroupToJSON)),
     };
 }

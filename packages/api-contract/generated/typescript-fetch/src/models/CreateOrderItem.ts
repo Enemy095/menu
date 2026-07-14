@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { CreateOrderModifier } from './CreateOrderModifier';
+import {
+    CreateOrderModifierFromJSON,
+    CreateOrderModifierFromJSONTyped,
+    CreateOrderModifierToJSON,
+    CreateOrderModifierToJSONTyped,
+} from './CreateOrderModifier';
+
 /**
  *
  * @export
@@ -31,6 +39,12 @@ export interface CreateOrderItem {
      * @memberof CreateOrderItem
      */
     quantity: number;
+    /**
+     *
+     * @type {Array<CreateOrderModifier>}
+     * @memberof CreateOrderItem
+     */
+    modifiers: Array<CreateOrderModifier>;
 }
 
 /**
@@ -39,6 +53,7 @@ export interface CreateOrderItem {
 export function instanceOfCreateOrderItem(value: object): value is CreateOrderItem {
     if (!('menuItemId' in value) || value['menuItemId'] === undefined) return false;
     if (!('quantity' in value) || value['quantity'] === undefined) return false;
+    if (!('modifiers' in value) || value['modifiers'] === undefined) return false;
     return true;
 }
 
@@ -54,6 +69,7 @@ export function CreateOrderItemFromJSONTyped(json: any, ignoreDiscriminator: boo
 
         'menuItemId': json['menuItemId'],
         'quantity': json['quantity'],
+        'modifiers': ((json['modifiers'] as Array<any>).map(CreateOrderModifierFromJSON)),
     };
 }
 
@@ -70,5 +86,6 @@ export function CreateOrderItemToJSONTyped(value?: CreateOrderItem | null, ignor
 
         'menuItemId': value['menuItemId'],
         'quantity': value['quantity'],
+        'modifiers': ((value['modifiers'] as Array<any>).map(CreateOrderModifierToJSON)),
     };
 }

@@ -22,10 +22,10 @@
 | MIG-001B | Strict parser и zero-write dry-run | MIG-001A | 4B | superseded |
 | MIG-001C | Staged apply и gated verification | MIG-001A, MIG-001B | 4C | superseded |
 | SC-000 | Single-client ADR, AGENTS и replan | — | P0 | done |
-| SC-DB-001 | Append-only single-client schema pivot | SC-000, INF-001 | P1 | ready |
-| SC-API-001 | Single-client OpenAPI и generated client | SC-000 | P1 | ready |
+| SC-DB-001 | Append-only single-client schema pivot | SC-000, INF-001 | P1 | done |
+| SC-API-001 | Single-client OpenAPI и generated client | SC-000 | P1 | done |
 | SC-BE-001 | Site/asset modules и удаление tenancy runtime | SC-DB-001, SC-API-001 | P2 | blocked |
-| SC-SEC-001 | Single-client public/admin security boundary | SC-BE-001 | P2 | blocked |
+| SC-SEC-001 | Single-client public/admin security boundary | SC-API-001 | P2 | ready |
 | SC-DATA-001 | Импорт одного выбранного legacy dataset | SC-BE-001, client selection | P3 | blocked |
 | SC-WEB-001 | Next.js SSR config/menu frontend | SC-API-001, SC-DATA-001 | P4 | blocked |
 | SC-CART-001 | Single-client persisted cart и checkout | SC-WEB-001 | P5 | blocked |

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -31,12 +31,6 @@ export interface OrderCustomer {
      * @memberof OrderCustomer
      */
     phone: string;
-    /**
-     *
-     * @type {string}
-     * @memberof OrderCustomer
-     */
-    address?: string;
 }
 
 /**
@@ -60,7 +54,6 @@ export function OrderCustomerFromJSONTyped(json: any, ignoreDiscriminator: boole
 
         'name': json['name'],
         'phone': json['phone'],
-        'address': json['address'] == null ? undefined : json['address'],
     };
 }
 
@@ -77,6 +70,5 @@ export function OrderCustomerToJSONTyped(value?: OrderCustomer | null, ignoreDis
 
         'name': value['name'],
         'phone': value['phone'],
-        'address': value['address'],
     };
 }

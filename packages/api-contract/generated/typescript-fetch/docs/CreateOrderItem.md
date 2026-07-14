@@ -8,6 +8,7 @@ Name | Type
 ------------ | -------------
 `menuItemId` | string
 `quantity` | number
+`modifiers` | [Array&lt;CreateOrderModifier&gt;](CreateOrderModifier.md)
 
 ## Example
 
@@ -18,6 +19,7 @@ import type { CreateOrderItem } from '@e-menu/public-api-client'
 const example = {
   "menuItemId": null,
   "quantity": null,
+  "modifiers": null,
 } satisfies CreateOrderItem
 
 console.log(example)

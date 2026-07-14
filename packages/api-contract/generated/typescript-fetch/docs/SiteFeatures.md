@@ -1,5 +1,5 @@
 
-# RestaurantFeatures
+# SiteFeatures
 
 
 ## Properties
@@ -23,7 +23,7 @@ Name | Type
 ## Example
 
 ```typescript
-import type { RestaurantFeatures } from '@e-menu/public-api-client'
+import type { SiteFeatures } from '@e-menu/public-api-client'
 
 // TODO: Update the object below with actual values
 const example = {
@@ -40,7 +40,7 @@ const example = {
   "loyalty": null,
   "reservations": null,
   "deliveryBlocks": null,
-} satisfies RestaurantFeatures
+} satisfies SiteFeatures
 
 console.log(example)
 
@@ -49,7 +49,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as RestaurantFeatures
+const exampleParsed = JSON.parse(exampleJSON) as SiteFeatures
 console.log(exampleParsed)
 ```
 

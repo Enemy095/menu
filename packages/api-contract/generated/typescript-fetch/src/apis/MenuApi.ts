@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -24,11 +24,6 @@ import {
     MenuResponseToJSON,
 } from '../models/MenuResponse';
 
-export interface GetPublicMenuRequest {
-    tenantSlug: string;
-    ifNoneMatch?: string;
-}
-
 /**
  * MenuApi - interface
  *
@@ -38,29 +33,25 @@ export interface GetPublicMenuRequest {
 export interface MenuApiInterface {
     /**
      * Creates request options for getPublicMenu without sending the request
-     * @param {string} tenantSlug Public tenant slug resolved together with the trusted request host.
-     * @param {string} [ifNoneMatch] Previously received entity tag. A matching value returns a bodyless &#x60;304&#x60; response.
      * @throws {RequiredError}
      * @memberof MenuApiInterface
      */
-    getPublicMenuRequestOpts(requestParameters: GetPublicMenuRequest): Promise<runtime.RequestOpts>;
+    getPublicMenuRequestOpts(): Promise<runtime.RequestOpts>;
 
     /**
-     * Returns the current published menu for the resolved active tenant.
+     * Returns the current immutable published menu snapshot.
      * @summary Get published menu
-     * @param {string} tenantSlug Public tenant slug resolved together with the trusted request host.
-     * @param {string} [ifNoneMatch] Previously received entity tag. A matching value returns a bodyless &#x60;304&#x60; response.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof MenuApiInterface
      */
-    getPublicMenuRaw(requestParameters: GetPublicMenuRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MenuResponse>>;
+    getPublicMenuRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MenuResponse>>;
 
     /**
-     * Returns the current published menu for the resolved active tenant.
+     * Returns the current immutable published menu snapshot.
      * Get published menu
      */
-    getPublicMenu(requestParameters: GetPublicMenuRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MenuResponse>;
+    getPublicMenu(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MenuResponse>;
 
 }
 
@@ -72,25 +63,13 @@ export class MenuApi extends runtime.BaseAPI implements MenuApiInterface {
     /**
      * Creates request options for getPublicMenu without sending the request
      */
-    async getPublicMenuRequestOpts(requestParameters: GetPublicMenuRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['tenantSlug'] == null) {
-            throw new runtime.RequiredError(
-                'tenantSlug',
-                'Required parameter "tenantSlug" was null or undefined when calling getPublicMenu().'
-            );
-        }
-
+    async getPublicMenuRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        if (requestParameters['ifNoneMatch'] != null) {
-            headerParameters['If-None-Match'] = String(requestParameters['ifNoneMatch']);
-        }
 
-
-        let urlPath = `/api/v1/public/{tenantSlug}/menu`;
-        urlPath = urlPath.replace('{tenantSlug}', encodeURIComponent(String(requestParameters['tenantSlug'])));
+        let urlPath = `/api/v1/public/menu`;
 
         return {
             path: urlPath,
@@ -101,22 +80,22 @@ export class MenuApi extends runtime.BaseAPI implements MenuApiInterface {
     }
 
     /**
-     * Returns the current published menu for the resolved active tenant.
+     * Returns the current immutable published menu snapshot.
      * Get published menu
      */
-    async getPublicMenuRaw(requestParameters: GetPublicMenuRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MenuResponse>> {
-        const requestOptions = await this.getPublicMenuRequestOpts(requestParameters);
+    async getPublicMenuRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MenuResponse>> {
+        const requestOptions = await this.getPublicMenuRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MenuResponseFromJSON(jsonValue));
     }
 
     /**
-     * Returns the current published menu for the resolved active tenant.
+     * Returns the current immutable published menu snapshot.
      * Get published menu
      */
-    async getPublicMenu(requestParameters: GetPublicMenuRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MenuResponse> {
-        const response = await this.getPublicMenuRaw(requestParameters, initOverrides);
+    async getPublicMenu(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MenuResponse> {
+        const response = await this.getPublicMenuRaw(initOverrides);
         return await response.value();
     }
 

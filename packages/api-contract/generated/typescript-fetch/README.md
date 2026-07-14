@@ -1,6 +1,6 @@
 # @e-menu/public-api-client@0.1.0
 
-A TypeScript SDK client for the platform.example.com API.
+A TypeScript SDK client for the menu.example.com API.
 
 ## Usage
 
@@ -16,23 +16,16 @@ Next, try it out.
 ```ts
 import {
   Configuration,
-  MenuApi,
+  ConfigApi,
 } from '@e-menu/public-api-client';
-import type { GetPublicMenuRequest } from '@e-menu/public-api-client';
+import type { GetPublicConfigurationRequest } from '@e-menu/public-api-client';
 
 async function example() {
   console.log("🚀 Testing @e-menu/public-api-client SDK...");
-  const api = new MenuApi();
-
-  const body = {
-    // string | Public tenant slug resolved together with the trusted request host.
-    tenantSlug: adamas,
-    // string | Previously received entity tag. A matching value returns a bodyless `304` response. (optional)
-    ifNoneMatch: "menu-stambul-v3",
-  } satisfies GetPublicMenuRequest;
+  const api = new ConfigApi();
 
   try {
-    const data = await api.getPublicMenu(body);
+    const data = await api.getPublicConfiguration();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -48,13 +41,13 @@ example().catch(console.error);
 
 ### API Endpoints
 
-All URIs are relative to *https://platform.example.com*
+All URIs are relative to *https://menu.example.com*
 
 | Class | Method | HTTP request | Description
 | ----- | ------ | ------------ | -------------
-*MenuApi* | [**getPublicMenu**](docs/MenuApi.md#getpublicmenu) | **GET** /api/v1/public/{tenantSlug}/menu | Get published menu
-*OrdersApi* | [**createPublicOrder**](docs/OrdersApi.md#createpublicorder) | **POST** /api/v1/public/{tenantSlug}/orders | Create an order
-*RestaurantApi* | [**getPublicRestaurant**](docs/RestaurantApi.md#getpublicrestaurant) | **GET** /api/v1/public/{tenantSlug}/restaurant | Get public restaurant configuration
+*ConfigApi* | [**getPublicConfiguration**](docs/ConfigApi.md#getpublicconfiguration) | **GET** /api/v1/public/config | Get public configuration
+*MenuApi* | [**getPublicMenu**](docs/MenuApi.md#getpublicmenu) | **GET** /api/v1/public/menu | Get published menu
+*OrdersApi* | [**createPublicOrder**](docs/OrdersApi.md#createpublicorder) | **POST** /api/v1/public/orders | Create an order
 
 
 ### Models
@@ -62,8 +55,13 @@ All URIs are relative to *https://platform.example.com*
 - [AvailableOrderType](docs/AvailableOrderType.md)
 - [Branding](docs/Branding.md)
 - [CreateOrderItem](docs/CreateOrderItem.md)
+- [CreateOrderModifier](docs/CreateOrderModifier.md)
 - [CreateOrderRequest](docs/CreateOrderRequest.md)
 - [CreateOrderResponse](docs/CreateOrderResponse.md)
+- [DayOfWeek](docs/DayOfWeek.md)
+- [DeliveryConfiguration](docs/DeliveryConfiguration.md)
+- [DeliveryFulfillment](docs/DeliveryFulfillment.md)
+- [DeliveryOrderRequest](docs/DeliveryOrderRequest.md)
 - [DesignTokens](docs/DesignTokens.md)
 - [ErrorCode](docs/ErrorCode.md)
 - [ErrorDetail](docs/ErrorDetail.md)
@@ -71,18 +69,26 @@ All URIs are relative to *https://platform.example.com*
 - [GeoLocation](docs/GeoLocation.md)
 - [Hero](docs/Hero.md)
 - [HeroBenefit](docs/HeroBenefit.md)
-- [LocalizedRestaurantText](docs/LocalizedRestaurantText.md)
+- [LocalizedSiteText](docs/LocalizedSiteText.md)
 - [MenuCategory](docs/MenuCategory.md)
 - [MenuItem](docs/MenuItem.md)
+- [MenuModifierGroup](docs/MenuModifierGroup.md)
+- [MenuModifierOption](docs/MenuModifierOption.md)
 - [MenuResponse](docs/MenuResponse.md)
+- [NonDeliveryFulfillment](docs/NonDeliveryFulfillment.md)
+- [OpeningInterval](docs/OpeningInterval.md)
 - [OrderCustomer](docs/OrderCustomer.md)
+- [OrderLimits](docs/OrderLimits.md)
 - [OrderType](docs/OrderType.md)
+- [PickupOrderRequest](docs/PickupOrderRequest.md)
+- [PreorderOrderRequest](docs/PreorderOrderRequest.md)
+- [PublicConfigurationResponse](docs/PublicConfigurationResponse.md)
 - [PublicProfile](docs/PublicProfile.md)
-- [RestaurantFeatures](docs/RestaurantFeatures.md)
-- [RestaurantLimits](docs/RestaurantLimits.md)
-- [RestaurantResponse](docs/RestaurantResponse.md)
 - [SeoMetadata](docs/SeoMetadata.md)
+- [SiteFeatures](docs/SiteFeatures.md)
 - [SocialLink](docs/SocialLink.md)
+- [WeeklySchedule](docs/WeeklySchedule.md)
+- [WeeklyScheduleDay](docs/WeeklyScheduleDay.md)
 
 ### Authorization
 
@@ -136,4 +142,4 @@ npm publish
 
 ## License
 
-[Proprietary](https://platform.example.com/legal/api-license)
+[Proprietary](https://menu.example.com/legal/api-license)

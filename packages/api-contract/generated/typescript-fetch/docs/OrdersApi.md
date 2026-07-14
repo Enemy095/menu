@@ -1,20 +1,20 @@
 # OrdersApi
 
-All URIs are relative to *https://platform.example.com*
+All URIs are relative to *https://menu.example.com*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**createPublicOrder**](OrdersApi.md#createpublicorder) | **POST** /api/v1/public/{tenantSlug}/orders | Create an order |
+| [**createPublicOrder**](OrdersApi.md#createpublicorder) | **POST** /api/v1/public/orders | Create an order |
 
 
 
 ## createPublicOrder
 
-> CreateOrderResponse createPublicOrder(tenantSlug, idempotencyKey, createOrderRequest)
+> CreateOrderResponse createPublicOrder(idempotencyKey, createOrderRequest)
 
 Create an order
 
-Creates exactly one order per tenant and idempotency key. Backend validates the current published menu, item availability, quantities and total before persisting.
+Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
 
 ### Example
 
@@ -30,8 +30,6 @@ async function example() {
   const api = new OrdersApi();
 
   const body = {
-    // string | Public tenant slug resolved together with the trusted request host.
-    tenantSlug: adamas,
     // string | Client-generated UUID reused only when retrying the same canonical order payload.
     idempotencyKey: 6a43ed97-c755-4df2-a600-b4cf523f176c,
     // CreateOrderRequest
@@ -55,7 +53,6 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **tenantSlug** | `string` | Public tenant slug resolved together with the trusted request host. | [Defaults to `undefined`] |
 | **idempotencyKey** | `string` | Client-generated UUID reused only when retrying the same canonical order payload. | [Defaults to `undefined`] |
 | **createOrderRequest** | [CreateOrderRequest](CreateOrderRequest.md) |  | |
 
@@ -76,11 +73,12 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Order created, or the original result returned for an identical idempotent replay. |  -  |
-| **400** | Request structure or input format is invalid. |  -  |
-| **404** | Tenant is unknown, inactive, or not confirmed for the request host. |  -  |
-| **409** | Current menu/order state conflicts with the submitted order or idempotency key. |  -  |
-| **429** | Too many requests for the tenant/client rate-limit scope. |  * Retry-After - Seconds before the client should retry. <br>  |
-| **500** | Unexpected server failure. The trace ID can be reported to support. |  -  |
+| **201** | Order created, or the original result returned for an identical replay. |  * Idempotency-Replayed -  <br>  * Cache-Control -  <br>  |
+| **400** | Request structure, input format or fulfillment data is invalid. |  * Cache-Control -  <br>  |
+| **404** | No current published menu is available. |  * Cache-Control -  <br>  |
+| **409** | Current menu or idempotency state conflicts with the submitted order. |  * Cache-Control -  <br>  |
+| **429** | Too many requests for the client or global rate-limit scope. |  * Retry-After -  <br>  * Cache-Control -  <br>  |
+| **503** | A required backend dependency is temporarily unavailable. |  * Cache-Control -  <br>  |
+| **500** | Unexpected server failure. The trace ID can be reported to support. |  * Cache-Control -  <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)

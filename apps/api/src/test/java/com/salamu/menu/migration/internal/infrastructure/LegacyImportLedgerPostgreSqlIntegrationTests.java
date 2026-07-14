@@ -125,7 +125,7 @@ class LegacyImportLedgerPostgreSqlIntegrationTests {
         var upgradeSchema = "legacy_import_upgrade";
 
         flyway(freshSchema, null).migrate();
-        assertThat(currentVersion(freshSchema)).isEqualTo("5");
+        assertThat(currentVersion(freshSchema)).isEqualTo("6");
         assertThat(tables(freshSchema)).contains(
                 "legacy_import_runs",
                 "legacy_import_run_tenants",
@@ -139,7 +139,7 @@ class LegacyImportLedgerPostgreSqlIntegrationTests {
         var upgraded = flyway(upgradeSchema, null);
         upgraded.migrate();
         assertThat(upgraded.validateWithResult().validationSuccessful).isTrue();
-        assertThat(currentVersion(upgradeSchema)).isEqualTo("5");
+        assertThat(currentVersion(upgradeSchema)).isEqualTo("6");
         assertThat(migrationChecksums(upgradeSchema)).containsAllEntriesOf(checksumsBefore);
     }
 

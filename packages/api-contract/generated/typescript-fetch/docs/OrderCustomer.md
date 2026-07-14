@@ -8,7 +8,6 @@ Name | Type
 ------------ | -------------
 `name` | string
 `phone` | string
-`address` | string
 
 ## Example
 
@@ -19,7 +18,6 @@ import type { OrderCustomer } from '@e-menu/public-api-client'
 const example = {
   "name": null,
   "phone": null,
-  "address": null,
 } satisfies OrderCustomer
 
 console.log(example)

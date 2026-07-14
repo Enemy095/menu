@@ -6,13 +6,11 @@
 
 Name | Type
 ------------ | -------------
-`orderType` | [OrderType](OrderType.md)
+`orderType` | string
 `customer` | [OrderCustomer](OrderCustomer.md)
+`fulfillment` | [NonDeliveryFulfillment](NonDeliveryFulfillment.md)
 `items` | [Array&lt;CreateOrderItem&gt;](CreateOrderItem.md)
 `comment` | string
-`guestCount` | number
-`clientTotalMinor` | number
-`clientCreatedAt` | Date
 `clientMenuVersion` | number
 
 ## Example
@@ -24,11 +22,9 @@ import type { CreateOrderRequest } from '@e-menu/public-api-client'
 const example = {
   "orderType": null,
   "customer": null,
+  "fulfillment": null,
   "items": null,
   "comment": null,
-  "guestCount": null,
-  "clientTotalMinor": null,
-  "clientCreatedAt": null,
   "clientMenuVersion": null,
 } satisfies CreateOrderRequest
 

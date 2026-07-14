@@ -97,7 +97,8 @@ Gate:
 
 ### P1A — append-only schema pivot (`SC-DB-001`)
 
-Objective: create a final single-client relational model without losing reusable data.
+Objective: выполнить expand phase single-client relational model без потери reusable
+data и без поломки текущего runtime до переключения Java-кода.
 
 Required work:
 
@@ -113,10 +114,13 @@ Required work:
    - exactly one selected source dataset: migrate it;
    - more than one populated tenant without explicit selection: fail closed before
      destructive migration or use a separate pre-migration selection operation.
-4. Remove `tenant_id` from target PK/UK/FK/indexes.
+4. Создать `sc_*` shadow target без `tenant_id` в PK/UK/FK/indexes; legacy tables
+   временно остаются для старого runtime.
 5. Make order idempotency global.
 6. Replace asset namespace with `assets/{kind}/{sha256}.{ext}`.
 7. Validate no orphan references and exact current menu relationship.
+8. Contract/drop/rename migration не входит в изолированный P1 commit: она добавляется
+   вместе с SC-BE switch, чтобы каждый checkpoint оставался runnable.
 
 Tests:
 
@@ -126,7 +130,8 @@ Tests:
 - fail-closed ambiguous two-data-set state;
 - constraints for menu/assets/orders/outbox;
 - current Flyway version assertion;
-- schema metadata assertion that target tables contain no `tenant_id`.
+- schema metadata assertion that `sc_*` target tables contain no `tenant_id`;
+- existing backend still boots against legacy tables until P2.
 
 Restrictions:
 

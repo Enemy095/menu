@@ -12,4 +12,4 @@ rules:
   no-identical-paths: error
   no-invalid-media-type-examples: error
   no-server-example.com: off # platform.example.com is an intentional non-routable documentation host.
-  security-defined: off # Every endpoint is intentionally public; tenant resolution and rate limiting are server concerns.
+  security-defined: off # Every endpoint is intentionally public; rate limiting is a server concern.

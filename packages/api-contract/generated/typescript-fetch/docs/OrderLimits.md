@@ -1,5 +1,5 @@
 
-# RestaurantLimits
+# OrderLimits
 
 
 ## Properties
@@ -12,14 +12,12 @@ Name | Type
 `maxPhoneLength` | number
 `maxAddressLength` | number
 `maxCommentLength` | number
-`minOrderMinor` | number
-`freeDeliveryThresholdMinor` | number
 `delayedOrderConfirmationMinutes` | number
 
 ## Example
 
 ```typescript
-import type { RestaurantLimits } from '@e-menu/public-api-client'
+import type { OrderLimits } from '@e-menu/public-api-client'
 
 // TODO: Update the object below with actual values
 const example = {
@@ -29,10 +27,8 @@ const example = {
   "maxPhoneLength": null,
   "maxAddressLength": null,
   "maxCommentLength": null,
-  "minOrderMinor": null,
-  "freeDeliveryThresholdMinor": null,
   "delayedOrderConfirmationMinutes": null,
-} satisfies RestaurantLimits
+} satisfies OrderLimits
 
 console.log(example)
 
@@ -41,7 +37,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as RestaurantLimits
+const exampleParsed = JSON.parse(exampleJSON) as OrderLimits
 console.log(exampleParsed)
 ```
 

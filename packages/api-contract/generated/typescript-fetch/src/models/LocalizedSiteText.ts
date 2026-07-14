@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -16,75 +16,75 @@ import { mapValues } from '../runtime';
 /**
  *
  * @export
- * @interface LocalizedRestaurantText
+ * @interface LocalizedSiteText
  */
-export interface LocalizedRestaurantText {
+export interface LocalizedSiteText {
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     locale: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     displayName: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     shortName: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     businessTypeLabel: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     cuisineText: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     slogan: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     introText: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     menuSectionTitle: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     cartTitle: string;
     /**
      *
      * @type {string}
-     * @memberof LocalizedRestaurantText
+     * @memberof LocalizedSiteText
      */
     orderTypeLegend: string;
 }
 
 /**
- * Check if a given object implements the LocalizedRestaurantText interface.
+ * Check if a given object implements the LocalizedSiteText interface.
  */
-export function instanceOfLocalizedRestaurantText(value: object): value is LocalizedRestaurantText {
+export function instanceOfLocalizedSiteText(value: object): value is LocalizedSiteText {
     if (!('locale' in value) || value['locale'] === undefined) return false;
     if (!('displayName' in value) || value['displayName'] === undefined) return false;
     if (!('shortName' in value) || value['shortName'] === undefined) return false;
@@ -98,11 +98,11 @@ export function instanceOfLocalizedRestaurantText(value: object): value is Local
     return true;
 }
 
-export function LocalizedRestaurantTextFromJSON(json: any): LocalizedRestaurantText {
-    return LocalizedRestaurantTextFromJSONTyped(json, false);
+export function LocalizedSiteTextFromJSON(json: any): LocalizedSiteText {
+    return LocalizedSiteTextFromJSONTyped(json, false);
 }
 
-export function LocalizedRestaurantTextFromJSONTyped(json: any, ignoreDiscriminator: boolean): LocalizedRestaurantText {
+export function LocalizedSiteTextFromJSONTyped(json: any, ignoreDiscriminator: boolean): LocalizedSiteText {
     if (json == null) {
         return json;
     }
@@ -121,11 +121,11 @@ export function LocalizedRestaurantTextFromJSONTyped(json: any, ignoreDiscrimina
     };
 }
 
-export function LocalizedRestaurantTextToJSON(json: any): LocalizedRestaurantText {
-    return LocalizedRestaurantTextToJSONTyped(json, false);
+export function LocalizedSiteTextToJSON(json: any): LocalizedSiteText {
+    return LocalizedSiteTextToJSONTyped(json, false);
 }
 
-export function LocalizedRestaurantTextToJSONTyped(value?: LocalizedRestaurantText | null, ignoreDiscriminator: boolean = false): any {
+export function LocalizedSiteTextToJSONTyped(value?: LocalizedSiteText | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

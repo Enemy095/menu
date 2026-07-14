@@ -11,7 +11,7 @@ Name | Type
 `faviconUrl` | string
 `hero` | [Hero](Hero.md)
 `designTokens` | [DesignTokens](DesignTokens.md)
-`localizedTexts` | [Array&lt;LocalizedRestaurantText&gt;](LocalizedRestaurantText.md)
+`localizedTexts` | [Array&lt;LocalizedSiteText&gt;](LocalizedSiteText.md)
 
 ## Example
 

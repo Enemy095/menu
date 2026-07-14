@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -30,7 +30,6 @@ import {
 } from '../models/ErrorResponse';
 
 export interface CreatePublicOrderRequest {
-    tenantSlug: string;
     idempotencyKey: string;
     createOrderRequest: CreateOrderRequest;
 }
@@ -44,7 +43,6 @@ export interface CreatePublicOrderRequest {
 export interface OrdersApiInterface {
     /**
      * Creates request options for createPublicOrder without sending the request
-     * @param {string} tenantSlug Public tenant slug resolved together with the trusted request host.
      * @param {string} idempotencyKey Client-generated UUID reused only when retrying the same canonical order payload.
      * @param {CreateOrderRequest} createOrderRequest
      * @throws {RequiredError}
@@ -53,9 +51,8 @@ export interface OrdersApiInterface {
     createPublicOrderRequestOpts(requestParameters: CreatePublicOrderRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Creates exactly one order per tenant and idempotency key. Backend validates the current published menu, item availability, quantities and total before persisting.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
      * @summary Create an order
-     * @param {string} tenantSlug Public tenant slug resolved together with the trusted request host.
      * @param {string} idempotencyKey Client-generated UUID reused only when retrying the same canonical order payload.
      * @param {CreateOrderRequest} createOrderRequest
      * @param {*} [options] Override http request option.
@@ -65,7 +62,7 @@ export interface OrdersApiInterface {
     createPublicOrderRaw(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateOrderResponse>>;
 
     /**
-     * Creates exactly one order per tenant and idempotency key. Backend validates the current published menu, item availability, quantities and total before persisting.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
      * Create an order
      */
     createPublicOrder(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateOrderResponse>;
@@ -81,13 +78,6 @@ export class OrdersApi extends runtime.BaseAPI implements OrdersApiInterface {
      * Creates request options for createPublicOrder without sending the request
      */
     async createPublicOrderRequestOpts(requestParameters: CreatePublicOrderRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['tenantSlug'] == null) {
-            throw new runtime.RequiredError(
-                'tenantSlug',
-                'Required parameter "tenantSlug" was null or undefined when calling createPublicOrder().'
-            );
-        }
-
         if (requestParameters['idempotencyKey'] == null) {
             throw new runtime.RequiredError(
                 'idempotencyKey',
@@ -113,8 +103,7 @@ export class OrdersApi extends runtime.BaseAPI implements OrdersApiInterface {
         }
 
 
-        let urlPath = `/api/v1/public/{tenantSlug}/orders`;
-        urlPath = urlPath.replace('{tenantSlug}', encodeURIComponent(String(requestParameters['tenantSlug'])));
+        let urlPath = `/api/v1/public/orders`;
 
         return {
             path: urlPath,
@@ -126,7 +115,7 @@ export class OrdersApi extends runtime.BaseAPI implements OrdersApiInterface {
     }
 
     /**
-     * Creates exactly one order per tenant and idempotency key. Backend validates the current published menu, item availability, quantities and total before persisting.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
      * Create an order
      */
     async createPublicOrderRaw(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateOrderResponse>> {
@@ -137,7 +126,7 @@ export class OrdersApi extends runtime.BaseAPI implements OrdersApiInterface {
     }
 
     /**
-     * Creates exactly one order per tenant and idempotency key. Backend validates the current published menu, item availability, quantities and total before persisting.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
      * Create an order
      */
     async createPublicOrder(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateOrderResponse> {

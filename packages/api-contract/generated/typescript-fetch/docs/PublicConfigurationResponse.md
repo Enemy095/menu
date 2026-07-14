@@ -1,5 +1,5 @@
 
-# RestaurantResponse
+# PublicConfigurationResponse
 
 
 ## Properties
@@ -7,13 +7,14 @@
 Name | Type
 ------------ | -------------
 `restaurantId` | string
-`slug` | string
 `branding` | [Branding](Branding.md)
 `seo` | [SeoMetadata](SeoMetadata.md)
 `profile` | [PublicProfile](PublicProfile.md)
-`features` | [RestaurantFeatures](RestaurantFeatures.md)
+`features` | [SiteFeatures](SiteFeatures.md)
 `orderTypes` | [Set&lt;AvailableOrderType&gt;](AvailableOrderType.md)
-`limits` | [RestaurantLimits](RestaurantLimits.md)
+`limits` | [OrderLimits](OrderLimits.md)
+`schedule` | [WeeklySchedule](WeeklySchedule.md)
+`deliveryConfiguration` | [DeliveryConfiguration](DeliveryConfiguration.md)
 `locale` | string
 `currency` | string
 `timezone` | string
@@ -21,22 +22,23 @@ Name | Type
 ## Example
 
 ```typescript
-import type { RestaurantResponse } from '@e-menu/public-api-client'
+import type { PublicConfigurationResponse } from '@e-menu/public-api-client'
 
 // TODO: Update the object below with actual values
 const example = {
   "restaurantId": null,
-  "slug": null,
   "branding": null,
   "seo": null,
   "profile": null,
   "features": null,
   "orderTypes": null,
   "limits": null,
+  "schedule": null,
+  "deliveryConfiguration": null,
   "locale": ru-RU,
   "currency": RUB,
   "timezone": Europe/Moscow,
-} satisfies RestaurantResponse
+} satisfies PublicConfigurationResponse
 
 console.log(example)
 
@@ -45,7 +47,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as RestaurantResponse
+const exampleParsed = JSON.parse(exampleJSON) as PublicConfigurationResponse
 console.log(exampleParsed)
 ```
 

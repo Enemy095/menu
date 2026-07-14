@@ -1,5 +1,5 @@
 
-# LocalizedRestaurantText
+# LocalizedSiteText
 
 
 ## Properties
@@ -20,7 +20,7 @@ Name | Type
 ## Example
 
 ```typescript
-import type { LocalizedRestaurantText } from '@e-menu/public-api-client'
+import type { LocalizedSiteText } from '@e-menu/public-api-client'
 
 // TODO: Update the object below with actual values
 const example = {
@@ -34,7 +34,7 @@ const example = {
   "menuSectionTitle": null,
   "cartTitle": null,
   "orderTypeLegend": null,
-} satisfies LocalizedRestaurantText
+} satisfies LocalizedSiteText
 
 console.log(example)
 
@@ -43,7 +43,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as LocalizedRestaurantText
+const exampleParsed = JSON.parse(exampleJSON) as LocalizedSiteText
 console.log(exampleParsed)
 ```
 

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -18,13 +18,15 @@
  * @enum {string}
  */
 export enum ErrorCode {
-    TENANT_NOT_FOUND = 'TENANT_NOT_FOUND',
     VALIDATION_ERROR = 'VALIDATION_ERROR',
+    MENU_NOT_FOUND = 'MENU_NOT_FOUND',
     MENU_CHANGED = 'MENU_CHANGED',
     ITEM_UNAVAILABLE = 'ITEM_UNAVAILABLE',
-    TOTAL_MISMATCH = 'TOTAL_MISMATCH',
+    MODIFIER_UNAVAILABLE = 'MODIFIER_UNAVAILABLE',
     IDEMPOTENCY_CONFLICT = 'IDEMPOTENCY_CONFLICT',
     RATE_LIMITED = 'RATE_LIMITED',
+    SITE_NOT_READY = 'SITE_NOT_READY',
+    DEPENDENCY_UNAVAILABLE = 'DEPENDENCY_UNAVAILABLE',
     INTERNAL_ERROR = 'INTERNAL_ERROR'
 }
 

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -13,13 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
-import type { LocalizedRestaurantText } from './LocalizedRestaurantText';
+import type { LocalizedSiteText } from './LocalizedSiteText';
 import {
-    LocalizedRestaurantTextFromJSON,
-    LocalizedRestaurantTextFromJSONTyped,
-    LocalizedRestaurantTextToJSON,
-    LocalizedRestaurantTextToJSONTyped,
-} from './LocalizedRestaurantText';
+    LocalizedSiteTextFromJSON,
+    LocalizedSiteTextFromJSONTyped,
+    LocalizedSiteTextToJSON,
+    LocalizedSiteTextToJSONTyped,
+} from './LocalizedSiteText';
 import type { Hero } from './Hero';
 import {
     HeroFromJSON,
@@ -42,7 +42,7 @@ import {
  */
 export interface Branding {
     /**
-     * Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
+     * Immutable content-addressed public asset URL.
      * @type {string}
      * @memberof Branding
      */
@@ -54,7 +54,7 @@ export interface Branding {
      */
     logoAlt: string;
     /**
-     * Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
+     * Immutable content-addressed public asset URL.
      * @type {string}
      * @memberof Branding
      */
@@ -73,10 +73,10 @@ export interface Branding {
     designTokens: DesignTokens;
     /**
      *
-     * @type {Array<LocalizedRestaurantText>}
+     * @type {Array<LocalizedSiteText>}
      * @memberof Branding
      */
-    localizedTexts: Array<LocalizedRestaurantText>;
+    localizedTexts: Array<LocalizedSiteText>;
 }
 
 /**
@@ -106,7 +106,7 @@ export function BrandingFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
         'faviconUrl': json['faviconUrl'] == null ? undefined : json['faviconUrl'],
         'hero': HeroFromJSON(json['hero']),
         'designTokens': DesignTokensFromJSON(json['designTokens']),
-        'localizedTexts': ((json['localizedTexts'] as Array<any>).map(LocalizedRestaurantTextFromJSON)),
+        'localizedTexts': ((json['localizedTexts'] as Array<any>).map(LocalizedSiteTextFromJSON)),
     };
 }
 
@@ -126,6 +126,6 @@ export function BrandingToJSONTyped(value?: Branding | null, ignoreDiscriminator
         'faviconUrl': value['faviconUrl'],
         'hero': HeroToJSON(value['hero']),
         'designTokens': DesignTokensToJSON(value['designTokens']),
-        'localizedTexts': ((value['localizedTexts'] as Array<any>).map(LocalizedRestaurantTextToJSON)),
+        'localizedTexts': ((value['localizedTexts'] as Array<any>).map(LocalizedSiteTextToJSON)),
     };
 }

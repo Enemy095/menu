@@ -14,6 +14,7 @@ Name | Type
 `imageUrl` | string
 `available` | boolean
 `sortOrder` | number
+`modifierGroups` | [Array&lt;MenuModifierGroup&gt;](MenuModifierGroup.md)
 
 ## Example
 
@@ -30,6 +31,7 @@ const example = {
   "imageUrl": null,
   "available": null,
   "sortOrder": null,
+  "modifierGroups": null,
 } satisfies MenuItem
 
 console.log(example)

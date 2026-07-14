@@ -1,20 +1,20 @@
 # MenuApi
 
-All URIs are relative to *https://platform.example.com*
+All URIs are relative to *https://menu.example.com*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**getPublicMenu**](MenuApi.md#getpublicmenu) | **GET** /api/v1/public/{tenantSlug}/menu | Get published menu |
+| [**getPublicMenu**](MenuApi.md#getpublicmenu) | **GET** /api/v1/public/menu | Get published menu |
 
 
 
 ## getPublicMenu
 
-> MenuResponse getPublicMenu(tenantSlug, ifNoneMatch)
+> MenuResponse getPublicMenu()
 
 Get published menu
 
-Returns the current published menu for the resolved active tenant.
+Returns the current immutable published menu snapshot.
 
 ### Example
 
@@ -29,15 +29,8 @@ async function example() {
   console.log("🚀 Testing @e-menu/public-api-client SDK...");
   const api = new MenuApi();
 
-  const body = {
-    // string | Public tenant slug resolved together with the trusted request host.
-    tenantSlug: adamas,
-    // string | Previously received entity tag. A matching value returns a bodyless `304` response. (optional)
-    ifNoneMatch: "menu-stambul-v3",
-  } satisfies GetPublicMenuRequest;
-
   try {
-    const data = await api.getPublicMenu(body);
+    const data = await api.getPublicMenu();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -50,11 +43,7 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **tenantSlug** | `string` | Public tenant slug resolved together with the trusted request host. | [Defaults to `undefined`] |
-| **ifNoneMatch** | `string` | Previously received entity tag. A matching value returns a bodyless &#x60;304&#x60; response. | [Optional] [Defaults to `undefined`] |
+This endpoint does not need any parameter.
 
 ### Return type
 
@@ -74,9 +63,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Current published menu. |  * ETag -  <br>  * Cache-Control -  <br>  * Cache-Tag -  <br>  * Surrogate-Key -  <br>  |
-| **304** | The published menu has not changed for the supplied entity tag; response has no body. |  * ETag -  <br>  * Cache-Control -  <br>  * Cache-Tag -  <br>  * Surrogate-Key -  <br>  |
-| **404** | Tenant is unknown, inactive, or not confirmed for the request host. |  -  |
-| **429** | Too many requests for the tenant/client rate-limit scope. |  * Retry-After - Seconds before the client should retry. <br>  |
-| **500** | Unexpected server failure. The trace ID can be reported to support. |  -  |
+| **404** | No current published menu is available. |  * Cache-Control -  <br>  |
+| **503** | Required public configuration is missing or not ready. |  * Cache-Control -  <br>  |
+| **500** | Unexpected server failure. The trace ID can be reported to support. |  * Cache-Control -  <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)

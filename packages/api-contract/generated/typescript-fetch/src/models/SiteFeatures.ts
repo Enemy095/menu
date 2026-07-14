@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
+ * Public contract for one restaurant deployment. The request authority is validated by infrastructure but never selects business data. Prices, availability, fulfillment rules and notification destinations are always resolved by the backend.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -16,93 +16,93 @@ import { mapValues } from '../runtime';
 /**
  *
  * @export
- * @interface RestaurantFeatures
+ * @interface SiteFeatures
  */
-export interface RestaurantFeatures {
+export interface SiteFeatures {
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     orders: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     contacts: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     geoLocation: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     socialLinks: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     delivery: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     pickup: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     preorder: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     customTheme: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     whatsappFallback: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     promotions: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     loyalty: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     reservations: boolean;
     /**
      *
      * @type {boolean}
-     * @memberof RestaurantFeatures
+     * @memberof SiteFeatures
      */
     deliveryBlocks: boolean;
 }
 
 /**
- * Check if a given object implements the RestaurantFeatures interface.
+ * Check if a given object implements the SiteFeatures interface.
  */
-export function instanceOfRestaurantFeatures(value: object): value is RestaurantFeatures {
+export function instanceOfSiteFeatures(value: object): value is SiteFeatures {
     if (!('orders' in value) || value['orders'] === undefined) return false;
     if (!('contacts' in value) || value['contacts'] === undefined) return false;
     if (!('geoLocation' in value) || value['geoLocation'] === undefined) return false;
@@ -119,11 +119,11 @@ export function instanceOfRestaurantFeatures(value: object): value is Restaurant
     return true;
 }
 
-export function RestaurantFeaturesFromJSON(json: any): RestaurantFeatures {
-    return RestaurantFeaturesFromJSONTyped(json, false);
+export function SiteFeaturesFromJSON(json: any): SiteFeatures {
+    return SiteFeaturesFromJSONTyped(json, false);
 }
 
-export function RestaurantFeaturesFromJSONTyped(json: any, ignoreDiscriminator: boolean): RestaurantFeatures {
+export function SiteFeaturesFromJSONTyped(json: any, ignoreDiscriminator: boolean): SiteFeatures {
     if (json == null) {
         return json;
     }
@@ -145,11 +145,11 @@ export function RestaurantFeaturesFromJSONTyped(json: any, ignoreDiscriminator: 
     };
 }
 
-export function RestaurantFeaturesToJSON(json: any): RestaurantFeatures {
-    return RestaurantFeaturesToJSONTyped(json, false);
+export function SiteFeaturesToJSON(json: any): SiteFeatures {
+    return SiteFeaturesToJSONTyped(json, false);
 }
 
-export function RestaurantFeaturesToJSONTyped(value?: RestaurantFeatures | null, ignoreDiscriminator: boolean = false): any {
+export function SiteFeaturesToJSONTyped(value?: SiteFeatures | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

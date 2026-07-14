@@ -1,6 +1,6 @@
 # SC-API-001 — single-client OpenAPI contract
 
-Status: `ready`
+Status: `done`
 Wave: P1
 Dependencies: `SC-000`
 
@@ -56,9 +56,9 @@ integration, stop and create a versioning ADR instead of silently breaking clien
 - old `/api/public/orders` and slug routes are absent.
 
 ```text
-pnpm --filter @menu/api-contract lint
-pnpm --filter @menu/api-contract generate
-pnpm --filter @menu/api-contract check:generated
+pnpm --filter @e-menu/api-contract lint
+pnpm --filter @e-menu/api-contract generate
+pnpm --filter @e-menu/api-contract check-generated
 git diff --check
 ```
 

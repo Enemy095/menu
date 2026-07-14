@@ -12,9 +12,11 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("app.platform.hosts")
 public record PlatformHostsProperties(
         @NotBlank String baseDomain,
-        @NotEmpty Set<@NotBlank String> allowedHosts) {
+        @NotEmpty Set<@NotBlank String> allowedHosts,
+        Set<@NotBlank String> localAliases) {
 
     public PlatformHostsProperties {
         allowedHosts = allowedHosts == null ? Set.of() : Set.copyOf(allowedHosts);
+        localAliases = localAliases == null ? Set.of() : Set.copyOf(localAliases);
     }
 }

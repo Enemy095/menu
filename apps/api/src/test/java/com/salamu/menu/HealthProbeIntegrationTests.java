@@ -16,8 +16,12 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import com.salamu.menu.tenancy.internal.application.TenantRegistry;
 
 @ActiveProfiles("test")
+@MockitoBean(types = TenantRegistry.class)
 @Import(HealthProbeIntegrationTests.DatabaseOutageConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.autoconfigure.exclude="

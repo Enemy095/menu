@@ -26,10 +26,20 @@ management:
         url: ${OTEL_METRICS_ENDPOINT:http://localhost:4318/v1/metrics}
 
 app:
+  assets:
+    storage:
+      endpoint: ${ASSET_STORAGE_ENDPOINT:http://localhost:9000}
+      region: ${ASSET_STORAGE_REGION:us-east-1}
+      bucket: ${ASSET_STORAGE_BUCKET:tenant-assets-local}
+      access-key: ${ASSET_STORAGE_ACCESS_KEY:emenu-local}
+      secret-key: ${ASSET_STORAGE_SECRET_KEY:emenu-local-password}
+      path-style-access: ${ASSET_STORAGE_PATH_STYLE_ACCESS:true}
+    cdn-base-url: ${ASSET_BASE_URL:http://localhost:9000/tenant-assets-local}
   platform:
     hosts:
-      base-domain: ${PLATFORM_BASE_DOMAIN:localhost}
-      allowed-hosts: ${PLATFORM_ALLOWED_HOSTS:localhost,127.0.0.1}
+      base-domain: ${PLATFORM_BASE_DOMAIN:platform.localhost}
+      allowed-hosts: ${PLATFORM_ALLOWED_HOSTS:platform.localhost}
+      local-aliases: ${PLATFORM_LOCAL_ALIASES:localhost,127.0.0.1,::1}
     trusted-forwarding:
       enabled: false
       trusted-proxy-cidrs: []

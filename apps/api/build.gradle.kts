@@ -15,9 +15,13 @@ java {
 }
 
 dependencies {
+    implementation(platform(libs.aws.sdk.bom))
     implementation(platform(libs.spring.boot.bom))
     implementation(platform(libs.spring.modulith.bom))
 
+    implementation(libs.aws.sdk.s3)
+    implementation(libs.bucket4j.core)
+    implementation(libs.caffeine)
     implementation(libs.spring.boot.starter.webmvc)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.data.jpa)
@@ -34,8 +38,10 @@ dependencies {
 
     testImplementation(platform(libs.spring.boot.bom))
     testImplementation(platform(libs.spring.modulith.bom))
+    testImplementation(platform(libs.testcontainers.bom))
     testImplementation(libs.spring.boot.starter.test)
     testImplementation(libs.spring.modulith.starter.test)
+    testImplementation(libs.testcontainers.core)
     testImplementation(libs.testcontainers.junit)
     testImplementation(libs.testcontainers.postgresql)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -4,12 +4,25 @@ spring:
       on-profile: test
 
 app:
+  assets:
+    storage:
+      endpoint: http://127.0.0.1:1
+      region: us-east-1
+      bucket: tenant-assets-test
+      access-key: test-access-key
+      secret-key: test-secret-key
+      path-style-access: true
+    cdn-base-url: https://assets.example.test
   platform:
     hosts:
       base-domain: example.test
       allowed-hosts:
         - example.test
         - tenant.example.test
+      local-aliases:
+        - localhost
+        - 127.0.0.1
+        - '::1'
     trusted-forwarding:
       enabled: false
       trusted-proxy-cidrs: []

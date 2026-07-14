@@ -1,6 +1,6 @@
 # MENU-001 — published menu public API
 
-Status: `planned`  
+Status: `ready`
 Wave: 4  
 Dependencies: `API-001`, `TEN-001`, `DB-001`, `MOD-001`; final asset URLs require `AST-001`
 

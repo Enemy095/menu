@@ -18,6 +18,9 @@
 | CFG-001 | Restaurant/config public read API | API-001, TEN-001, DB-001 | 4 | review |
 | MENU-001 | Published menu public read API | API-001, TEN-001, DB-001 | 4 | review |
 | MIG-001 | Idempotent legacy tenant import | CFG-001, MENU-001, AST-001 | 4 | in_progress |
+| MIG-001A | Provisioning foundations и V5 provenance | MIG-001 Phase A, DB-001, TEN-001, AST-001 | 4B | ready |
+| MIG-001B | Strict parser и zero-write dry-run | MIG-001A | 4B | blocked |
+| MIG-001C | Staged apply и gated verification | MIG-001A, MIG-001B | 4C | blocked |
 | WEB-001 | Next.js SSR tenant shell | API-001 | 5 | planned |
 | WEB-002 | Branding/menu/contact/delivery UI | WEB-001, CFG-001, MENU-001 | 5 | planned |
 | CART-001 | Tenant-scoped persisted cart | WEB-002 | 6 | planned |

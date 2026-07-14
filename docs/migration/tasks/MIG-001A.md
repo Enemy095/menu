@@ -1,6 +1,6 @@
 # MIG-001A — provisioning foundations
 
-Status: `ready`
+Status: `done`
 Wave: 4B
 Dependencies: `DB-001`, `TEN-001`, `AST-001`, `CFG-001`, `MENU-001`
 
@@ -77,18 +77,20 @@ Migration должна добавить migration-owned таблицы без р
 
 ```text
 legacy_import_runs
-  id UUID PK; importer_key; manifest_id; schema_version; run_fingerprint CHAR(64)
+  run_id UUID PK; importer_key; manifest_id; schema_version; run_fingerprint CHAR(64)
   manifest_sha256; fixture_sha256; source_set_sha256
   status staging|applying|applied|failed|cleaned
   created_at; updated_at; applied_at nullable; failure_code nullable
 
-legacy_import_tenant_provenance
-  run_id UUID FK; tenant_id UUID FK; tenant_slug; menu_version BIGINT
+legacy_import_run_tenants
+  run_id UUID FK; tenant_id_snapshot UUID immutable; tenant_id UUID nullable live FK
+  tenant_slug; menu_version BIGINT
   tenant_source_set_sha256; asset_set_sha256; semantic_fingerprint
   status skeleton|staged|applied|cleaned; created_at; updated_at
 
 legacy_import_run_assets
-  run_id UUID FK; tenant_id UUID FK; asset_id UUID nullable
+  run_id UUID FK; tenant_id_snapshot UUID immutable; tenant_id UUID nullable live FK
+  asset_id_snapshot UUID nullable immutable; asset_id UUID nullable live FK
   asset_kind; sha256; size_bytes; canonical_object_key (internal cleanup only)
   status planned|created|reused|cleaned
   provenance VARCHAR; created_at; reused BOOLEAN
@@ -99,13 +101,17 @@ uniqueness для run fingerprint, одного open run на importer, asset id
 `(run_id, canonical_object_key)`.
 `asset_id` после staging ссылается на tenant-scoped asset; `created/reused` различает
 новый object и существующий immutable content.
+Same-run object, восстановленный после uncertain PUT либо process restart, имеет runtime
+disposition `RECOVERED`, но в ledger остаётся принадлежащим этому run объектом `created`,
+а не чужим `reused`. Snapshot UUID сохраняются после DB cleanup, nullable live FK
+обнуляются до post-commit object cleanup.
 Provenance не содержит manifest JSON, source text, asset bytes, secret reference,
 телефон, address либо exception message. Canonical object key хранится только внутри
 asset ledger для cleanup и никогда не попадает в public API/report/log.
 
 Ledger API предоставляет acquire/inspect/CAS-transition/finalize semantics. Acquisition,
 final apply и cleanup transaction отдельно берут `pg_advisory_xact_lock` для стабильного
-`importerKey`; network asset stage не удерживает connection/lock. Между transactions
+canonical run fingerprint; network asset stage не удерживает connection/lock. Между transactions
 конкуренцию блокируют ledger status, partial uniqueness одного open run и CAS transition.
 При `23505` текущая transaction откатывается полностью; новая transaction снова берёт
 xact lock и перечитывает winner. Продолжать работу в aborted transaction запрещено.
@@ -266,6 +272,28 @@ validation, Modulith verification и поиск, что provisioning interfaces 
 - Tests, backend check, bootJar и `git diff --check` зелёные.
 
 ## Handoff report
+
+Реализация интегрирована оркестратором 2026-07-14:
+
+- добавлена append-only Flyway V5 schema для import ledger, tenant ownership и
+  recoverable asset stage;
+- privileged provisioning/inspection/cleanup API изолированы профилем
+  `legacy-import` и не регистрируются в обычном runtime;
+- tenant configuration, default restaurant, published menu и notification destination
+  записываются module-owned `MANDATORY` writers;
+- tenant assets имеют условную S3-запись, provenance reconciliation и fail-closed
+  cleanup proof;
+- transaction-boundary test доказывает единый `DataSource`/transaction manager,
+  общий rollback и видимость tenant только после commit/activation;
+- PostgreSQL, MinIO, Flyway, Modulith и полный backend check прошли на Docker engine.
+
+Проверено:
+
+```text
+./gradlew clean :apps:api:check --no-daemon    BUILD SUCCESSFUL
+./gradlew :apps:api:bootJar --no-daemon        BUILD SUCCESSFUL
+git diff --check                               clean
+```
 
 ```text
 Task ID: MIG-001A

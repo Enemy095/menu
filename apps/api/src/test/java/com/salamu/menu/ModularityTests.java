@@ -24,6 +24,7 @@ class ModularityTests {
                         "menu",
                         "ordering",
                         "notification",
-                        "identity"));
+                        "identity",
+                        "migration"));
     }
 }

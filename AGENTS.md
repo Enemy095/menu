@@ -190,7 +190,7 @@ HTTP request
 Целевые модули:
 
 ```text
-com.project.menu
+com.salamu.menu
   tenancy
   restaurant
   menu

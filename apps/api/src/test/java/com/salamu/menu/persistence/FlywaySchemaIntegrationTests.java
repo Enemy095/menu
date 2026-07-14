@@ -24,9 +24,10 @@ class FlywaySchemaIntegrationTests {
                 1, "tenants",
                 2, "menu_items",
                 3, "orders",
-                4, "outbox_events");
+                4, "outbox_events",
+                5, "legacy_import_runs");
 
-        for (int version = 1; version <= 4; version++) {
+        for (int version = 1; version <= 5; version++) {
             var flyway = flyway(MIGRATION_SCHEMA, MigrationVersion.fromVersion(Integer.toString(version)));
             flyway.migrate();
 

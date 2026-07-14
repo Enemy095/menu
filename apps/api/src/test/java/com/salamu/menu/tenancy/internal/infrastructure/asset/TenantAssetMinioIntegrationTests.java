@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -21,26 +22,40 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.IllegalTransactionStateException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import com.salamu.menu.tenancy.api.AssetKind;
+import com.salamu.menu.tenancy.api.ProvisioningRunFingerprint;
 import com.salamu.menu.tenancy.api.TenantAsset;
+import com.salamu.menu.tenancy.api.TenantAssetCleanupCandidate;
+import com.salamu.menu.tenancy.api.TenantAssetCleanupProof;
 import com.salamu.menu.tenancy.api.TenantAssetId;
 import com.salamu.menu.tenancy.api.TenantAssetImportRequest;
 import com.salamu.menu.tenancy.api.TenantAssetNotFoundException;
+import com.salamu.menu.tenancy.api.TenantAssetObjectCleanupDisposition;
+import com.salamu.menu.tenancy.api.TenantAssetProvisioningConflictException;
+import com.salamu.menu.tenancy.api.TenantAssetProvisioningDisposition;
+import com.salamu.menu.tenancy.api.TenantAssetProvisioningProvenance;
+import com.salamu.menu.tenancy.api.TenantAssetProvisioningService;
 import com.salamu.menu.tenancy.api.TenantAssetService;
 import com.salamu.menu.tenancy.api.TenantId;
+import com.salamu.menu.tenancy.api.TenantLifecycle;
 
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-@ActiveProfiles("test")
+@ActiveProfiles({"test", "legacy-import"})
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TenantAssetMinioIntegrationTests {
@@ -52,6 +67,12 @@ class TenantAssetMinioIntegrationTests {
             new TenantId(UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
     private static final TenantId TENANT_B =
             new TenantId(UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
+    private static final ProvisioningRunFingerprint RUN_A =
+            new ProvisioningRunFingerprint("1".repeat(64));
+    private static final ProvisioningRunFingerprint RUN_B =
+            new ProvisioningRunFingerprint("2".repeat(64));
+    private static final String PNG_SHA256 =
+            "275f1bcbbb585c71e3b2184304eccfa0e37de92022ca3b6f4e9c10df32318d85";
 
     static final PostgreSQLContainer POSTGRES;
     static final GenericContainer<?> MINIO;
@@ -96,10 +117,16 @@ class TenantAssetMinioIntegrationTests {
     private TenantAssetService assetService;
 
     @Autowired
+    private TenantAssetProvisioningService provisioningService;
+
+    @Autowired
     private S3Client s3Client;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @BeforeAll
     void createPrivateBucket() {
@@ -120,6 +147,11 @@ class TenantAssetMinioIntegrationTests {
                         .bucket(BUCKET)
                         .key(object.key())
                         .build()));
+        jdbcTemplate.update("DELETE FROM menu_items");
+        jdbcTemplate.update("DELETE FROM menu_categories");
+        jdbcTemplate.update("DELETE FROM menu_versions");
+        jdbcTemplate.update("DELETE FROM restaurants");
+        jdbcTemplate.update("DELETE FROM tenant_branding");
         jdbcTemplate.update("DELETE FROM tenant_assets");
         jdbcTemplate.update("DELETE FROM tenants");
         insertTenant(TENANT_A, "tenant-a");
@@ -242,6 +274,433 @@ class TenantAssetMinioIntegrationTests {
         assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isZero();
     }
 
+    @Test
+    void privilegedProvisioningSupportsExactSuspendedOrActiveLifecycleWithoutWeakeningOrdinaryService() {
+        suspend(TENANT_A);
+
+        assertThatThrownBy(() -> assetService.importAsset(TENANT_A, pngLogo()))
+                .isInstanceOf(TenantAssetNotFoundException.class);
+
+        var suspended = provisioningService.provision(
+                TENANT_A,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+        var active = provisioningService.provision(
+                TENANT_B,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.ACTIVE);
+        var suspendedReplay = provisioningService.provision(
+                TENANT_A,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+
+        assertThat(suspended.disposition()).isEqualTo(TenantAssetProvisioningDisposition.CREATED);
+        assertThat(active.disposition()).isEqualTo(TenantAssetProvisioningDisposition.CREATED);
+        assertThat(suspendedReplay.disposition()).isEqualTo(TenantAssetProvisioningDisposition.RECOVERED);
+        assertThat(suspendedReplay.asset()).isEqualTo(suspended.asset());
+        assertThat(provisioningService.inspect(
+                        TENANT_A,
+                        AssetKind.LOGO,
+                        suspended.asset().sha256(),
+                        RUN_A,
+                        TenantLifecycle.SUSPENDED))
+                .contains(suspended.asset());
+        assertThat(suspended.provenance().toString()).contains("canonicalObjectKey=<redacted>");
+        assertThat(java.util.Arrays.stream(suspended.asset().getClass().getRecordComponents())
+                        .map(java.lang.reflect.RecordComponent::getName))
+                .doesNotContain("publicUrl", "canonicalObjectKey");
+
+        var head = head(suspended.provenance().canonicalObjectKey());
+        assertThat(head.metadata())
+                .containsEntry(S3AssetObjectStorage.SHA_256_METADATA_KEY, suspended.asset().sha256())
+                .containsEntry(S3AssetObjectStorage.RUN_FINGERPRINT_METADATA_KEY, RUN_A.value());
+    }
+
+    @Test
+    void deterministicObjectRejectsAnotherRunAndCrossTenantCleanup() {
+        suspend(TENANT_A);
+        var provisioned = provisioningService.provision(
+                TENANT_A,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+
+        assertThatThrownBy(() -> provisioningService.provision(
+                        TENANT_A,
+                        pngLogo(),
+                        RUN_B,
+                        TenantLifecycle.SUSPENDED))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        TenantAssetCleanupProof proof =
+                provisioningService.verifyCleanupProvenance(TENANT_A, provisioned.provenance());
+        assertThatThrownBy(() -> inTransaction(() -> provisioningService.removeRegistrationForCleanup(
+                        TENANT_B,
+                        proof)))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+
+        assertThat(head(provisioned.provenance().canonicalObjectKey()).metadata())
+                .containsEntry(S3AssetObjectStorage.RUN_FINGERPRINT_METADATA_KEY, RUN_A.value());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isEqualTo(1L);
+    }
+
+    @Test
+    void retryReconcilesFingerprintOwnedObjectLeftBeforeDatabaseRegistration() {
+        suspend(TENANT_A);
+        String key = expectedKey(TENANT_A, AssetKind.LOGO, PNG_SHA256, "png");
+        putProvisionedObject(key, RUN_A);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isZero();
+
+        var recovered = provisioningService.provision(
+                TENANT_A,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+
+        assertThat(recovered.disposition()).isEqualTo(TenantAssetProvisioningDisposition.RECOVERED);
+        assertThat(recovered.provenance().canonicalObjectKey()).isEqualTo(key);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isEqualTo(1L);
+        assertThat(objectKeys()).containsExactly(key);
+    }
+
+    @Test
+    void cleanupIsDatabaseFirstFingerprintVerifiedAndWorksAfterTenantSkeletonRemoval() {
+        suspend(TENANT_A);
+        var provisioned = provisioningService.provision(
+                TENANT_A,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+
+        TenantAssetCleanupProof proof =
+                provisioningService.verifyCleanupProvenance(TENANT_A, provisioned.provenance());
+        TenantAssetCleanupCandidate candidate = inTransaction(() ->
+                provisioningService.removeRegistrationForCleanup(TENANT_A, proof));
+
+        assertThat(candidate.registrationRemoved()).isTrue();
+        assertThat(objectKeys()).containsExactly(provisioned.provenance().canonicalObjectKey());
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isZero();
+
+        TenantAssetProvisioningProvenance foreignRun = new TenantAssetProvisioningProvenance(
+                TENANT_A,
+                provisioned.asset().kind(),
+                provisioned.asset().contentType(),
+                provisioned.asset().sizeBytes(),
+                provisioned.asset().sha256(),
+                provisioned.provenance().canonicalObjectKey(),
+                RUN_B);
+        assertThatThrownBy(() -> provisioningService.verifyCleanupProvenance(TENANT_A, foreignRun))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        TenantAssetCleanupCandidate forgedCandidate = new TenantAssetCleanupCandidate() {
+            @Override
+            public TenantId tenantId() {
+                return TENANT_A;
+            }
+
+            @Override
+            public AssetKind kind() {
+                return AssetKind.LOGO;
+            }
+
+            @Override
+            public String sha256() {
+                return provisioned.asset().sha256();
+            }
+
+            @Override
+            public boolean registrationRemoved() {
+                return true;
+            }
+        };
+        assertThatThrownBy(() -> provisioningService.deleteObjectForCleanup(
+                        TENANT_A,
+                        forgedCandidate))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        assertThat(objectKeys()).containsExactly(provisioned.provenance().canonicalObjectKey());
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO tenant_assets
+                    (id, tenant_id, object_key, asset_type, content_type, size_bytes, sha256, status)
+                VALUES (?, ?, ?, 'logo', 'image/png', 9, ?, 'active')
+                """,
+                UUID.fromString("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"),
+                TENANT_B.value(),
+                provisioned.provenance().canonicalObjectKey(),
+                "3".repeat(64));
+        assertThatThrownBy(() -> provisioningService.deleteObjectForCleanup(TENANT_A, candidate))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        jdbcTemplate.update(
+                "DELETE FROM tenant_assets WHERE tenant_id = ? AND object_key = ?",
+                TENANT_B.value(),
+                provisioned.provenance().canonicalObjectKey());
+
+        jdbcTemplate.update("DELETE FROM tenants WHERE id = ?", TENANT_A.value());
+        assertThat(provisioningService.deleteObjectForCleanup(TENANT_A, candidate))
+                .isEqualTo(TenantAssetObjectCleanupDisposition.DELETED);
+        assertThat(provisioningService.deleteObjectForCleanup(TENANT_A, candidate))
+                .isEqualTo(TenantAssetObjectCleanupDisposition.ALREADY_ABSENT);
+        assertThat(objectKeys()).isEmpty();
+    }
+
+    @Test
+    void cleanupCannotRemoveAnActiveTenantAsset() {
+        var provisioned = provisioningService.provision(
+                TENANT_A,
+                pngLogo(),
+                RUN_A,
+                TenantLifecycle.ACTIVE);
+
+        assertThatThrownBy(() -> provisioningService.verifyCleanupProvenance(
+                        TENANT_A,
+                        provisioned.provenance()))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isEqualTo(1L);
+        assertThat(objectKeys()).containsExactly(provisioned.provenance().canonicalObjectKey());
+    }
+
+    @Test
+    void finalWriterValidationIsMandatoryDbOnlyAndChecksExactTenantKindAndStatus() {
+        suspend(TENANT_A);
+        suspend(TENANT_B);
+        var category = provisioningService.provision(
+                TENANT_A,
+                pngAsset(AssetKind.MENU_CATEGORY_IMAGE),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+        var item = provisioningService.provision(
+                TENANT_A,
+                pngAsset(AssetKind.MENU_ITEM_IMAGE),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+        Map<TenantAssetId, AssetKind> expected = Map.of(
+                category.asset().id(), AssetKind.MENU_CATEGORY_IMAGE,
+                item.asset().id(), AssetKind.MENU_ITEM_IMAGE);
+
+        inTransaction(() -> {
+            provisioningService.validatePreparedAssetReferences(
+                    TENANT_A, expected, TenantLifecycle.SUSPENDED);
+            return null;
+        });
+        assertThatThrownBy(() -> provisioningService.validatePreparedAssetReferences(
+                        TENANT_A, expected, TenantLifecycle.SUSPENDED))
+                .isInstanceOf(IllegalTransactionStateException.class);
+        assertThatThrownBy(() -> inTransaction(() -> {
+                    provisioningService.validatePreparedAssetReferences(
+                            TENANT_A,
+                            Map.of(category.asset().id(), AssetKind.MENU_ITEM_IMAGE),
+                            TenantLifecycle.SUSPENDED);
+                    return null;
+                }))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        assertThatThrownBy(() -> inTransaction(() -> {
+                    provisioningService.validatePreparedAssetReferences(
+                            TENANT_B,
+                            Map.of(category.asset().id(), AssetKind.MENU_CATEGORY_IMAGE),
+                            TenantLifecycle.SUSPENDED);
+                    return null;
+                }))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+
+        jdbcTemplate.update(
+                "UPDATE tenant_assets SET status = 'pending' WHERE tenant_id = ? AND id = ?",
+                TENANT_A.value(),
+                item.asset().id().value());
+        assertThatThrownBy(() -> inTransaction(() -> {
+                    provisioningService.validatePreparedAssetReferences(
+                            TENANT_A, expected, TenantLifecycle.SUSPENDED);
+                    return null;
+                }))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+    }
+
+    @Test
+    void preparedAssetInspectionIsStandaloneDbOnlyZeroWriteAndReturnsActualSha() {
+        suspend(TENANT_B);
+        var category = provisioningService.provision(
+                TENANT_A,
+                pngAsset(AssetKind.MENU_CATEGORY_IMAGE),
+                RUN_A,
+                TenantLifecycle.ACTIVE);
+        var item = provisioningService.provision(
+                TENANT_A,
+                pngAsset(AssetKind.MENU_ITEM_IMAGE),
+                RUN_A,
+                TenantLifecycle.ACTIVE);
+        Map<TenantAssetId, AssetKind> expected = Map.of(
+                category.asset().id(), AssetKind.MENU_CATEGORY_IMAGE,
+                item.asset().id(), AssetKind.MENU_ITEM_IMAGE);
+        assertThat(provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        expected,
+                        TenantLifecycle.ACTIVE))
+                .containsOnlyKeys(category.asset().id(), item.asset().id());
+        suspend(TENANT_A);
+        long rowCountBefore = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM tenant_assets WHERE tenant_id = ?",
+                Long.class,
+                TENANT_A.value());
+        for (var provisioned : List.of(category, item)) {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(BUCKET)
+                    .key(provisioned.provenance().canonicalObjectKey())
+                    .build());
+        }
+
+        var inspected = provisioningService.inspectPreparedAssetReferences(
+                TENANT_A,
+                expected,
+                TenantLifecycle.SUSPENDED);
+
+        assertThat(inspected).containsOnlyKeys(category.asset().id(), item.asset().id());
+        assertThat(inspected.get(category.asset().id()).kind()).isEqualTo(AssetKind.MENU_CATEGORY_IMAGE);
+        assertThat(inspected.get(category.asset().id()).sha256()).isEqualTo(category.asset().sha256());
+        assertThat(inspected.get(item.asset().id()).kind()).isEqualTo(AssetKind.MENU_ITEM_IMAGE);
+        assertThat(inspected.get(item.asset().id()).sha256()).isEqualTo(item.asset().sha256());
+        assertThat(inTransaction(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        expected,
+                        TenantLifecycle.SUSPENDED)))
+                .isEqualTo(inspected);
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM tenant_assets WHERE tenant_id = ?",
+                        Long.class,
+                        TENANT_A.value()))
+                .isEqualTo(rowCountBefore);
+        assertThat(jdbcTemplate.queryForList(
+                        "SELECT status FROM tenant_assets WHERE tenant_id = ? ORDER BY id",
+                        String.class,
+                        TENANT_A.value()))
+                .containsOnly("active");
+        assertThatThrownBy(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        expected,
+                        TenantLifecycle.ACTIVE))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+
+        assertThatThrownBy(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        Map.of(category.asset().id(), AssetKind.MENU_ITEM_IMAGE),
+                        TenantLifecycle.SUSPENDED))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        assertThatThrownBy(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_B,
+                        Map.of(category.asset().id(), AssetKind.MENU_CATEGORY_IMAGE),
+                        TenantLifecycle.SUSPENDED))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        assertThatThrownBy(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        Map.of(new TenantAssetId(UUID.randomUUID()), AssetKind.MENU_CATEGORY_IMAGE),
+                        TenantLifecycle.SUSPENDED))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+
+        jdbcTemplate.update(
+                "UPDATE tenant_assets SET status = 'pending' WHERE tenant_id = ? AND id = ?",
+                TENANT_A.value(),
+                item.asset().id().value());
+        assertThatThrownBy(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        expected,
+                        TenantLifecycle.SUSPENDED))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        jdbcTemplate.update(
+                "UPDATE tenant_assets SET status = 'deleted' WHERE tenant_id = ? AND id = ?",
+                TENANT_A.value(),
+                item.asset().id().value());
+        assertThatThrownBy(() -> provisioningService.inspectPreparedAssetReferences(
+                        TENANT_A,
+                        expected,
+                        TenantLifecycle.SUSPENDED))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class);
+    }
+
+    @Test
+    void cleanupReferenceScanIncludesScalarAndBrandingJsonAssetIds() {
+        suspend(TENANT_A);
+        var logo = provisioningService.provision(
+                TENANT_A, pngAsset(AssetKind.LOGO), RUN_A, TenantLifecycle.SUSPENDED);
+        var hero = provisioningService.provision(
+                TENANT_A, pngAsset(AssetKind.HERO), RUN_A, TenantLifecycle.SUSPENDED);
+        var openGraph = provisioningService.provision(
+                TENANT_A, pngAsset(AssetKind.OPEN_GRAPH), RUN_A, TenantLifecycle.SUSPENDED);
+        jdbcTemplate.update(
+                """
+                INSERT INTO tenant_branding
+                    (tenant_id, display_name, business_type, logo_asset_id,
+                     design_tokens, localized_texts, hero, seo_metadata)
+                VALUES (?, 'Tenant A', 'restaurant', ?, '{}'::jsonb, '[]'::jsonb,
+                        jsonb_build_object('imageAssetId', ?::text),
+                        jsonb_build_object('openGraphAssetId', ?::text))
+                """,
+                TENANT_A.value(),
+                logo.asset().id().value(),
+                hero.asset().id().value(),
+                openGraph.asset().id().value());
+
+        for (var provisioned : List.of(logo, hero, openGraph)) {
+            TenantAssetCleanupProof proof =
+                    provisioningService.verifyCleanupProvenance(TENANT_A, provisioned.provenance());
+            assertThatThrownBy(() -> inTransaction(() ->
+                            provisioningService.removeRegistrationForCleanup(TENANT_A, proof)))
+                    .isInstanceOf(TenantAssetProvisioningConflictException.class);
+        }
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM tenant_assets", Long.class)).isEqualTo(3L);
+    }
+
+    @Test
+    void cleanupReliesOnMenuForeignKeyAndRedactsIntegrityFailure() {
+        suspend(TENANT_A);
+        var categoryAsset = provisioningService.provision(
+                TENANT_A,
+                pngAsset(AssetKind.MENU_CATEGORY_IMAGE),
+                RUN_A,
+                TenantLifecycle.SUSPENDED);
+        UUID restaurantId = UUID.randomUUID();
+        UUID menuVersionId = UUID.randomUUID();
+        jdbcTemplate.update(
+                """
+                INSERT INTO restaurants (id, tenant_id, slug, display_name, status, is_default)
+                VALUES (?, ?, 'asset-fk', 'Asset FK', 'active', true)
+                """,
+                restaurantId,
+                TENANT_A.value());
+        jdbcTemplate.update(
+                """
+                INSERT INTO menu_versions (id, tenant_id, restaurant_id, version, status)
+                VALUES (?, ?, ?, 1, 'draft')
+                """,
+                menuVersionId,
+                TENANT_A.value(),
+                restaurantId);
+        jdbcTemplate.update(
+                """
+                INSERT INTO menu_categories
+                    (id, tenant_id, menu_version_id, public_id, name, image_asset_id, sort_order)
+                VALUES (?, ?, ?, 'asset-fk', 'Asset FK', ?, 0)
+                """,
+                UUID.randomUUID(),
+                TENANT_A.value(),
+                menuVersionId,
+                categoryAsset.asset().id().value());
+        TenantAssetCleanupProof proof = provisioningService.verifyCleanupProvenance(
+                TENANT_A,
+                categoryAsset.provenance());
+
+        assertThatThrownBy(() -> inTransaction(() ->
+                        provisioningService.removeRegistrationForCleanup(TENANT_A, proof)))
+                .isInstanceOf(TenantAssetProvisioningConflictException.class)
+                .hasMessage("Referenced asset cannot be cleaned up")
+                .hasNoCause();
+        assertThat(jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM tenant_assets WHERE tenant_id = ? AND id = ?",
+                        Long.class,
+                        TENANT_A.value(),
+                        categoryAsset.asset().id().value()))
+                .isEqualTo(1L);
+    }
+
     private void insertTenant(TenantId tenantId, String slug) {
         jdbcTemplate.update(
                 """
@@ -250,6 +709,36 @@ class TenantAssetMinioIntegrationTests {
                 """,
                 tenantId.value(),
                 slug);
+    }
+
+    private void suspend(TenantId tenantId) {
+        jdbcTemplate.update(
+                "UPDATE tenants SET status = 'suspended', updated_at = now() WHERE id = ?",
+                tenantId.value());
+    }
+
+    private <T> T inTransaction(java.util.function.Supplier<T> action) {
+        return new TransactionTemplate(transactionManager).execute(ignored -> action.get());
+    }
+
+    private software.amazon.awssdk.services.s3.model.HeadObjectResponse head(String key) {
+        return s3Client.headObject(HeadObjectRequest.builder().bucket(BUCKET).key(key).build());
+    }
+
+    private void putProvisionedObject(String key, ProvisioningRunFingerprint fingerprint) {
+        byte[] content = pngBytes();
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(BUCKET)
+                        .key(key)
+                        .contentType("image/png")
+                        .contentLength((long) content.length)
+                        .cacheControl(S3AssetObjectStorage.IMMUTABLE_CACHE_CONTROL)
+                        .metadata(java.util.Map.of(
+                                S3AssetObjectStorage.SHA_256_METADATA_KEY, PNG_SHA256,
+                                S3AssetObjectStorage.RUN_FINGERPRINT_METADATA_KEY, fingerprint.value()))
+                        .build(),
+                RequestBody.fromBytes(content));
     }
 
     private Set<String> objectKeys() {
@@ -261,8 +750,12 @@ class TenantAssetMinioIntegrationTests {
     }
 
     private static TenantAssetImportRequest pngLogo() {
+        return pngAsset(AssetKind.LOGO);
+    }
+
+    private static TenantAssetImportRequest pngAsset(AssetKind kind) {
         return new TenantAssetImportRequest(
-                AssetKind.LOGO,
+                kind,
                 "image/png",
                 "png",
                 pngBytes());

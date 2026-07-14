@@ -4,30 +4,44 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.LockModeType;
+
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 
-interface TenantOrderCounterJpaRepository extends Repository<TenantOrderCounterEntity, UUID> {
+interface OrderCounterJpaRepository extends Repository<OrderCounterEntity, Short> {
 
-    Optional<TenantOrderCounterEntity> findByTenantId(UUID tenantId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select counter from OrderCounterPersistenceEntity counter where counter.singletonId = 1")
+    Optional<OrderCounterEntity> lockSingleton();
 }
 
 interface OrderJpaRepository extends Repository<OrderEntity, UUID> {
 
-    Optional<OrderEntity> findByTenantIdAndId(UUID tenantId, UUID orderId);
+    Optional<OrderEntity> findById(UUID orderId);
 
-    Optional<OrderEntity> findByTenantIdAndIdempotencyKey(UUID tenantId, String idempotencyKey);
+    Optional<OrderEntity> findByIdempotencyKey(String idempotencyKey);
 
-    Optional<OrderEntity> findByTenantIdAndOrderNumber(UUID tenantId, long orderNumber);
+    Optional<OrderEntity> findByOrderNumber(long orderNumber);
 }
 
 interface OrderItemJpaRepository extends Repository<OrderItemEntity, UUID> {
 
-    List<OrderItemEntity> findAllByTenantIdAndOrderIdOrderBySortOrder(UUID tenantId, UUID orderId);
+    List<OrderItemEntity> findAllByOrderIdOrderBySortOrder(UUID orderId);
 }
 
 interface OrderStatusHistoryJpaRepository extends Repository<OrderStatusHistoryEntity, UUID> {
 
-    List<OrderStatusHistoryEntity> findAllByTenantIdAndOrderIdOrderByOccurredAt(
-            UUID tenantId,
-            UUID orderId);
+    List<OrderStatusHistoryEntity> findAllByOrderIdOrderByOccurredAtAscIdAsc(UUID orderId);
+}
+
+interface OutboxEventJpaRepository extends Repository<OutboxEventEntity, UUID> {
+
+    List<OutboxEventEntity> findAllByProcessingStateOrderByAvailableAtAscCreatedAtAscIdAsc(
+            String processingState);
+
+    List<OutboxEventEntity> findAllByAggregateTypeAndAggregateIdOrderByCreatedAtAsc(
+            String aggregateType,
+            UUID aggregateId);
 }

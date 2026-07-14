@@ -1,9 +1,15 @@
 package com.salamu.menu.menu.internal.application;
 
-/** Generic fail-closed signal for persisted menu data that violates the public contract. */
-final class InvalidPublishedMenuException extends IllegalStateException {
+/** Fail-closed corruption signal with no persistence or resource details. */
+public final class InvalidPublishedMenuException extends RuntimeException {
 
-    InvalidPublishedMenuException() {
-        super("Published menu data is invalid");
+    private static final String SAFE_MESSAGE = "Published menu is internally inconsistent";
+
+    public InvalidPublishedMenuException() {
+        super(SAFE_MESSAGE);
+    }
+
+    public InvalidPublishedMenuException(Throwable cause) {
+        super(SAFE_MESSAGE, cause);
     }
 }

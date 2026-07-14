@@ -14,15 +14,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
-@ConfigurationProperties("app.security")
+@ConfigurationProperties(prefix = "app.security", ignoreUnknownFields = false)
 public record SecurityProperties(
         @NotNull @Valid Cors cors,
+        @NotNull @Valid RequestAuthority requestAuthority,
+        @NotNull @Valid TrustedProxies trustedProxies,
         @NotNull @Valid RateLimit rateLimit) {
 
     public record Cors(Set<@NotBlank String> allowedOrigins) {
 
         public Cors {
-            allowedOrigins = allowedOrigins == null ? Set.of() : Set.copyOf(allowedOrigins);
+            allowedOrigins = immutableSet(allowedOrigins);
         }
 
         @AssertTrue(message = "CORS origins must be exact HTTP(S) origins without wildcard, credentials, or path")
@@ -38,22 +40,50 @@ public record SecurityProperties(
                 var origin = URI.create(value);
                 var scheme = origin.getScheme();
                 var path = origin.getRawPath();
+                var port = origin.getPort();
                 return ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme))
                         && origin.getHost() != null
                         && origin.getRawUserInfo() == null
                         && (path == null || path.isEmpty())
                         && origin.getRawQuery() == null
                         && origin.getRawFragment() == null
-                        && origin.getPort() <= 65535;
+                        && (port == -1 || port >= 1 && port <= 65_535);
             } catch (IllegalArgumentException exception) {
                 return false;
             }
         }
     }
 
+    public record RequestAuthority(Set<@NotBlank String> allowedHosts) {
+
+        public RequestAuthority {
+            allowedHosts = immutableSet(allowedHosts);
+        }
+
+        @AssertTrue(message = "request authority hosts must be exact host literals without scheme, port, wildcard, or path")
+        public boolean isExactHostAllowlist() {
+            return allowedHosts.stream()
+                    .allMatch(host -> RequestAuthorityParser.normalizeHostLiteral(host).isPresent());
+        }
+    }
+
+    public record TrustedProxies(
+            boolean enabled,
+            Set<@NotBlank String> cidrs) {
+
+        public TrustedProxies {
+            cidrs = immutableSet(cidrs);
+        }
+
+        @AssertTrue(message = "trusted proxy CIDRs must contain only valid IPv4 or IPv6 CIDR literals")
+        public boolean isCidrAllowlistValid() {
+            return cidrs.stream().allMatch(TrustedProxyPolicy::isValidCidr);
+        }
+    }
+
     public record RateLimit(
             @NotNull @Valid Limit client,
-            @NotNull @Valid Limit tenant,
+            @NotNull @Valid Limit application,
             @NotNull @Valid Cache cache) {
     }
 
@@ -75,7 +105,6 @@ public record SecurityProperties(
 
     public record Cache(
             @Min(1) long maximumClientBuckets,
-            @Min(1) long maximumTenantBuckets,
             @NotNull Duration expireAfterAccess) {
 
         @AssertTrue(message = "rate-limit cache expiry must be positive")
@@ -84,5 +113,9 @@ public record SecurityProperties(
                     && !expireAfterAccess.isZero()
                     && !expireAfterAccess.isNegative();
         }
+    }
+
+    private static Set<String> immutableSet(Set<String> values) {
+        return values == null ? Set.of() : Set.copyOf(values);
     }
 }

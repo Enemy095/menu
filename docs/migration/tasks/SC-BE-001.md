@@ -1,6 +1,6 @@
 # SC-BE-001 — single-client backend boundary and tenancy removal
 
-Status: `blocked`
+Status: `done`
 Wave: P2
 Development dependencies: `SC-000`, `SC-DB-001`, `SC-API-001`
 Integration prerequisite: `SC-SEC-001` must be applied first so `identity` no longer imports
@@ -33,9 +33,20 @@ runtime и оставить один запускаемый modular monolith б�
 3. Orchestrator зафиксировал SHA/commit обоих P1 checkpoints в handoff.
 4. Для текущей БД подтверждено одно из двух:
    - V1–V5 dataset пуст, включая V5 ledger и `tenant_assets`; либо
-   - отдельная одобренная процедура уже скопировала каждый active object в canonical key,
-     сверила hash/size и выставила `sc_assets.storage_state = 'canonical_ready'`.
-5. `SC-SEC-001` уже применён при интеграции либо его diff готов к применению первым.
+   - отдельная одобренная процедура обработала **каждую сохраняемую** asset metadata row,
+     включая `pending`/`deleted`: object скопирован в canonical key, hash и `size_bytes`
+     проверены, а соответствующая `sc_assets` row имеет `storage_state =
+     'canonical_ready'`. Ненужная `pending`/`deleted` row может быть удалена до cutover
+     только отдельным одобренным retention/delete шагом, если она не referenced; V7 не
+     отбрасывает такие rows молча.
+5. Preflight validator построил полный business projection из shadow schema, validation
+   прошла, а `sourceDataDigest` и `businessProjectionDigest` вошли в одобренный cutover
+   artifact. Порядок вычисления и проверки digest определён ниже.
+6. Старые readers, writers и workers остановлены; нет `processing` outbox events,
+   `started` notification deliveries или внешней доставки с неустановленным outcome.
+7. Flyway запускается dedicated migration role. Runtime role отлична от неё, не владеет
+   V6 helpers, не имеет `EXECUTE` на них и не имеет DDL privileges.
+8. `SC-SEC-001` уже применён при интеграции либо его diff готов к применению первым.
 
 Если контракт, V6 table/column names или data preconditions отличаются, не угадывать и не
 создавать compatibility layer. Остановиться и передать расхождение orchestrator.
@@ -165,11 +176,34 @@ record SiteConfigurationSnapshot(
     SiteFeatures features,
     List<AvailableOrderType> orderTypes,
     OrderLimits limits,
+    WeeklySchedule schedule,
+    DeliveryConfiguration deliveryConfiguration,
     String locale,
     String currency,
     String timezone,
     String representationHash
 ) {}
+
+record WeeklySchedule(
+    String timezone,
+    String displayText,
+    List<WeeklyScheduleDay> days
+) {}
+
+record WeeklyScheduleDay(
+    DayOfWeek dayOfWeek,
+    List<OpeningInterval> intervals
+) {}
+
+record OpeningInterval(LocalTime opensAt, LocalTime closesAt) {}
+
+record DeliveryConfiguration(
+    boolean enabled,
+    boolean addressRequired,
+    DeliveryFeePolicy feePolicy
+) {}
+
+enum DeliveryFeePolicy { NONE }
 ```
 
 The nested value objects must preserve the accepted OpenAPI fields from `SC-API-001`.
@@ -185,8 +219,24 @@ Implementation rules:
   compatibility; duplicate known keys or invalid typed config fail closed;
 - exactly one enabled order type is default; money remains minor units; timezone and
   locale are validated;
+- `WeeklySchedule` is typed and matches the accepted OpenAPI exactly: seven entries in
+  Monday-through-Sunday order, absent legacy days become empty interval lists, values use
+  `HH:mm`, at most eight intervals are allowed per day, and unknown/duplicate days,
+  duplicate or overlapping intervals and invalid `opensAt >= closesAt` fail closed.
+  `schedule.timezone` equals the validated site timezone; `displayText` is the migrated
+  non-blank public text of at most 240 characters, not a replacement for intervals;
+- `DeliveryConfiguration` is typed and matches the accepted OpenAPI exactly. `enabled`
+  derives from the typed delivery feature, `addressRequired` follows the accepted order
+  contract, and MVP `feePolicy` is `NONE`. Do not expose unapproved minimum-order,
+  free-delivery or delivery-fee fields from legacy JSON;
+- public `OrderLimits` are checked against the exact accepted contract bounds:
+  `maxItemQuantity` 1–99, `maxTotalItems` 1–200, `maxNameLength` 1–80,
+  `maxPhoneLength` 5–32, `maxAddressLength` 1–240, `maxCommentLength` 1–500 and
+  `delayedOrderConfirmationMinutes` 0–1440; an out-of-range DB value is not silently
+  clamped;
 - representation hash covers the complete public response in deterministic field/list
-  order, excluding DB revision, Host, internal singleton ID and secrets;
+  order, including schedule and delivery configuration, but excluding DB revision, Host,
+  internal singleton ID and secrets;
 - missing/inactive site, missing branding/profile/default restaurant, invalid JSON,
   missing required logo or wrong asset kind maps to `503 SITE_NOT_READY` with no internal
   detail leakage.
@@ -223,11 +273,86 @@ interface PublishedMenuQuery {
 and items, availability, minor-unit prices/currency, modifiers required by the accepted
 contract, resolved public asset URLs and deterministic representation hash.
 
+V1–V6 have no normalized modifier catalog. V7 therefore creates the following **final**
+tables after the shadow tables have been renamed; it does not add a second temporary
+modifier model:
+
+```sql
+CREATE TABLE menu_modifier_groups (
+    id uuid PRIMARY KEY,
+    menu_version_id uuid NOT NULL,
+    menu_item_id uuid NOT NULL,
+    public_id varchar(120) NOT NULL,
+    name varchar(120) NOT NULL,
+    min_selections integer NOT NULL,
+    max_selections integer NOT NULL,
+    sort_order integer NOT NULL,
+    CONSTRAINT uq_menu_modifier_groups_version_id
+        UNIQUE (menu_version_id, id),
+    CONSTRAINT uq_menu_modifier_groups_item_public_id
+        UNIQUE (menu_version_id, menu_item_id, public_id),
+    CONSTRAINT fk_menu_modifier_groups_item
+        FOREIGN KEY (menu_version_id, menu_item_id)
+        REFERENCES menu_items (menu_version_id, id) ON DELETE CASCADE,
+    CONSTRAINT ck_menu_modifier_groups_public_id
+        CHECK (public_id ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+    CONSTRAINT ck_menu_modifier_groups_name
+        CHECK (length(btrim(name)) BETWEEN 1 AND 120),
+    CONSTRAINT ck_menu_modifier_groups_selections
+        CHECK (min_selections BETWEEN 0 AND 99
+           AND max_selections BETWEEN 1 AND 99
+           AND min_selections <= max_selections),
+    CONSTRAINT ck_menu_modifier_groups_sort_order CHECK (sort_order >= 0)
+);
+
+CREATE INDEX ix_menu_modifier_groups_item_ordered
+    ON menu_modifier_groups (menu_version_id, menu_item_id, sort_order, public_id);
+
+CREATE TABLE menu_modifier_options (
+    id uuid PRIMARY KEY,
+    menu_version_id uuid NOT NULL,
+    modifier_group_id uuid NOT NULL,
+    public_id varchar(120) NOT NULL,
+    name varchar(120) NOT NULL,
+    price_delta_minor bigint NOT NULL,
+    available boolean NOT NULL,
+    sort_order integer NOT NULL,
+    CONSTRAINT uq_menu_modifier_options_group_public_id
+        UNIQUE (menu_version_id, modifier_group_id, public_id),
+    CONSTRAINT fk_menu_modifier_options_group
+        FOREIGN KEY (menu_version_id, modifier_group_id)
+        REFERENCES menu_modifier_groups (menu_version_id, id) ON DELETE CASCADE,
+    CONSTRAINT ck_menu_modifier_options_public_id
+        CHECK (public_id ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+    CONSTRAINT ck_menu_modifier_options_name
+        CHECK (length(btrim(name)) BETWEEN 1 AND 120),
+    CONSTRAINT ck_menu_modifier_options_price_delta
+        CHECK (price_delta_minor BETWEEN -1000000000000 AND 1000000000000),
+    CONSTRAINT ck_menu_modifier_options_sort_order CHECK (sort_order >= 0)
+);
+
+CREATE INDEX ix_menu_modifier_options_group_ordered
+    ON menu_modifier_options (menu_version_id, modifier_group_id, sort_order, public_id);
+```
+
+The V7 legacy backfill for both tables is deliberately empty. Do not invent modifier
+definitions from `order_items.modifier_snapshot`: that JSON is immutable order history,
+not menu master data. Until `SC-DATA-001` imports an approved catalog, every migrated item
+returns `modifierGroups: []`; once rows exist, the query returns groups/options in
+`sort_order, public_id` order. IDs and `public_id` values are stable catalog identifiers,
+not localized labels. Application/import validation also enforces the accepted maximum of
+20 groups per item, one to 100 options per persisted group, and exact OpenAPI identifier,
+name, selection and price-delta bounds; a group without options is never published.
+
 Rules:
 
 - resolve the restaurant only through `DefaultRestaurantQuery`; no Host/slug/context;
 - repository performs bounded ordered reads from final `menu_versions`,
-  `menu_categories`, `menu_items`; no N+1;
+  `menu_categories`, `menu_items`, `menu_modifier_groups` and
+  `menu_modifier_options`; no N+1 and no per-item/per-group query;
+- `menu_versions.currency` is the required version-level ISO 4217 currency. Every item
+  must use that currency, so an empty published menu still has a deterministic public
+  currency without introducing a dependency on `site::api`;
 - one published menu is required for a menu response; zero maps to
   `404 MENU_NOT_FOUND`; duplicates/corrupt FK/currency/price/order data map to a generic
   server error and are logged only with trace ID;
@@ -325,24 +450,109 @@ after its initial snapshot. It intentionally leaves owner-only migration helpers
 creation-time `search_path` is fixed and `PUBLIC` has no `EXECUTE`; do not grant them to
 the application role. V7 must reuse and then drop them.
 
+### Migration/runtime database roles
+
+Database privilege separation is a deployment gate, not a recommendation:
+
+- logical role `flyway_migrator` applies V6/V7, owns both V6 helper functions and has the
+  DDL privileges needed for the contract transaction;
+- logical role `application_runtime` is a distinct login used by the running service. It
+  has only the final schema `USAGE` and required table DML privileges; it has no schema
+  `CREATE`, table/function ownership, `ALTER`/`DROP`, role membership in
+  `flyway_migrator`, or direct/role-inherited `EXECUTE` on either V6 helper;
+- migrations run as a separate deployment step with migrator credentials. The service
+  starts afterwards with runtime credentials and must not acquire migrator credentials;
+- if V6 was applied by the runtime owner, cutover is blocked until a DBA-controlled step
+  transfers helper/schema ownership to `flyway_migrator`, revokes direct and inherited
+  runtime privileges and records the privilege audit. Merely executing `REVOKE PUBLIC`
+  is insufficient because a function owner retains control;
+- `SC-SEC-001`/infra owns datasource wiring outside this task's file scope. SC-BE-001 owns
+  verification tests and must not weaken this requirement by reusing one credential.
+
+Before mutation, query `pg_roles`, `pg_auth_members`, `pg_proc`, `information_schema` and
+`has_function_privilege` as both logical roles. Stable diagnostic
+`SC_BE_001_DATABASE_ROLE_SEPARATION_REQUIRED` aborts V7 if the runtime role owns or can
+execute either helper or has DDL capability on the target schema.
+
+### Approved business projection
+
+Bidirectional row equality is necessary but does not prove that migrated data can satisfy
+the accepted API. While old writers/workers remain stopped, a cutover-only validator must:
+
+1. call the accepted V6 refresh with the migrator role and commit that non-destructive
+   refresh;
+2. read only the `sc_*` candidate tables and build the same typed
+   `SiteConfigurationSnapshot`, `PublishedMenuSnapshot`, asset readiness and sanitized
+   notification readiness that final application readers build. It reuses the same
+   validation/mapping/hash code; it is not a runtime dual-read or fallback;
+3. fail on every condition that would make `/config` non-`200` for a populated site,
+   make the required current menu invalid, violate the accepted OpenAPI bounds, expose a
+   secret/internal field, or leave a referenced asset unresolved;
+4. emit an immutable cutover artifact containing release/database identity, V6 checksum,
+   deterministic `sourceDataDigest`, `businessProjectionDigest`, representation hashes,
+   singleton/default-menu state, retained asset manifest digest and outbox/delivery state
+   counts. The source digest covers every value in every `sc_*` row in fixed table, primary
+   key and column order; JSON is canonicalized, null is explicit and timestamps are UTC;
+5. obtain explicit operator approval for that artifact. Missing approval is a hard stop.
+
+The approved `sourceDataDigest` is supplied to the V7 Flyway connection through a
+deployment-controlled PostgreSQL session setting such as
+`app.sc_be_approved_source_digest`; it is not interpolated into migration SQL and therefore
+does not change the Flyway checksum. Under the V7 source locks, after its final refresh,
+V7 recomputes the exact same deterministic source digest and compares it with the setting.
+Missing, malformed or mismatched values raise
+`SC_BE_001_APPROVED_PROJECTION_MISSING` or
+`SC_BE_001_APPROVED_SOURCE_DIGEST_MISMATCH` before destructive DDL. Matching the source
+digest proves that the rows used by the approved business projection are the rows being
+contracted. After startup, smoke verification compares response representation hashes/body
+digest with `businessProjectionDigest` from the artifact.
+
+The digest algorithm and canonicalization are versioned in the validator and V7 tests.
+The digest is a change detector inside a trusted deployment path, not an authorization
+token; artifact approval and database credentials remain protected by the deployment
+system.
+
 ### Pre-contract gates in V7
 
 The migration must raise stable diagnostics before destructive DDL when any check fails:
 
-1. the V6 bidirectional `EXCEPT ALL` refresh comparison reports any difference across
+1. migration/runtime role separation is not proven as specified above;
+2. the V6 bidirectional `EXCEPT ALL` refresh comparison reports any difference across
    every migrated table/column;
-2. site configuration is not empty or exactly one row; populated site is not `active`;
-3. active/default restaurant cardinality is not exactly one for populated data;
-4. current published menu cardinality is invalid;
-5. any `sc_assets.storage_state <> 'canonical_ready'`, canonical object key is invalid,
-   or active asset still depends on `legacy_object_key`;
-6. any V5 ledger table contains a row; non-empty ledger requires export/retention decision
+3. the approved projection setting is missing/malformed or the final locked
+   `sourceDataDigest` differs;
+4. site configuration is not empty or exactly one row; populated site is not `active`, or
+   the typed config/schedule/delivery/limits projection is invalid;
+5. active/default restaurant cardinality is not exactly one for populated data;
+6. published-menu cardinality violates this explicit policy:
+   - a completely empty installation (no site, restaurant or menu data) has zero current
+     published menus and may migrate;
+   - a populated active site has exactly one current published menu for its one active
+     default restaurant and that complete menu projection must validate;
+   - zero or multiple current published menus for that restaurant fail cutover. Other
+     retained restaurants may have at most one current published menu each; they never
+     become an implicit public fallback;
+7. any retained `sc_assets` row, regardless of `status = pending|active|deleted`, has
+   `storage_state <> 'canonical_ready'`, an invalid canonical key, an unverified object, or
+   a hash/content-type/`size_bytes` mismatch. A non-active status is not permission for V7
+   to discard metadata or skip object verification;
+8. any V5 ledger table contains a row; non-empty ledger requires export/retention decision
    outside this task;
-7. an order history row contains `tenant_admin` or `platform_admin`; mapping historical
+9. an order history row contains `tenant_admin` or `platform_admin`; mapping historical
    roles requires explicit ADR/data decision, not a silent rewrite;
-8. any `sc_outbox_events.payload` contains a tenant routing field or any destination has
-   an invalid opaque reference;
-9. orphan/collision checks from V6 no longer hold.
+10. any `sc_outbox_events.payload` contains a tenant routing field, any destination has an
+    invalid opaque reference, any outbox event is `processing`, or any notification
+    delivery is `started`;
+11. provider reconciliation left an externally accepted delivery with unknown local
+    outcome, or a retained `pending` backlog lacks an explicit deferral owner/decision for
+    `SC-OUT-001`;
+12. orphan/collision checks from V6 no longer hold.
+
+For the outbox gate, `published`/`failed` events and `succeeded`/`failed` deliveries are
+terminal and are preserved. `pending` events are preserved, not marked delivered; their
+count, oldest age and approved deferral are recorded in the handoff. No legacy worker may
+restart after drain. Ambiguous provider outcomes are reconciled before the artifact is
+approved so V7 never resolves delivery semantics by guessing.
 
 Flyway must not call S3. Object copy/hash verification occurs before V7. A failed gate
 rolls back the entire migration and leaves V1–V6 intact.
@@ -351,32 +561,50 @@ rolls back the entire migration and leaves V1–V6 intact.
 
 Within one PostgreSQL/Flyway transaction and maintenance window:
 
-1. after every old reader/writer/worker is drained, acquire an advisory lock dedicated to
-   `SC-BE-001`;
-2. call `sc_refresh_single_client_shadow()`. It reacquires all V1–V5 source `SHARE` locks
+1. after every old reader/writer/worker is drained, verify database roles and acquire an
+   advisory lock dedicated to `SC-BE-001` as `flyway_migrator`;
+2. before refresh, capture a transaction-local readiness identity for every
+   `canonical_ready` shadow asset: `id`, `asset_type`, `content_type`, `sha256`,
+   `size_bytes` and `canonical_object_key`;
+3. call `sc_refresh_single_client_shadow()`. It reacquires all V1–V5 source `SHARE` locks
    in the V6-defined stable order, locks/truncates all shadow tables, backfills them and
    performs the bidirectional `EXCEPT ALL` preservation check. Do not copy this SQL into
    V7 or run a weaker count-only refresh;
-3. run all remaining pre-contract gates while those transaction locks are still held;
-4. drop old tables in FK-safe order:
+4. compare every refreshed `canonical_ready` row with the captured readiness identity,
+   including `size_bytes`. Any changed/missing field raises
+   `SC_BE_001_ASSET_READINESS_IDENTITY_CHANGED`; re-copy and re-verify the object rather
+   than preserving readiness. This V7 compensation is mandatory because immutable V6 does
+   not include `size_bytes` in its readiness-preservation temp table;
+5. recompute/compare the approved source digest and run all remaining pre-contract gates
+   while source locks are still held;
+6. drop old tables in FK-safe order:
    `legacy_import_run_assets`, `legacy_import_run_tenants`, `legacy_import_runs`,
    `notification_deliveries`, `outbox_events`, `notification_destinations`,
    `order_status_history`, `order_items`, `orders`, `menu_items`, `menu_categories`,
    `menu_versions`, `tenant_order_counters`, `tenant_branding`, `tenant_profiles`,
    `tenant_features`, `tenant_assets`, `restaurants`, `tenant_domains`, `tenants`;
-5. rename all `sc_*` tables to final names, including `sc_site_profile` and
+7. rename all `sc_*` tables to final names, including `sc_site_profile` and
    `sc_order_counter`, and rename constraints/indexes so live metadata has no `sc_` or
    tenant naming;
-6. for `assets`, require canonical readiness, drop `legacy_object_key` and
+8. add required `menu_versions.currency`: for a version with items, require exactly one
+   distinct item currency equal to `site_configuration.currency`; for an empty version,
+   use the singleton site currency. Missing site currency, mixed currencies, mismatch or
+   invalid ISO value aborts before destructive completion;
+9. create empty final `menu_modifier_groups` and `menu_modifier_options` with the exact
+   DDL, FK/check/unique constraints and ordered indexes specified above. Do not backfill
+   them from order snapshots;
+10. for `assets`, require canonical readiness, drop `legacy_object_key` and
    `storage_state`, then rename `canonical_object_key` to `object_key`;
-7. replace site status constraint with single-site operational values `active/inactive`;
+11. replace site status constraint with single-site operational values `active/inactive`;
    old suspended/deleted data must already have failed the preflight;
-8. replace order actor constraint with target values such as
+12. replace order actor constraint with target values such as
    `system/customer/client_admin/worker/import`; do not preserve tenant/platform admin as
    values writable by new code;
-9. drop `sc_refresh_single_client_shadow()` and `sc_assert_single_client_source()`;
-10. assert through catalog queries that no live table/column/constraint/index/policy name
-    contains tenant scope, no table starts with `sc_`, and neither helper function exists.
+13. revoke migration-only grants no longer needed and drop
+    `sc_refresh_single_client_shadow()` and `sc_assert_single_client_source()`;
+14. assert through catalog queries that no live table/column/constraint/index/policy name
+    contains tenant scope, no table starts with `sc_`, neither helper function exists, and
+    runtime privileges match the final allowlist.
 
 Java entities/repositories map only final names. There is no dual-read, fallback to old
 tables, runtime feature flag or compatibility tenant context. Deployment order is:
@@ -384,16 +612,38 @@ tables, runtime feature flag or compatibility tenant context. Deployment order i
 ```text
 enter maintenance and stop old writers/workers
 → apply/confirm V6 while writers remain stopped; never restart at the V6-only checkpoint
-→ refresh, verify and copy canonical assets outside Flyway
+→ drain/reconcile in-flight outbox and provider deliveries
+→ refresh, copy and verify every retained canonical asset outside Flyway, including size
+→ validate the complete business projection and approve its digest artifact
 → deploy artifact containing V7 + single-client Java
-→ Flyway V7 transaction
+→ run Flyway V7 as migration role with the approved source digest session setting
 → Hibernate validate
-→ start new readers
-→ run smoke/security checks
+→ start new readers with the restricted runtime role
+→ compare smoke bodies/representation hashes with the approved projection artifact
+→ run security and database-privilege checks
 ```
 
 Rollback after V7 is restore/forward-fix from verified database/object backup, not running
 the old binary against the contracted schema. Record this in the handoff.
+
+### Deployment gates
+
+- **Enter maintenance:** verified database and object-store backups exist; old binary and
+  every writer/worker are stopped; role audit is green; provider reconciliation and the
+  in-flight outbox drain are complete.
+- **Approve candidate:** V6 final refresh is green; every retained asset status has a
+  verified canonical object including `size_bytes`; the complete typed config/menu
+  projection is green; source/business digests and any pending-backlog deferral are
+  approved in one artifact.
+- **Permit destructive DDL:** V7 holds the advisory/source locks, the readiness identity
+  check is green, approved source digest matches, and every numbered pre-contract gate is
+  green. A missing artifact/session setting is never an overrideable warning.
+- **Start application:** V7 and Hibernate validation are green; helper functions are gone;
+  modifier catalog constraints/indexes exist; runtime privilege allowlist is green. Old
+  binary/workers remain prohibited.
+- **Exit maintenance:** `/config` and `/menu` smoke bodies/representation hashes match the
+  approved projection; role/security/MinIO checks are green; monitoring shows no secret or
+  legacy-key fallback. Otherwise restore/forward-fix according to the approved runbook.
 
 ## Exact deletion and migration inventory
 
@@ -470,9 +720,14 @@ exception. V1–V6 SQL text is the only expected tenant-heavy history.
 ### Unit/module
 
 - asset content/hash/key validation and 500-ID batch bound;
-- site feature/order-type/limits validation and deterministic hash;
+- site feature/order-type/limits validation, typed seven-day schedule, typed delivery
+  configuration and deterministic hash covering both new value objects;
 - restaurant zero/one/multiple default behavior;
-- menu ordering, hash, availability, money and asset-kind validation;
+- menu ordering, hash, availability, money, asset-kind and modifier group/option bounds;
+- empty modifier catalog maps to `modifierGroups: []`; populated groups/options retain
+  stable identifiers and deterministic ordering without reading order snapshots;
+- candidate projection/source digest canonicalization is deterministic for JSON key order,
+  row order, nulls and UTC timestamps, and changes for every covered business field;
 - notification redaction: secret reference absent from `toString`, exceptions and API;
 - exact Modulith graph and no imports from `internal` packages.
 
@@ -484,11 +739,32 @@ exception. V1–V6 SQL text is the only expected tenant-heavy history.
   late write; source locks prevent a concurrent writer during refresh;
 - one complete owner graph preserves IDs/counts/order amounts/snapshots and reads through
   final repositories, provided asset rows are marked canonical-ready by fixture;
+- clean/empty data with zero published menu succeeds; a populated active site with zero or
+  multiple current menus for the default restaurant fails before destructive DDL; exactly
+  one valid current menu succeeds;
+- invalid schedule, delivery config, public order limits or complete menu projection fails
+  candidate approval/V7 without dropping source/shadow tables;
+- missing/malformed approved digest and a one-field source change after approval each fail
+  V7 before destructive DDL; unchanged approved input succeeds and produces the recorded
+  business representation hashes;
+- a late asset `size_bytes` change cannot inherit canonical readiness: the V7 readiness
+  identity gate fails even when ID/type/content/hash are unchanged;
+- retained `active`, `pending` and `deleted` asset fixtures all require verified
+  canonical-ready objects; explicit pre-cutover deletion succeeds only for an unreferenced
+  row and is audited outside V7;
+- `processing` outbox event, `started` delivery or ambiguous-provider fixture fails V7;
+  terminal rows survive, while an approved `pending` backlog survives unchanged;
 - V7 refuses non-empty V5 ledger, legacy-only asset, old actor role, invalid singleton,
   orphan and collision without dropping source/shadow tables;
+- V7 creates empty `menu_modifier_groups`/`menu_modifier_options` on legacy upgrade; catalog
+  tests assert every named FK/check/unique/index, reject invalid/cross-version rows, and
+  prove inserts/read queries support the accepted one-to-20/one-to-100 shape;
+- privilege tests use distinct migrator/runtime logins: migrator can run V7, runtime cannot
+  execute V6 helpers or create/alter/drop schema objects, and final runtime DML works;
 - catalog assertion: no live `tenant_id`, tenant table/index/FK, `sc_*` object or composite
-  tenant FK, and both V6 helper functions are absent;
-- query-count tests prove config/menu use bounded reads and one asset batch.
+  tenant FK, both V6 helper functions are absent, and modifier FK/index names are exact;
+- query-count tests prove config/menu (including all modifier groups/options) use bounded
+  reads and one asset batch.
 
 ### HTTP
 
@@ -498,6 +774,10 @@ exception. V1–V6 SQL text is the only expected tenant-heavy history.
 - Host/Forwarded/X-Forwarded-Host/query/header/body tenant values do not affect data;
 - config/menu `200`, ETag/cache tags and generic failures match OpenAPI; no unsupported
   conditional `304` flow is advertised;
+- `/config` returns the exact accepted `WeeklySchedule` and `DeliveryConfiguration`, with
+  seven ordered days and no unapproved delivery-threshold fields;
+- `/menu` returns an empty modifier array after legacy backfill and the exact accepted
+  nested group/option shape after controlled catalog insertion;
 - missing site → `503 SITE_NOT_READY`; no published menu → `404 MENU_NOT_FOUND`;
 - response/log capture contains no tenant fields or secret/object keys.
 
@@ -519,6 +799,8 @@ pnpm --filter @e-menu/api-contract validate
 ./gradlew :apps:api:test --tests "*Flyway*" --tests "*SingleClient*"
 ./gradlew :apps:api:test --tests "*Site*" --tests "*Restaurant*" --tests "*Menu*"
 ./gradlew :apps:api:test --tests "*Asset*" --tests "*Notification*"
+./gradlew :apps:api:test --tests "*CutoverProjection*" --tests "*Modifier*"
+./gradlew :apps:api:test --tests "*DatabasePrivilege*" --tests "*OutboxDrain*"
 ./gradlew :apps:api:test
 ./gradlew :apps:api:check
 rg -n "com\.salamu\.menu\.tenancy|Tenant(Id|Context|Resolution|Request|Asset)|tenant_id" apps/api/src/main apps/api/src/test
@@ -550,7 +832,12 @@ Files added/moved/deleted: <grouped by site/asset/restaurant/menu/notification/s
 Public Java contracts: <actual classes and signatures>
 Module graph: <actual allowedDependencies>
 V7 gates: <each diagnostic and test proving rollback>
-Dataset state: <empty | approved canonical-ready dataset evidence>
+Database roles: <migrator/runtime identities, ownership/grants audit and negative test>
+Projection approval: <artifact ID, V6 checksum, source/business digests and smoke match>
+Dataset state: <empty | approved canonical-ready dataset evidence for every asset status>
+Asset readiness: <manifest digest and kind/content/hash/size/object verification>
+Menu cardinality/modifiers: <empty or one current default menu; final DDL/catalog evidence>
+Outbox drain: <processing=0, started=0, reconciliation and pending deferral/count/oldest age>
 Flyway results: <clean; V1-V5 empty upgrade; populated upgrade; refusal cases>
 HTTP results: <config/menu/ETag/errors/cache>
 S3/MinIO results: <canonical key/hash/url/failure cases>
@@ -567,8 +854,14 @@ Git status: <short output; no commit>
 - Fixed config/menu controllers and target repositories run against final single-client
   tables.
 - `site` and `asset` own the responsibilities defined above.
+- Typed schedule/delivery projections and normalized final modifier tables implement the
+  already accepted OpenAPI without changing generated contract files.
 - Tenancy and legacy import modules/runtime are absent; no fake global tenant remains.
-- V7 is append-only, fail-closed and verified from clean and V1–V5 upgrade paths.
+- V7 is append-only, fail-closed and verified from clean and V1–V5 upgrade paths; no
+  destructive DDL can run without matching approved projection input, complete asset
+  readiness (including size) and drained in-flight delivery state.
+- Migration/runtime database roles are separated and verified with positive and negative
+  privilege tests.
 - Live schema, Java, logs, cache tags, asset paths, outbox payload and notification
   metadata contain no tenant scope.
 - OpenAPI/generated client remain unchanged and synchronized.

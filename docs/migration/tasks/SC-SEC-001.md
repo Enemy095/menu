@@ -1,6 +1,6 @@
 # SC-SEC-001 — single-client request and security boundary
 
-Status: `ready`
+Status: `done`
 Wave: P2
 Dependencies: `SC-000`, `SC-API-001`
 Integration order: execute after the public contract is frozen; integrate this diff before

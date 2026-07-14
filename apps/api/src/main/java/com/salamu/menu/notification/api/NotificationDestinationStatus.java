@@ -1,6 +1,6 @@
 package com.salamu.menu.notification.api;
 
-/** Operational state stored for a tenant notification destination. */
+/** Operational state stored for a notification destination. */
 public enum NotificationDestinationStatus {
     ACTIVE("active"),
     DISABLED("disabled");

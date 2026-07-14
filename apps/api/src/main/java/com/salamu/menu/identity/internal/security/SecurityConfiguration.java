@@ -5,9 +5,6 @@ import java.util.List;
 
 import jakarta.servlet.DispatcherType;
 
-import com.salamu.menu.TraceIdAccessor;
-import com.salamu.menu.tenancy.api.TenantRequestAccess;
-
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfiguration {
@@ -38,6 +36,10 @@ public class SecurityConfiguration {
     private static final List<String> EXPOSED_RESPONSE_HEADERS = List.of(
             "X-Correlation-Id",
             "X-Trace-Id",
+            "ETag",
+            "Cache-Control",
+            "Cache-Tag",
+            "Surrogate-Key",
             "Retry-After");
 
     @Bean
@@ -61,22 +63,19 @@ public class SecurityConfiguration {
     SecurityFilterChain applicationSecurityFilterChain(
             HttpSecurity http,
             UrlBasedCorsConfigurationSource corsConfigurationSource,
-            TenantRequestAccess tenantRequestAccess,
+            SecurityProperties properties,
             TrustedClientIpResolver clientIpResolver,
-            TenantRateLimiter rateLimiter,
-            TraceIdAccessor traceIdAccessor) throws Exception {
-        var rateLimitFilter = new PublicOrderRateLimitFilter(
-                tenantRequestAccess,
-                clientIpResolver,
-                rateLimiter,
-                traceIdAccessor);
+            OrderRateLimiter rateLimiter,
+            SecurityErrorWriter errorWriter) throws Exception {
+        var authorityFilter = new RequestAuthorityFilter(properties, errorWriter);
+        var rateLimitFilter = new PublicOrderRateLimitFilter(clientIpResolver, rateLimiter, errorWriter);
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.ignoringRequestMatchers(SecurityRequestMatchers.PUBLIC_ORDER))
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(
-                                SecurityRequestMatchers.PUBLIC_RESTAURANT,
+                                SecurityRequestMatchers.PUBLIC_CONFIG,
                                 SecurityRequestMatchers.PUBLIC_MENU,
                                 SecurityRequestMatchers.PUBLIC_ORDER,
                                 SecurityRequestMatchers.LIVENESS,
@@ -88,6 +87,7 @@ public class SecurityConfiguration {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
+                .addFilterBefore(authorityFilter, CorsFilter.class)
                 .addFilterBefore(rateLimitFilter, AuthorizationFilter.class);
         return http.build();
     }
@@ -97,7 +97,7 @@ public class SecurityConfiguration {
         var source = new UrlBasedCorsConfigurationSource();
         var allowedOrigins = new ArrayList<>(properties.cors().allowedOrigins());
         source.registerCorsConfiguration(
-                SecurityRequestMatchers.PUBLIC_RESTAURANT_PATH,
+                SecurityRequestMatchers.PUBLIC_CONFIG_PATH,
                 corsConfiguration(allowedOrigins, List.of("GET"), READ_REQUEST_HEADERS));
         source.registerCorsConfiguration(
                 SecurityRequestMatchers.PUBLIC_MENU_PATH,

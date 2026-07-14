@@ -5,6 +5,10 @@ import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
+import com.salamu.menu.menu.api.PublishedMenuNotFoundException;
+import com.salamu.menu.restaurant.api.DefaultRestaurantUnavailableException;
+import com.salamu.menu.site.api.SiteNotReadyException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
@@ -15,10 +19,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
-import org.springframework.web.server.ResponseStatusException;
 
 @Order(Ordered.LOWEST_PRECEDENCE)
 @RestControllerAdvice
@@ -31,7 +35,9 @@ public class ApiErrorHandler {
     private static final String INTERNAL_ERROR_MESSAGE = "Не удалось обработать запрос";
     private static final String VALIDATION_ERROR_CODE = "VALIDATION_ERROR";
     private static final String VALIDATION_ERROR_MESSAGE = "Ошибка валидации запроса";
-    private static final String TENANT_NOT_FOUND_CODE = "TENANT_NOT_FOUND";
+    private static final String MENU_NOT_FOUND_MESSAGE = "Меню пока недоступно";
+    private static final String SITE_NOT_READY_CODE = "SITE_NOT_READY";
+    private static final String SITE_NOT_READY_MESSAGE = "Сайт временно недоступен";
     private static final String RATE_LIMITED_CODE = "RATE_LIMITED";
     private static final String GENERIC_HTTP_ERROR_MESSAGE = "Ошибка HTTP-запроса";
 
@@ -41,9 +47,27 @@ public class ApiErrorHandler {
         this.traceIdAccessor = traceIdAccessor;
     }
 
-    @ExceptionHandler(ResponseStatusException.class)
+    @ExceptionHandler(PublishedMenuNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMenuNotFound(HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.NOT_FOUND,
+                PublishedMenuNotFoundException.ERROR_CODE,
+                MENU_NOT_FOUND_MESSAGE,
+                request);
+    }
+
+    @ExceptionHandler({SiteNotReadyException.class, DefaultRestaurantUnavailableException.class})
+    public ResponseEntity<ApiErrorResponse> handleSiteNotReady(HttpServletRequest request) {
+        return createResponse(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                SITE_NOT_READY_CODE,
+                SITE_NOT_READY_MESSAGE,
+                request);
+    }
+
+    @ExceptionHandler(ErrorResponseException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatus(
-            ResponseStatusException exception,
+            ErrorResponseException exception,
             HttpServletRequest request) {
         var status = exception.getStatusCode();
         var resolvedStatus = HttpStatus.resolve(status.value());
@@ -78,6 +102,7 @@ public class ApiErrorHandler {
 
         var headers = new HttpHeaders();
         headers.set(TRACE_ID_HEADER, traceId);
+        headers.setCacheControl("no-store");
         var body = new ApiErrorResponse(INTERNAL_ERROR_CODE, INTERNAL_ERROR_MESSAGE, List.of(), traceId);
         return new ResponseEntity<>(body, headers, HttpStatus.INTERNAL_SERVER_ERROR);
     }
@@ -90,6 +115,7 @@ public class ApiErrorHandler {
         var traceId = traceIdAccessor.currentTraceId(request);
         var headers = new HttpHeaders();
         headers.set(TRACE_ID_HEADER, traceId);
+        headers.setCacheControl("no-store");
         var body = new ApiErrorResponse(code, message, List.of(), traceId);
         return new ResponseEntity<>(body, headers, status);
     }
@@ -97,7 +123,6 @@ public class ApiErrorHandler {
     private static String contractErrorCode(HttpStatusCode status) {
         return switch (status.value()) {
             case 400 -> VALIDATION_ERROR_CODE;
-            case 404 -> TENANT_NOT_FOUND_CODE;
             case 429 -> RATE_LIMITED_CODE;
             default -> INTERNAL_ERROR_CODE;
         };

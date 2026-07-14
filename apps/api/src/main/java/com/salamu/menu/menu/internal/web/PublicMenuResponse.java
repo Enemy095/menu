@@ -7,10 +7,9 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-import com.salamu.menu.menu.internal.application.PublishedMenu;
+import com.salamu.menu.menu.api.PublishedMenuSnapshot;
 
-/** OpenAPI-compatible HTTP response; optional values are omitted rather than serialized as null. */
-public record PublicMenuResponse(
+record PublicMenuResponse(
         UUID restaurantId,
         long version,
         Instant publishedAt,
@@ -18,10 +17,10 @@ public record PublicMenuResponse(
         List<Category> categories,
         List<Item> items) {
 
-    static PublicMenuResponse from(PublishedMenu menu) {
+    static PublicMenuResponse from(PublishedMenuSnapshot menu) {
         var categories = menu.categories().stream()
                 .map(category -> new Category(
-                        category.categoryId(),
+                        category.publicId(),
                         category.name(),
                         category.description(),
                         category.imageUrl(),
@@ -29,17 +28,33 @@ public record PublicMenuResponse(
                 .toList();
         var items = menu.items().stream()
                 .map(item -> new Item(
-                        item.menuItemId(),
-                        item.categoryId(),
+                        item.publicId(),
+                        item.categoryPublicId(),
                         item.name(),
                         item.description(),
                         item.priceMinor(),
                         item.imageUrl(),
                         item.available(),
-                        item.sortOrder()))
+                        item.sortOrder(),
+                        item.modifierGroups().stream()
+                                .map(group -> new ModifierGroup(
+                                        group.publicId(),
+                                        group.name(),
+                                        group.minSelections(),
+                                        group.maxSelections(),
+                                        group.sortOrder(),
+                                        group.options().stream()
+                                                .map(option -> new ModifierOption(
+                                                        option.publicId(),
+                                                        option.name(),
+                                                        option.priceDeltaMinor(),
+                                                        option.available(),
+                                                        option.sortOrder()))
+                                                .toList()))
+                                .toList()))
                 .toList();
         return new PublicMenuResponse(
-                menu.restaurantId(),
+                menu.restaurantId().value(),
                 menu.version(),
                 menu.publishedAt(),
                 menu.currency(),
@@ -48,22 +63,35 @@ public record PublicMenuResponse(
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Category(
-            String categoryId,
-            String name,
-            String description,
-            URI imageUrl,
-            int sortOrder) {
+    record Category(String categoryId, String name, String description, URI imageUrl, int sortOrder) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    public record Item(
+    record Item(
             String menuItemId,
             String categoryId,
             String name,
             String description,
             long priceMinor,
             URI imageUrl,
+            boolean available,
+            int sortOrder,
+            List<ModifierGroup> modifierGroups) {
+    }
+
+    record ModifierGroup(
+            String modifierGroupId,
+            String name,
+            int minSelections,
+            int maxSelections,
+            int sortOrder,
+            List<ModifierOption> options) {
+    }
+
+    record ModifierOption(
+            String optionId,
+            String name,
+            long priceDeltaMinor,
             boolean available,
             int sortOrder) {
     }

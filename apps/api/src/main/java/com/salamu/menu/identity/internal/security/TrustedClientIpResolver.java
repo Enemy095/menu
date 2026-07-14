@@ -7,16 +7,14 @@ import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import com.salamu.menu.tenancy.api.TrustedProxyPolicy;
-
 import org.springframework.stereotype.Component;
 
 @Component
 public class TrustedClientIpResolver {
 
     static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
-    private static final int MAX_FORWARDED_HEADER_LENGTH = 512;
-    private static final int MAX_FORWARDED_HOPS = 16;
+    static final int MAX_FORWARDED_HEADER_LENGTH = 512;
+    static final int MAX_FORWARDED_HOPS = 16;
     private static final String INVALID_REMOTE_ADDRESS = "invalid-remote";
 
     private final TrustedProxyPolicy trustedProxyPolicy;
@@ -78,9 +76,9 @@ public class TrustedClientIpResolver {
             return Optional.empty();
         }
         try {
-            var address = InetAddress.getByName(value);
+            var address = InetAddress.ofLiteral(value);
             return address.getAddress().length == 16 ? Optional.of(address) : Optional.empty();
-        } catch (UnknownHostException exception) {
+        } catch (IllegalArgumentException exception) {
             return Optional.empty();
         }
     }
@@ -113,6 +111,6 @@ public class TrustedClientIpResolver {
     }
 
     private static String canonicalAddress(InetAddress address) {
-        return address.getHostAddress();
+        return address.getHostAddress().toLowerCase(java.util.Locale.ROOT);
     }
 }

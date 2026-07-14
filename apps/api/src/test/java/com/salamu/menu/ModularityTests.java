@@ -19,12 +19,12 @@ class ModularityTests {
                 .map(module -> module.getIdentifier().toString())
                 .collect(Collectors.toSet()))
                 .isEqualTo(Set.of(
-                        "tenancy",
+                        "asset",
                         "restaurant",
+                        "site",
                         "menu",
                         "ordering",
                         "notification",
-                        "identity",
-                        "migration"));
+                        "identity"));
     }
 }

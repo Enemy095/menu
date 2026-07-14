@@ -2,36 +2,31 @@ package com.salamu.menu.identity.internal.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.regex.Pattern;
 
 import com.salamu.menu.CorrelationIdFilter;
 import com.salamu.menu.TraceIdAccessor;
-import com.salamu.menu.tenancy.api.TenantContext;
-import com.salamu.menu.tenancy.api.TenantId;
-import com.salamu.menu.tenancy.api.TenantRequestAccess;
-import com.salamu.menu.tenancy.api.TenantResolution;
-import com.salamu.menu.tenancy.api.TrustedProxyPolicy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @ActiveProfiles("test")
@@ -39,7 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
         classes = SecurityIntegrationTests.SecurityTestApplication.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "app.security.cors.allowed-origins[0]=https://frontend.example.test",
+                "app.security.rate-limit.client.tokens-per-period=1000",
+                "app.security.rate-limit.client.burst-capacity=1000",
+                "app.security.rate-limit.application.tokens-per-period=1000",
+                "app.security.rate-limit.application.burst-capacity=1000",
                 "management.endpoint.health.group.readiness.include=readinessState",
                 "management.tracing.export.enabled=false",
                 "management.tracing.export.otlp.enabled=false",
@@ -48,95 +46,144 @@ import org.springframework.web.bind.annotation.RestController;
 class SecurityIntegrationTests {
 
     private static final String ALLOWED_ORIGIN = "https://frontend.example.test";
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     @LocalServerPort
     private int serverPort;
 
     @Test
-    void exposesOnlyExactPublicMethodAndPathPairs() throws Exception {
-        assertThat(send("GET", "/api/v1/public/routes/restaurant", Map.of()).statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/api/v1/public/routes/menu", Map.of()).statusCode()).isEqualTo(200);
-        assertThat(send("POST", "/api/v1/public/routes/orders", Map.of()).statusCode()).isEqualTo(200);
+    void exposesOnlyCanonicalPublicPairsAndExplicitProbes() throws Exception {
+        assertThat(send("127.0.0.1", "GET", "/api/v1/public/config", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "GET", "/api/v1/public/menu", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "POST", "/api/v1/public/orders", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "GET", "/livez", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "GET", "/readyz", Map.of()).statusCode()).isEqualTo(200);
 
-        assertThat(send("POST", "/api/v1/public/routes/restaurant", Map.of()).statusCode()).isEqualTo(403);
-        assertThat(send("GET", "/api/v1/public/routes/orders", Map.of()).statusCode()).isEqualTo(403);
-        assertThat(send("GET", "/api/v1/public/routes/unknown", Map.of()).statusCode()).isEqualTo(403);
-        assertThat(send("GET", "/api/v1/admin/test", Map.of()).statusCode()).isEqualTo(403);
-        assertThat(send("GET", "/api/v1/platform-admin/test", Map.of()).statusCode()).isEqualTo(403);
-        assertThat(send("GET", "/unlisted", Map.of()).statusCode()).isEqualTo(403);
+        for (var denied : new String[] {
+                "POST /api/v1/public/config",
+                "GET /api/v1/public/orders",
+                "GET /api/v1/public/example/menu",
+                "POST /api/public/orders",
+                "GET /api/v1/admin/test",
+                "GET /tenant-admin/test",
+                "GET /platform-admin/test",
+                "GET /unlisted"
+        }) {
+            var parts = denied.split(" ", 2);
+            assertThat(send("127.0.0.1", parts[0], parts[1], Map.of()).statusCode())
+                    .as(denied)
+                    .isEqualTo(403);
+        }
+        assertThat(send("127.0.0.1", "POST", "/livez", Map.of()).statusCode()).isEqualTo(403);
     }
 
     @Test
-    void exposesOnlyConfiguredManagementEndpointsAndExplicitProbes() throws Exception {
-        assertThat(send("GET", "/livez", Map.of()).statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/readyz", Map.of()).statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/actuator/health", Map.of()).statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/actuator/info", Map.of()).statusCode()).isEqualTo(200);
-        assertThat(send("GET", "/actuator/env", Map.of()).statusCode()).isNotEqualTo(200);
-        assertThat(send("POST", "/livez", Map.of()).statusCode()).isEqualTo(403);
+    void managementChainKeepsOnlyConfiguredEndpointsPublicAndCreatesNoSession() throws Exception {
+        assertThat(send("127.0.0.1", "GET", "/actuator/health", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "GET", "/actuator/info", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "GET", "/actuator/env", Map.of()).statusCode()).isNotEqualTo(200);
+
+        var publicResponse = send("127.0.0.1", "GET", "/api/v1/public/config", Map.of());
+        assertThat(publicResponse.headers().allValues("Set-Cookie")).isEmpty();
+        assertThat(publicResponse.headers().allValues("WWW-Authenticate")).isEmpty();
     }
 
     @Test
-    void permittedPublicFailureKeepsItsErrorStatusAcrossErrorDispatch() throws Exception {
-        assertThat(send("GET", "/api/v1/public/failure/menu", Map.of()).statusCode())
+    void aliasesAndForwardedHostHeadersCannotSelectDifferentDataOrEtag() throws Exception {
+        for (var path : new String[] {"/api/v1/public/config", "/api/v1/public/menu"}) {
+            var numericAlias = send("127.0.0.1", "GET", path, Map.of());
+            var dnsAlias = send("localhost", "GET", path, Map.of(
+                    "Forwarded", "host=attacker.example",
+                    "X-Forwarded-Host", "attacker.example"));
+
+            assertThat(dnsAlias.statusCode()).isEqualTo(200);
+            assertThat(dnsAlias.body()).isEqualTo(numericAlias.body());
+            assertThat(dnsAlias.headers().firstValue("ETag"))
+                    .isEqualTo(numericAlias.headers().firstValue("ETag"));
+        }
+    }
+
+    @Test
+    void unknownHostReturnsGenericNoStoreEnvelopeBeforeController() throws Exception {
+        var response = rawGet("unknown-secret.example", "/api/v1/public/config");
+
+        assertThat(response).startsWith("HTTP/1.1 400");
+        assertThat(response.toLowerCase()).contains("cache-control: no-store");
+        assertThat(response)
+                .contains("\"code\":\"VALIDATION_ERROR\"")
+                .contains("\"message\":\"Invalid request authority\"")
+                .doesNotContain("unknown-secret.example", "config-marker");
+    }
+
+    @Test
+    void corsIsExactPerRouteMethodAndHeaderWithoutCredentials() throws Exception {
+        var configPreflight = send("127.0.0.1", "OPTIONS", "/api/v1/public/config", Map.of(
+                "Origin", ALLOWED_ORIGIN,
+                "Access-Control-Request-Method", "GET",
+                "Access-Control-Request-Headers", "Accept,X-Correlation-Id"));
+        assertThat(configPreflight.statusCode()).isEqualTo(200);
+        assertThat(configPreflight.headers().firstValue("Access-Control-Allow-Origin")).contains(ALLOWED_ORIGIN);
+        assertThat(configPreflight.headers().firstValue("Access-Control-Allow-Credentials")).isEmpty();
+
+        var orderPreflight = send("127.0.0.1", "OPTIONS", "/api/v1/public/orders", Map.of(
+                "Origin", ALLOWED_ORIGIN,
+                "Access-Control-Request-Method", "POST",
+                "Access-Control-Request-Headers", "Content-Type,Idempotency-Key,traceparent"));
+        assertThat(orderPreflight.statusCode()).isEqualTo(200);
+
+        var wrongHeader = send("127.0.0.1", "OPTIONS", "/api/v1/public/config", Map.of(
+                "Origin", ALLOWED_ORIGIN,
+                "Access-Control-Request-Method", "GET",
+                "Access-Control-Request-Headers", "Idempotency-Key"));
+        assertThat(wrongHeader.statusCode()).isEqualTo(403);
+
+        var wrongOrigin = send("127.0.0.1", "OPTIONS", "/api/v1/public/config", Map.of(
+                "Origin", "https://attacker.example",
+                "Access-Control-Request-Method", "GET"));
+        assertThat(wrongOrigin.statusCode()).isEqualTo(403);
+
+        var actual = send("127.0.0.1", "GET", "/api/v1/public/config", Map.of("Origin", ALLOWED_ORIGIN));
+        assertThat(actual.headers().firstValue("Access-Control-Expose-Headers").orElse(""))
+                .contains(
+                        "X-Correlation-Id",
+                        "X-Trace-Id",
+                        "ETag",
+                        "Cache-Control",
+                        "Cache-Tag",
+                        "Surrogate-Key",
+                        "Retry-After");
+        assertThat(actual.headers().firstValue("Access-Control-Allow-Credentials")).isEmpty();
+    }
+
+    @Test
+    void csrfIgnoreIsExactToOrderAndErrorDispatchPreservesFailure() throws Exception {
+        assertThat(send("127.0.0.1", "POST", "/api/v1/public/orders", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "POST", "/api/v1/admin/test", Map.of()).statusCode()).isEqualTo(403);
+        assertThat(send("127.0.0.1", "GET", "/api/v1/public/menu?fail=true", Map.of()).statusCode())
                 .isEqualTo(500);
     }
 
-    @Test
-    void corsIsExactOriginRouteAndMethodAllowlistWithoutCredentials() throws Exception {
-        var allowed = send("OPTIONS", "/api/v1/public/cors/restaurant", Map.of(
-                "Origin", ALLOWED_ORIGIN,
-                "Access-Control-Request-Method", "GET"));
-        assertThat(allowed.statusCode()).isEqualTo(200);
-        assertThat(allowed.headers().firstValue("Access-Control-Allow-Origin")).contains(ALLOWED_ORIGIN);
-        assertThat(allowed.headers().firstValue("Access-Control-Allow-Credentials")).isEmpty();
-
-        var disallowedOrigin = send("OPTIONS", "/api/v1/public/cors/restaurant", Map.of(
-                "Origin", "https://attacker.example",
-                "Access-Control-Request-Method", "GET"));
-        assertThat(disallowedOrigin.statusCode()).isEqualTo(403);
-
-        var disallowedMethod = send("OPTIONS", "/api/v1/public/cors/restaurant", Map.of(
-                "Origin", ALLOWED_ORIGIN,
-                "Access-Control-Request-Method", "POST"));
-        assertThat(disallowedMethod.statusCode()).isEqualTo(403);
-    }
-
-    @Test
-    void missingTrustedTenantContextReturnsContract404() throws Exception {
-        var response = send("POST", "/api/v1/public/missing/orders", Map.of());
-
-        assertThat(response.statusCode()).isEqualTo(404);
-        assertThat(response.body())
-                .contains("\"code\":\"TENANT_NOT_FOUND\"")
-                .contains("\"details\":[]")
-                .contains("\"traceId\":");
-    }
-
-    @Test
-    void excessOrderReturnsContract429WithoutLeakingForwardedInput() throws Exception {
-        var headers = Map.of("X-Forwarded-For", "phone=+79991112233,address=Secret-street");
-        for (var requestNumber = 0; requestNumber < 10; requestNumber++) {
-            assertThat(send("POST", "/api/v1/public/limit-test/orders", headers).statusCode())
-                    .isEqualTo(200);
-        }
-
-        var rejected = send("POST", "/api/v1/public/limit-test/orders", headers);
-        assertThat(rejected.statusCode()).isEqualTo(429);
-        assertThat(rejected.headers().firstValue("Retry-After").map(Long::parseLong))
-                .hasValueSatisfying(value -> assertThat(value).isPositive());
-        assertThat(rejected.body())
-                .contains("\"code\":\"RATE_LIMITED\"")
-                .contains("\"details\":[]")
-                .contains("\"traceId\":")
-                .doesNotContain("79991112233", "Secret-street", "limit-test", "127.0.0.1");
-    }
-
-    private HttpResponse<String> send(String method, String path, Map<String, String> headers) throws Exception {
-        var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + serverPort + path));
+    private HttpResponse<String> send(
+            String authority,
+            String method,
+            String path,
+            Map<String, String> headers) throws Exception {
+        var request = HttpRequest.newBuilder(URI.create("http://" + authority + ":" + serverPort + path));
         headers.forEach(request::header);
         request.method(method, HttpRequest.BodyPublishers.noBody());
-        return HttpClient.newHttpClient().send(request.build(), HttpResponse.BodyHandlers.ofString());
+        return HTTP_CLIENT.send(request.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private String rawGet(String hostHeader, String path) throws Exception {
+        try (var socket = new Socket("127.0.0.1", serverPort);
+                var writer = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.US_ASCII);
+                var reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
+            writer.write("GET " + path + " HTTP/1.1\r\n");
+            writer.write("Host: " + hostHeader + "\r\n");
+            writer.write("Connection: close\r\n\r\n");
+            writer.flush();
+            return reader.lines().collect(java.util.stream.Collectors.joining("\n"));
+        }
     }
 
     @SpringBootApplication(
@@ -147,81 +194,38 @@ class SecurityIntegrationTests {
             "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
             })
     @EnableConfigurationProperties(SecurityProperties.class)
-    @Import({
-            SecurityConfiguration.class,
-            TrustedClientIpResolver.class,
-            TenantRateLimiter.class,
-            TraceIdAccessor.class,
-            CorrelationIdFilter.class,
-            TestApi.class,
-            TestTenancyConfiguration.class
-    })
+    @Import({TraceIdAccessor.class, CorrelationIdFilter.class, TestApi.class})
     static class SecurityTestApplication {
-    }
-
-    @Configuration(proxyBeanMethods = false)
-    static class TestTenancyConfiguration {
-
-        private static final Pattern TENANT_PATH = Pattern.compile("^/api/v1/public/([^/]+)/.*$");
-
-        @Bean
-        TrustedProxyPolicy trustedProxyPolicy() {
-            return remoteAddress -> false;
-        }
-
-        @Bean
-        TenantRequestAccess tenantRequestAccess() {
-            return request -> {
-                var matcher = TENANT_PATH.matcher(request.getRequestURI());
-                if (!matcher.matches() || "missing".equals(matcher.group(1))) {
-                    return Optional.empty();
-                }
-                var slug = matcher.group(1);
-                var context = new TenantContext(
-                        new TenantId(UUID.nameUUIDFromBytes(slug.getBytes(StandardCharsets.UTF_8))),
-                        slug);
-                return Optional.of(new TenantResolution(
-                        context,
-                        request.getServerName(),
-                        Optional.of(slug),
-                        TenantResolution.Source.LOCAL_PATH));
-            };
-        }
     }
 
     @RestController
     static class TestApi {
 
-        @GetMapping("/api/v1/public/{tenantSlug}/restaurant")
-        String restaurant() {
-            return "restaurant";
+        @GetMapping("/api/v1/public/config")
+        ResponseEntity<String> config() {
+            return ResponseEntity.ok().eTag("config-v1").body("config-marker");
         }
 
-        @GetMapping("/api/v1/public/{tenantSlug}/menu")
-        String menu(@PathVariable String tenantSlug) {
-            if ("failure".equals(tenantSlug)) {
+        @GetMapping("/api/v1/public/menu")
+        ResponseEntity<String> menu(@RequestParam(defaultValue = "false") boolean fail) {
+            if (fail) {
                 throw new IllegalStateException("test failure without personal data");
             }
-            return "menu";
+            return ResponseEntity.ok().eTag("menu-v1").body("menu-marker");
         }
 
-        @PostMapping("/api/v1/public/{tenantSlug}/orders")
+        @PostMapping("/api/v1/public/orders")
         String order() {
-            return "order";
+            return "order-marker";
         }
 
-        @GetMapping("/api/v1/admin/test")
-        String tenantAdmin() {
+        @PostMapping("/api/v1/admin/test")
+        String adminWrite() {
             return "must-not-be-public";
         }
 
-        @GetMapping("/api/v1/platform-admin/test")
-        String platformAdmin() {
-            return "must-not-be-public";
-        }
-
-        @GetMapping("/unlisted")
-        String unlisted() {
+        @GetMapping({"/api/v1/admin/test", "/tenant-admin/test", "/platform-admin/test", "/unlisted"})
+        String deniedRead() {
             return "must-not-be-public";
         }
     }

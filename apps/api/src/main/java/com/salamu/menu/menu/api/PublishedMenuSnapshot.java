@@ -1,104 +1,118 @@
 package com.salamu.menu.menu.api;
 
+import java.net.URI;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Currency;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
+import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.salamu.menu.tenancy.api.TenantId;
+import com.salamu.menu.restaurant.api.RestaurantId;
 
-/**
- * Complete immutable published-menu specification used by the non-HTTP provisioning boundary.
- * Collection order is semantic and must match the stable database read order exactly.
- */
+/** Immutable, ordered public menu projection shared with ordering and the HTTP adapter. */
 public record PublishedMenuSnapshot(
-        TenantId tenantId,
-        UUID restaurantId,
+        RestaurantId restaurantId,
+        MenuVersionId menuVersionId,
         long version,
         Instant publishedAt,
         String currency,
         List<Category> categories,
-        List<Item> items) {
+        List<Item> items,
+        String representationHash) {
 
-    private static final int MAX_CATEGORIES = 500;
-    private static final int MAX_ITEMS = 10_000;
+    public static final int MAX_CATEGORIES = 500;
+    public static final int MAX_ITEMS = 10_000;
+    public static final int MAX_MODIFIER_GROUPS_PER_ITEM = 20;
+    public static final int MAX_OPTIONS_PER_GROUP = 100;
+    public static final long MAX_MONEY_MINOR = 1_000_000_000_000L;
+
     private static final Pattern PUBLIC_ID = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
     private static final Pattern CURRENCY = Pattern.compile("^[A-Z]{3}$");
+    private static final Pattern SHA_256 = Pattern.compile("^[0-9a-f]{64}$");
 
     public PublishedMenuSnapshot {
-        Objects.requireNonNull(tenantId, "tenantId");
         Objects.requireNonNull(restaurantId, "restaurantId");
+        Objects.requireNonNull(menuVersionId, "menuVersionId");
         Objects.requireNonNull(publishedAt, "publishedAt");
         requireCurrency(currency);
         if (version < 1) {
             throw new IllegalArgumentException("version must be positive");
         }
-        if (!publishedAt.equals(publishedAt.truncatedTo(ChronoUnit.MICROS))) {
-            throw new IllegalArgumentException("publishedAt must have PostgreSQL microsecond precision");
-        }
-
         categories = immutable(categories, "categories");
         items = immutable(items, "items");
-        if (categories.isEmpty() || categories.size() > MAX_CATEGORIES) {
-            throw new IllegalArgumentException("categories must contain between 1 and " + MAX_CATEGORIES + " entries");
+        if (categories.size() > MAX_CATEGORIES) {
+            throw new IllegalArgumentException("too many categories");
         }
-        if (items.isEmpty() || items.size() > MAX_ITEMS) {
-            throw new IllegalArgumentException("items must contain between 1 and " + MAX_ITEMS + " entries");
+        if (items.size() > MAX_ITEMS) {
+            throw new IllegalArgumentException("too many items");
         }
-        validateCollections(currency, categories, items);
+        if (representationHash == null || !SHA_256.matcher(representationHash).matches()) {
+            throw new IllegalArgumentException("representationHash must be lowercase SHA-256");
+        }
+        validateGraph(currency, categories, items);
     }
 
-    private static void validateCollections(String menuCurrency, List<Category> categories, List<Item> items) {
-        var categoryIds = new HashSet<String>();
-        var categoryOrder = new HashMap<String, Integer>();
+    private static void validateGraph(String currency, List<Category> categories, List<Item> items) {
+        Set<String> categoryPublicIds = new HashSet<>();
         Category previousCategory = null;
-        for (int index = 0; index < categories.size(); index++) {
-            var category = Objects.requireNonNull(categories.get(index), "category");
-            if (!categoryIds.add(category.categoryId())) {
-                throw new IllegalArgumentException("category IDs must be unique");
+        for (Category category : categories) {
+            Objects.requireNonNull(category, "category");
+            if (!categoryPublicIds.add(category.publicId())) {
+                throw new IllegalArgumentException("category public IDs must be unique");
             }
-            if (previousCategory != null && Category.ORDER.compare(previousCategory, category) >= 0) {
-                throw new IllegalArgumentException("categories must be in strict canonical order");
+            if (previousCategory != null && compare(previousCategory, category) >= 0) {
+                throw new IllegalArgumentException("categories must be in canonical order");
             }
-            categoryOrder.put(category.categoryId(), index);
             previousCategory = category;
         }
 
-        var itemIds = new HashSet<String>();
+        Set<MenuItemId> itemIds = new HashSet<>();
+        Set<String> itemPublicIds = new HashSet<>();
+        int previousCategoryIndex = -1;
         Item previousItem = null;
-        for (var item : items) {
+        for (Item item : items) {
             Objects.requireNonNull(item, "item");
-            if (!itemIds.add(item.menuItemId())) {
+            if (!itemIds.add(item.id()) || !itemPublicIds.add(item.publicId())) {
                 throw new IllegalArgumentException("menu item IDs must be unique");
             }
-            if (!categoryOrder.containsKey(item.categoryId())) {
+            int categoryIndex = indexOf(categories, item.categoryPublicId());
+            if (categoryIndex < 0) {
                 throw new IllegalArgumentException("menu item references an unknown category");
             }
-            if (!menuCurrency.equals(item.currency())) {
-                throw new IllegalArgumentException("menu item currency must match menu currency");
+            if (!currency.equals(item.currency())) {
+                throw new IllegalArgumentException("menu item currency must match menu version currency");
             }
-            if (previousItem != null && compareItems(previousItem, item, categoryOrder) >= 0) {
-                throw new IllegalArgumentException("items must be in strict canonical order");
+            if (categoryIndex < previousCategoryIndex
+                    || (categoryIndex == previousCategoryIndex
+                            && previousItem != null
+                            && compare(previousItem, item) >= 0)) {
+                throw new IllegalArgumentException("menu items must be in canonical order");
             }
+            previousCategoryIndex = categoryIndex;
             previousItem = item;
         }
     }
 
-    private static int compareItems(Item left, Item right, Map<String, Integer> categoryOrder) {
-        int categoryComparison = Integer.compare(categoryOrder.get(left.categoryId()), categoryOrder.get(right.categoryId()));
-        if (categoryComparison != 0) {
-            return categoryComparison;
+    private static int indexOf(List<Category> categories, String publicId) {
+        for (int index = 0; index < categories.size(); index++) {
+            if (categories.get(index).publicId().equals(publicId)) {
+                return index;
+            }
         }
-        int sortComparison = Integer.compare(left.sortOrder(), right.sortOrder());
-        return sortComparison != 0 ? sortComparison : left.menuItemId().compareTo(right.menuItemId());
+        return -1;
+    }
+
+    private static int compare(Category left, Category right) {
+        int order = Integer.compare(left.sortOrder(), right.sortOrder());
+        return order != 0 ? order : left.publicId().compareTo(right.publicId());
+    }
+
+    private static int compare(Item left, Item right) {
+        int order = Integer.compare(left.sortOrder(), right.sortOrder());
+        return order != 0 ? order : left.publicId().compareTo(right.publicId());
     }
 
     private static <T> List<T> immutable(List<T> values, String name) {
@@ -107,15 +121,13 @@ public record PublishedMenuSnapshot(
     }
 
     private static void requirePublicId(String value, String name) {
-        Objects.requireNonNull(value, name);
-        if (value.length() > 120 || !PUBLIC_ID.matcher(value).matches()) {
-            throw new IllegalArgumentException(name + " is not a canonical public ID");
+        if (value == null || value.length() > 120 || !PUBLIC_ID.matcher(value).matches()) {
+            throw new IllegalArgumentException(name + " must be a canonical public ID");
         }
     }
 
     private static void requireText(String value, int maxLength, String name) {
-        Objects.requireNonNull(value, name);
-        if (value.isBlank() || value.length() > maxLength) {
+        if (value == null || value.isBlank() || value.length() > maxLength) {
             throw new IllegalArgumentException(name + " is blank or too long");
         }
     }
@@ -127,62 +139,150 @@ public record PublishedMenuSnapshot(
     }
 
     private static void requireCurrency(String value) {
-        Objects.requireNonNull(value, "currency");
-        if (!CURRENCY.matcher(value).matches()) {
+        if (value == null || !CURRENCY.matcher(value).matches()) {
             throw new IllegalArgumentException("currency must be an ISO 4217 code");
         }
-        try {
-            Currency.getInstance(value);
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("currency must be an ISO 4217 code");
+        Currency.getInstance(value);
+    }
+
+    private static void requireSortOrder(int value, String name) {
+        if (value < 0) {
+            throw new IllegalArgumentException(name + " must be non-negative");
         }
     }
 
-    public record Category(
-            String categoryId,
-            String name,
-            String description,
-            MenuAssetReference imageAsset,
-            int sortOrder,
-            boolean available) {
+    private static void requireSafeAssetUrl(URI value) {
+        if (value != null
+                && (!value.isAbsolute()
+                        || value.getHost() == null
+                        || !("https".equalsIgnoreCase(value.getScheme())
+                                || "http".equalsIgnoreCase(value.getScheme()))
+                        || value.getUserInfo() != null
+                        || value.getQuery() != null
+                        || value.getFragment() != null)) {
+            throw new IllegalArgumentException("imageUrl must be a safe absolute HTTP(S) URL");
+        }
+    }
 
-        private static final Comparator<Category> ORDER = Comparator
-                .comparingInt(Category::sortOrder)
-                .thenComparing(Category::categoryId);
+    public record Category(String publicId, String name, String description, URI imageUrl, int sortOrder) {
 
         public Category {
-            requirePublicId(categoryId, "categoryId");
+            requirePublicId(publicId, "category publicId");
             requireText(name, 120, "category name");
             requireOptionalText(description, 500, "category description");
-            if (sortOrder < 0) {
-                throw new IllegalArgumentException("category sortOrder must be non-negative");
-            }
+            requireSafeAssetUrl(imageUrl);
+            requireSortOrder(sortOrder, "category sortOrder");
         }
     }
 
     public record Item(
-            String menuItemId,
-            String categoryId,
+            MenuItemId id,
+            String publicId,
+            String categoryPublicId,
             String name,
             String description,
             long priceMinor,
             String currency,
-            MenuAssetReference imageAsset,
+            URI imageUrl,
+            boolean available,
+            int sortOrder,
+            List<ModifierGroup> modifierGroups) {
+
+        public Item {
+            Objects.requireNonNull(id, "id");
+            requirePublicId(publicId, "item publicId");
+            requirePublicId(categoryPublicId, "category publicId");
+            requireText(name, 160, "item name");
+            requireOptionalText(description, 1000, "item description");
+            if (priceMinor < 0 || priceMinor > MAX_MONEY_MINOR) {
+                throw new IllegalArgumentException("priceMinor is outside accepted bounds");
+            }
+            requireCurrency(currency);
+            requireSafeAssetUrl(imageUrl);
+            requireSortOrder(sortOrder, "item sortOrder");
+            modifierGroups = immutable(modifierGroups, "modifierGroups");
+            if (modifierGroups.size() > MAX_MODIFIER_GROUPS_PER_ITEM) {
+                throw new IllegalArgumentException("too many modifier groups");
+            }
+            validateModifierGroups(modifierGroups);
+        }
+
+        private static void validateModifierGroups(List<ModifierGroup> groups) {
+            Set<String> publicIds = new HashSet<>();
+            ModifierGroup previous = null;
+            for (ModifierGroup group : groups) {
+                Objects.requireNonNull(group, "modifierGroup");
+                if (!publicIds.add(group.publicId())) {
+                    throw new IllegalArgumentException("modifier group IDs must be unique per item");
+                }
+                if (previous != null && compare(previous, group) >= 0) {
+                    throw new IllegalArgumentException("modifier groups must be in canonical order");
+                }
+                previous = group;
+            }
+        }
+
+        private static int compare(ModifierGroup left, ModifierGroup right) {
+            int order = Integer.compare(left.sortOrder(), right.sortOrder());
+            return order != 0 ? order : left.publicId().compareTo(right.publicId());
+        }
+    }
+
+    public record ModifierGroup(
+            String publicId,
+            String name,
+            int minSelections,
+            int maxSelections,
+            int sortOrder,
+            List<ModifierOption> options) {
+
+        public ModifierGroup {
+            requirePublicId(publicId, "modifier group publicId");
+            requireText(name, 120, "modifier group name");
+            if (minSelections < 0 || minSelections > 99
+                    || maxSelections < 1 || maxSelections > 99
+                    || minSelections > maxSelections) {
+                throw new IllegalArgumentException("modifier selection bounds are invalid");
+            }
+            requireSortOrder(sortOrder, "modifier group sortOrder");
+            options = immutable(options, "options");
+            if (options.isEmpty() || options.size() > MAX_OPTIONS_PER_GROUP) {
+                throw new IllegalArgumentException("modifier group must contain 1 to 100 options");
+            }
+            Set<String> publicIds = new HashSet<>();
+            ModifierOption previous = null;
+            for (ModifierOption option : options) {
+                Objects.requireNonNull(option, "modifierOption");
+                if (!publicIds.add(option.publicId())) {
+                    throw new IllegalArgumentException("modifier option IDs must be unique per group");
+                }
+                if (previous != null && compare(previous, option) >= 0) {
+                    throw new IllegalArgumentException("modifier options must be in canonical order");
+                }
+                previous = option;
+            }
+        }
+
+        private static int compare(ModifierOption left, ModifierOption right) {
+            int order = Integer.compare(left.sortOrder(), right.sortOrder());
+            return order != 0 ? order : left.publicId().compareTo(right.publicId());
+        }
+    }
+
+    public record ModifierOption(
+            String publicId,
+            String name,
+            long priceDeltaMinor,
             boolean available,
             int sortOrder) {
 
-        public Item {
-            requirePublicId(menuItemId, "menuItemId");
-            requirePublicId(categoryId, "categoryId");
-            requireText(name, 160, "item name");
-            requireOptionalText(description, 1000, "item description");
-            requireCurrency(currency);
-            if (priceMinor < 0) {
-                throw new IllegalArgumentException("priceMinor must be non-negative");
+        public ModifierOption {
+            requirePublicId(publicId, "modifier option publicId");
+            requireText(name, 120, "modifier option name");
+            if (priceDeltaMinor < -MAX_MONEY_MINOR || priceDeltaMinor > MAX_MONEY_MINOR) {
+                throw new IllegalArgumentException("modifier price delta is outside accepted bounds");
             }
-            if (sortOrder < 0) {
-                throw new IllegalArgumentException("item sortOrder must be non-negative");
-            }
+            requireSortOrder(sortOrder, "modifier option sortOrder");
         }
     }
 }

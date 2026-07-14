@@ -19,8 +19,12 @@ import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
+import com.salamu.menu.menu.api.PublishedMenuNotFoundException;
+import com.salamu.menu.site.api.SiteNotReadyException;
+
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,13 +37,15 @@ class ApiErrorHandlerTests {
     private static final String SENSITIVE_VALUE =
             "phone=+79991112233 address=Secret-street comment=Secret-comment";
     private static final Set<String> CONTRACT_ERROR_CODES = Set.of(
-            "TENANT_NOT_FOUND",
             "VALIDATION_ERROR",
+            "MENU_NOT_FOUND",
             "MENU_CHANGED",
             "ITEM_UNAVAILABLE",
-            "TOTAL_MISMATCH",
+            "MODIFIER_UNAVAILABLE",
             "IDEMPOTENCY_CONFLICT",
             "RATE_LIMITED",
+            "SITE_NOT_READY",
+            "DEPENDENCY_UNAVAILABLE",
             "INTERNAL_ERROR");
     private static final Pattern ERROR_CODE_PATTERN = Pattern.compile("\\\"code\\\":\\\"([A-Z_]+)\\\"");
 
@@ -62,6 +68,7 @@ class ApiErrorHandlerTests {
             var response = mockMvc.perform(get("/__test/observability/failure"))
                     .andExpect(status().isInternalServerError())
                     .andExpect(header().string(ApiErrorHandler.TRACE_ID_HEADER, TRACE_ID))
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                     .andReturn()
                     .getResponse();
 
@@ -70,19 +77,29 @@ class ApiErrorHandlerTests {
                     .contains("\"traceId\":\"" + TRACE_ID + "\"")
                     .doesNotContain("79991112233", "Secret-street", "Secret-comment");
 
-            var notFoundResponse = mockMvc.perform(get("/__test/observability/not-found"))
+            var notFoundResponse = mockMvc.perform(get("/__test/observability/menu-not-found"))
                     .andExpect(status().isNotFound())
                     .andExpect(header().string(ApiErrorHandler.TRACE_ID_HEADER, TRACE_ID))
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                     .andReturn()
                     .getResponse();
             assertThat(notFoundResponse.getContentAsString())
-                    .contains("\"code\":\"TENANT_NOT_FOUND\"")
+                    .contains("\"code\":\"MENU_NOT_FOUND\"")
                     .contains("\"traceId\":\"" + TRACE_ID + "\"")
                     .doesNotContain("79991112233", "Secret-street", "Secret-comment");
+
+            var siteNotReadyResponse = mockMvc.perform(get("/__test/observability/site-not-ready"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(header().string(ApiErrorHandler.TRACE_ID_HEADER, TRACE_ID))
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                    .andReturn()
+                    .getResponse();
+            assertContractCode(siteNotReadyResponse.getContentAsString(), "SITE_NOT_READY");
 
             var validationResponse = mockMvc.perform(get("/__test/observability/validation"))
                     .andExpect(status().isBadRequest())
                     .andExpect(header().string(ApiErrorHandler.TRACE_ID_HEADER, TRACE_ID))
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                     .andReturn()
                     .getResponse();
             assertThat(validationResponse.getContentAsString())
@@ -92,16 +109,25 @@ class ApiErrorHandlerTests {
 
             assertContractCode(mockMvc.perform(get("/__test/observability/bad-request"))
                     .andExpect(status().isBadRequest())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                     .andReturn()
                     .getResponse()
                     .getContentAsString(), "VALIDATION_ERROR");
+            assertContractCode(mockMvc.perform(get("/__test/observability/not-found"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString(), "INTERNAL_ERROR");
             assertContractCode(mockMvc.perform(get("/__test/observability/rate-limited"))
                     .andExpect(status().isTooManyRequests())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                     .andReturn()
                     .getResponse()
                     .getContentAsString(), "RATE_LIMITED");
             assertContractCode(mockMvc.perform(get("/__test/observability/not-implemented"))
                     .andExpect(status().isNotImplemented())
+                    .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
                     .andReturn()
                     .getResponse()
                     .getContentAsString(), "INTERNAL_ERROR");
@@ -148,6 +174,16 @@ class ApiErrorHandlerTests {
         @GetMapping("/__test/observability/not-found")
         String notFound() {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, SENSITIVE_VALUE);
+        }
+
+        @GetMapping("/__test/observability/menu-not-found")
+        String menuNotFound() {
+            throw new PublishedMenuNotFoundException();
+        }
+
+        @GetMapping("/__test/observability/site-not-ready")
+        String siteNotReady() {
+            throw new SiteNotReadyException();
         }
 
         @GetMapping("/__test/observability/bad-request")

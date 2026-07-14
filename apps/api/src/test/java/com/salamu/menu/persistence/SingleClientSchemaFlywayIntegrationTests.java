@@ -17,6 +17,8 @@ import org.junit.jupiter.api.Test;
 
 class SingleClientSchemaFlywayIntegrationTests {
 
+    private static final MigrationVersion V6 = MigrationVersion.fromVersion("6");
+
     private static final String OWNER = "10000000-0000-4000-8000-000000000001";
     private static final String RESTAURANT = "11000000-0000-4000-8000-000000000001";
     private static final String MENU_VERSION = "12000000-0000-4000-8000-000000000001";
@@ -50,7 +52,7 @@ class SingleClientSchemaFlywayIntegrationTests {
         var schema = "sc_empty_upgrade";
         resetSchema(schema);
 
-        var flyway = flyway(schema, null);
+        var flyway = flyway(schema, V6);
         assertThat(flyway.migrate().success).isTrue();
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
         assertThat(currentVersion(schema)).isEqualTo("6");
@@ -69,7 +71,7 @@ class SingleClientSchemaFlywayIntegrationTests {
 
         assertThat(flyway(schema, MigrationVersion.fromVersion("5")).migrate().success).isTrue();
         assertThat(currentVersion(schema)).isEqualTo("5");
-        assertThat(flyway(schema, null).migrate().success).isTrue();
+        assertThat(flyway(schema, V6).migrate().success).isTrue();
 
         assertThat(currentVersion(schema)).isEqualTo("6");
         for (var table : SHADOW_TABLES) {
@@ -81,7 +83,7 @@ class SingleClientSchemaFlywayIntegrationTests {
     void targetAssetKeyIsExactlyDerivedAndContentTypeIsAllowlisted() throws SQLException {
         var schema = "sc_asset_constraints";
         resetSchema(schema);
-        flyway(schema, null).migrate();
+        flyway(schema, V6).migrate();
 
         try (var connection = connection(schema)) {
             assertThatThrownBy(() -> execute(connection, """
@@ -121,7 +123,7 @@ class SingleClientSchemaFlywayIntegrationTests {
             insertCompleteOwnerGraph(connection);
         }
 
-        assertThat(flyway(schema, null).migrate().success).isTrue();
+        assertThat(flyway(schema, V6).migrate().success).isTrue();
 
         var expectedCounts = Map.ofEntries(
                 Map.entry("sc_site_configuration", 1L),
@@ -178,7 +180,7 @@ class SingleClientSchemaFlywayIntegrationTests {
         try (var connection = connection(schema)) {
             insertCompleteOwnerGraph(connection);
         }
-        flyway(schema, null).migrate();
+        flyway(schema, V6).migrate();
 
         try (var connection = connection(schema)) {
             execute(connection, "UPDATE restaurants SET display_name = 'Changed after V6' WHERE id = '" + RESTAURANT + "'");
@@ -204,7 +206,7 @@ class SingleClientSchemaFlywayIntegrationTests {
     void sourceAssertionHoldsWriteBarrierUntilCallingTransactionEnds() throws SQLException {
         var schema = "sc_source_write_barrier";
         resetSchema(schema);
-        flyway(schema, null).migrate();
+        flyway(schema, V6).migrate();
 
         try (var lockOwner = connection(schema); var legacyWriter = connection(schema)) {
             lockOwner.setAutoCommit(false);
@@ -233,7 +235,7 @@ class SingleClientSchemaFlywayIntegrationTests {
         try (var connection = connection(schema)) {
             insertCompleteOwnerGraph(connection);
         }
-        flyway(schema, null).migrate();
+        flyway(schema, V6).migrate();
 
         try (var connection = connection(schema)) {
             execute(connection, """
@@ -573,7 +575,7 @@ class SingleClientSchemaFlywayIntegrationTests {
     }
 
     private static void assertMigrationFailsWith(String schema, String stableDiagnostic) {
-        assertThatThrownBy(() -> flyway(schema, null).migrate())
+        assertThatThrownBy(() -> flyway(schema, V6).migrate())
                 .isInstanceOf(FlywayException.class)
                 .hasStackTraceContaining(stableDiagnostic);
     }

@@ -8,26 +8,14 @@ import org.springframework.data.repository.Repository;
 
 interface NotificationDestinationJpaRepository extends Repository<NotificationDestinationEntity, UUID> {
 
-    Optional<NotificationDestinationEntity> findByTenantIdAndId(UUID tenantId, UUID destinationId);
+    Optional<NotificationDestinationEntity> findById(UUID destinationId);
 
-    List<NotificationDestinationEntity> findAllByTenantIdAndChannelAndStatus(
-            UUID tenantId,
+    List<NotificationDestinationEntity> findAllByChannelAndStatusOrderByDisplayName(
             String channel,
             String status);
 }
 
-interface OutboxEventJpaRepository extends Repository<OutboxEventEntity, UUID> {
-
-    Optional<OutboxEventEntity> findByTenantIdAndId(UUID tenantId, UUID eventId);
-
-    List<OutboxEventEntity> findAllByTenantIdAndProcessingStateOrderByAvailableAt(
-            UUID tenantId,
-            String processingState);
-}
-
 interface NotificationDeliveryJpaRepository extends Repository<NotificationDeliveryEntity, UUID> {
 
-    List<NotificationDeliveryEntity> findAllByTenantIdAndOutboxEventIdOrderByAttemptNumber(
-            UUID tenantId,
-            UUID outboxEventId);
+    List<NotificationDeliveryEntity> findAllByOutboxEventIdOrderByAttemptNumber(UUID outboxEventId);
 }

@@ -6,12 +6,12 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 final class SecurityRequestMatchers {
 
-    static final String PUBLIC_RESTAURANT_PATH = "/api/v1/public/{tenantSlug}/restaurant";
-    static final String PUBLIC_MENU_PATH = "/api/v1/public/{tenantSlug}/menu";
-    static final String PUBLIC_ORDER_PATH = "/api/v1/public/{tenantSlug}/orders";
+    static final String PUBLIC_CONFIG_PATH = "/api/v1/public/config";
+    static final String PUBLIC_MENU_PATH = "/api/v1/public/menu";
+    static final String PUBLIC_ORDER_PATH = "/api/v1/public/orders";
 
-    static final RequestMatcher PUBLIC_RESTAURANT =
-            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, PUBLIC_RESTAURANT_PATH);
+    static final RequestMatcher PUBLIC_CONFIG =
+            PathPatternRequestMatcher.pathPattern(HttpMethod.GET, PUBLIC_CONFIG_PATH);
     static final RequestMatcher PUBLIC_MENU =
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, PUBLIC_MENU_PATH);
     static final RequestMatcher PUBLIC_ORDER =

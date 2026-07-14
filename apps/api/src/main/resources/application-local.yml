@@ -1,0 +1,17 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+
+app:
+  platform:
+    hosts:
+      base-domain: localhost
+      allowed-hosts:
+        - localhost
+    trusted-forwarding:
+      enabled: false
+      trusted-proxy-cidrs: []
+  external:
+    public-base-url: http://localhost:3000
+    asset-base-url: http://localhost:9000

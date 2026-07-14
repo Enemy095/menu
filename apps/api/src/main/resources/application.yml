@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: menu-platform-api
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+  flyway:
+    enabled: true
+  jackson:
+    time-zone: UTC
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    env:
+      access: none
+    configprops:
+      access: none
+
+app:
+  platform:
+    hosts:
+      base-domain: ${PLATFORM_BASE_DOMAIN}
+      allowed-hosts: ${PLATFORM_ALLOWED_HOSTS}
+    trusted-forwarding:
+      enabled: ${TRUSTED_FORWARDING_ENABLED:false}
+      trusted-proxy-cidrs: ${TRUSTED_PROXY_CIDRS:}
+  worker:
+    enabled: ${APP_WORKER_ENABLED:false}
+  external:
+    public-base-url: ${PUBLIC_BASE_URL}
+    asset-base-url: ${ASSET_BASE_URL}

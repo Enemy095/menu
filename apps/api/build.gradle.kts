@@ -1,0 +1,56 @@
+import org.springframework.boot.gradle.tasks.bundling.BootJar
+
+plugins {
+    java
+    alias(libs.plugins.spring.boot)
+}
+
+group = "com.salamu.menu"
+version = "0.1.0-SNAPSHOT"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+dependencies {
+    implementation(platform(libs.spring.boot.bom))
+    implementation(platform(libs.spring.modulith.bom))
+
+    implementation(libs.spring.boot.starter.webmvc)
+    implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.starter.security)
+    implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.opentelemetry)
+    implementation(libs.flyway.core)
+    implementation(libs.spring.modulith.starter.core)
+    implementation(libs.spring.modulith.starter.insight)
+
+    runtimeOnly(libs.flyway.postgresql)
+    runtimeOnly(libs.postgresql)
+
+    testImplementation(platform(libs.spring.boot.bom))
+    testImplementation(platform(libs.spring.modulith.bom))
+    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.modulith.starter.test)
+    testImplementation(libs.testcontainers.junit)
+    testImplementation(libs.testcontainers.postgresql)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release = 25
+    options.compilerArgs.add("-parameters")
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    systemProperty("user.timezone", "UTC")
+}
+
+tasks.named<BootJar>("bootJar") {
+    archiveFileName = "menu-platform-api.jar"
+}

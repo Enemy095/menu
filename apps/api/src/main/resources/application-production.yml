@@ -1,0 +1,16 @@
+spring:
+  config:
+    activate:
+      on-profile: production
+
+app:
+  platform:
+    hosts:
+      base-domain: ${PLATFORM_BASE_DOMAIN}
+      allowed-hosts: ${PLATFORM_ALLOWED_HOSTS}
+    trusted-forwarding:
+      enabled: ${TRUSTED_FORWARDING_ENABLED:false}
+      trusted-proxy-cidrs: ${TRUSTED_PROXY_CIDRS:}
+  external:
+    public-base-url: ${PUBLIC_BASE_URL}
+    asset-base-url: ${ASSET_BASE_URL}

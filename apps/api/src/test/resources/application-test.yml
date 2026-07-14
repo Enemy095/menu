@@ -1,0 +1,34 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+app:
+  platform:
+    hosts:
+      base-domain: example.test
+      allowed-hosts:
+        - example.test
+        - tenant.example.test
+    trusted-forwarding:
+      enabled: false
+      trusted-proxy-cidrs: []
+  worker:
+    enabled: false
+  external:
+    public-base-url: https://example.test
+    asset-base-url: https://assets.example.test
+
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      otlp:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false

@@ -4,8 +4,12 @@ info:
   version: 1.0.0
   description: |
     Публичный multi-tenant контракт электронной white-label платформы меню.
-    Tenant разрешается сервером по trusted host и `tenantSlug`; внутренние
-    идентификаторы tenant и конфигурация внешних integrations не раскрываются.
+    Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний
+    `tenantId`, persistence fields и конфигурация внешних integrations не
+    возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public
+    asset URL может содержать opaque UUID storage namespace; этот namespace
+    не является credential, authorization boundary или доказательством
+    принадлежности ресурса tenant.
   license:
     name: Proprietary
     url: https://platform.example.com/legal/api-license
@@ -30,9 +34,19 @@ paths:
       operationId: getPublicRestaurant
       parameters:
         - $ref: '#/components/parameters/TenantSlug'
+        - $ref: '#/components/parameters/IfNoneMatch'
       responses:
         '200':
           description: Public restaurant configuration.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Cache-Tag:
+              $ref: '#/components/headers/CacheTag'
+            Surrogate-Key:
+              $ref: '#/components/headers/SurrogateKey'
           content:
             application/json:
               schema:
@@ -42,6 +56,17 @@ paths:
                   $ref: '#/components/examples/StambulRestaurant'
                 adamas:
                   $ref: '#/components/examples/AdamasRestaurant'
+        '304':
+          description: The restaurant configuration has not changed for the supplied entity tag; response has no body.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Cache-Tag:
+              $ref: '#/components/headers/CacheTag'
+            Surrogate-Key:
+              $ref: '#/components/headers/SurrogateKey'
         '404':
           $ref: '#/components/responses/TenantNotFound'
         '429':
@@ -57,9 +82,19 @@ paths:
       operationId: getPublicMenu
       parameters:
         - $ref: '#/components/parameters/TenantSlug'
+        - $ref: '#/components/parameters/IfNoneMatch'
       responses:
         '200':
           description: Current published menu.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Cache-Tag:
+              $ref: '#/components/headers/CacheTag'
+            Surrogate-Key:
+              $ref: '#/components/headers/SurrogateKey'
           content:
             application/json:
               schema:
@@ -69,6 +104,17 @@ paths:
                   $ref: '#/components/examples/StambulMenu'
                 adamas:
                   $ref: '#/components/examples/AdamasMenu'
+        '304':
+          description: The published menu has not changed for the supplied entity tag; response has no body.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Cache-Tag:
+              $ref: '#/components/headers/CacheTag'
+            Surrogate-Key:
+              $ref: '#/components/headers/SurrogateKey'
         '404':
           $ref: '#/components/responses/TenantNotFound'
         '429':
@@ -147,6 +193,38 @@ components:
         type: string
         format: uuid
       example: 6a43ed97-c755-4df2-a600-b4cf523f176c
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: Previously received entity tag. A matching value returns a bodyless `304` response.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1024
+      example: '"menu-stambul-v3"'
+
+  headers:
+    ETag:
+      description: Strong entity tag for the selected tenant representation.
+      schema:
+        type: string
+      example: '"menu-stambul-v3"'
+    CacheControl:
+      description: Browser and shared-cache freshness policy for this public representation.
+      schema:
+        type: string
+      example: public, max-age=30, s-maxage=300, stale-while-revalidate=60
+    CacheTag:
+      description: Tenant-scoped CDN invalidation tag emitted by public cacheable endpoints.
+      schema:
+        type: string
+      example: tenant-stambul
+    SurrogateKey:
+      description: Tenant-scoped CDN invalidation keys emitted by public cacheable endpoints.
+      schema:
+        type: string
+      example: tenant-stambul restaurant-stambul
 
   responses:
     TenantNotFound:
@@ -273,6 +351,7 @@ components:
         logoUrl:
           type: string
           format: uri
+          description: Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
         logoAlt:
           type: string
           minLength: 1
@@ -280,6 +359,7 @@ components:
         faviconUrl:
           type: string
           format: uri
+          description: Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
         hero:
           $ref: '#/components/schemas/Hero'
         designTokens:
@@ -298,6 +378,7 @@ components:
         imageUrl:
           type: string
           format: uri
+          description: Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
         imageAlt:
           type: string
           maxLength: 160
@@ -449,6 +530,7 @@ components:
         openGraphImageUrl:
           type: string
           format: uri
+          description: Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
 
     PublicProfile:
       type: object
@@ -670,6 +752,7 @@ components:
         imageUrl:
           type: string
           format: uri
+          description: Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
         sortOrder:
           type: integer
           minimum: 0
@@ -710,6 +793,7 @@ components:
         imageUrl:
           type: string
           format: uri
+          description: Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
         available:
           type: boolean
         sortOrder:

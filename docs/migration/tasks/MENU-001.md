@@ -1,6 +1,6 @@
 # MENU-001 — published menu public API
 
-Status: `ready`
+Status: `review`
 Wave: 4  
 Dependencies: `API-001`, `TEN-001`, `DB-001`, `MOD-001`; final asset URLs require `AST-001`
 
@@ -15,7 +15,7 @@ Dependencies: `API-001`, `TEN-001`, `DB-001`, `MOD-001`; final asset URLs requir
 - Restaurant ID, version, publishedAt, currency, ordered categories/items.
 - Stable public IDs и `priceMinor`.
 - Image URL через asset resolver.
-- ETag `menu-{tenantSlug}-v{version}`.
+- Strong ETag `menu-{tenantSlug}-v{version}-{sha256}` from every ordered public field and resolved asset URL.
 - Browser cache 30s, shared 300s, stale-while-revalidate 60s.
 
 ## Tests
@@ -30,4 +30,8 @@ Dependencies: `API-001`, `TEN-001`, `DB-001`, `MOD-001`; final asset URLs requir
 
 ## Acceptance
 
-Contract/isolation/query-count tests и Gradle check проходят; ETag меняется только с published version/data revision согласно policy.
+Contract/isolation/query-count tests и Gradle check проходят; ETag стабилен для одинакового public response и меняется при любой published data/asset representation revision. Exact legacy 23/19 acceptance закрывается import E2E в `MIG-001`.
+
+## Review state
+
+Published read API, fail-closed validation, tenant isolation, fixed query count and representation ETag are implemented. Exact Stambul 23 / Adamas 19 imported-response acceptance remains coupled to the `MIG-001` apply/E2E gate; the checked-in preflight fixture is enforced in CI meanwhile.

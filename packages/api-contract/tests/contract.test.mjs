@@ -162,6 +162,36 @@ test("tenant slug is capped at the database limit", () => {
   assert.equal(spec.components.schemas.RestaurantResponse.properties.slug.maxLength, 63);
 });
 
+test("public reads define conditional GET and tenant-scoped cache metadata", () => {
+  const expectedHeaders = new Map([
+    ["/api/v1/public/{tenantSlug}/restaurant", new Set(["ETag", "Cache-Control", "Cache-Tag", "Surrogate-Key"])],
+    ["/api/v1/public/{tenantSlug}/menu", new Set(["ETag", "Cache-Control", "Cache-Tag", "Surrogate-Key"])],
+  ]);
+
+  for (const [route, headers] of expectedHeaders) {
+    const operation = spec.paths[route].get;
+    assert.ok(operation.parameters.some((parameter) => resolve(parameter).name === "If-None-Match"));
+    assert.equal(operation.responses["304"].content, undefined, `${route} 304 must be bodyless`);
+    for (const status of ["200", "304"]) {
+      assert.deepEqual(new Set(Object.keys(operation.responses[status].headers)), headers);
+    }
+  }
+});
+
+test("public asset URLs document the ADR-0001 opaque namespace exception", () => {
+  const assetProperties = [
+    spec.components.schemas.Branding.properties.logoUrl,
+    spec.components.schemas.Branding.properties.faviconUrl,
+    spec.components.schemas.Hero.properties.imageUrl,
+    spec.components.schemas.SeoMetadata.properties.openGraphImageUrl,
+    spec.components.schemas.MenuCategory.properties.imageUrl,
+    spec.components.schemas.MenuItem.properties.imageUrl,
+  ];
+  for (const property of assetProperties) {
+    assert.match(property.description, /ADR-0001 opaque UUID storage namespace/);
+  }
+});
+
 test("Stambul and Adamas restaurant and menu examples exist", () => {
   for (const name of ["StambulRestaurant", "AdamasRestaurant", "StambulMenu", "AdamasMenu"]) {
     assert.ok(spec.components.examples[name], `missing ${name}`);

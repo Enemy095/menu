@@ -10,7 +10,7 @@ All URIs are relative to *https://platform.example.com*
 
 ## getPublicRestaurant
 
-> RestaurantResponse getPublicRestaurant(tenantSlug)
+> RestaurantResponse getPublicRestaurant(tenantSlug, ifNoneMatch)
 
 Get public restaurant configuration
 
@@ -32,6 +32,8 @@ async function example() {
   const body = {
     // string | Public tenant slug resolved together with the trusted request host.
     tenantSlug: adamas,
+    // string | Previously received entity tag. A matching value returns a bodyless `304` response. (optional)
+    ifNoneMatch: "menu-stambul-v3",
   } satisfies GetPublicRestaurantRequest;
 
   try {
@@ -52,6 +54,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **tenantSlug** | `string` | Public tenant slug resolved together with the trusted request host. | [Defaults to `undefined`] |
+| **ifNoneMatch** | `string` | Previously received entity tag. A matching value returns a bodyless &#x60;304&#x60; response. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -70,7 +73,8 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Public restaurant configuration. |  -  |
+| **200** | Public restaurant configuration. |  * ETag -  <br>  * Cache-Control -  <br>  * Cache-Tag -  <br>  * Surrogate-Key -  <br>  |
+| **304** | The restaurant configuration has not changed for the supplied entity tag; response has no body. |  * ETag -  <br>  * Cache-Control -  <br>  * Cache-Tag -  <br>  * Surrogate-Key -  <br>  |
 | **404** | Tenant is unknown, inactive, or not confirmed for the request host. |  -  |
 | **429** | Too many requests for the tenant/client rate-limit scope. |  * Retry-After - Seconds before the client should retry. <br>  |
 | **500** | Unexpected server failure. The trace ID can be reported to support. |  -  |

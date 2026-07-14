@@ -63,9 +63,10 @@ class TenantAssetBatchLookupTests {
                 "webp");
         when(persistence.findAllActiveByIds(any(), any())).thenReturn(List.of(logo, item));
         when(publicUrlResolver.resolve(any()))
-                .thenAnswer(invocation -> URI.create("https://cdn.example.test/" + invocation
+                .thenAnswer(invocation -> URI.create("https://cdn.example.test/assets/" + invocation
                         .getArgument(0, AssetObjectKey.class)
-                        .value()));
+                        .value()
+                        .substring("tenants/".length())));
 
         var result = service.getActiveAssets(TENANT_ID, List.of(logo.id(), item.id(), logo.id()));
 

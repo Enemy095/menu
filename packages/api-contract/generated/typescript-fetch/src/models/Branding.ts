@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`; внутренние идентификаторы tenant и конфигурация внешних integrations не раскрываются.
+ * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -42,7 +42,7 @@ import {
  */
 export interface Branding {
     /**
-     *
+     * Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
      * @type {string}
      * @memberof Branding
      */
@@ -54,7 +54,7 @@ export interface Branding {
      */
     logoAlt: string;
     /**
-     *
+     * Immutable public asset URL; it may contain the ADR-0001 opaque UUID storage namespace.
      * @type {string}
      * @memberof Branding
      */

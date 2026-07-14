@@ -89,7 +89,7 @@ class TenantAssetMinioIntegrationTests {
         registry.add("app.assets.storage.access-key", () -> ACCESS_KEY);
         registry.add("app.assets.storage.secret-key", () -> SECRET_KEY);
         registry.add("app.assets.storage.path-style-access", () -> true);
-        registry.add("app.assets.cdn-base-url", () -> "https://cdn.example.test/assets");
+        registry.add("app.assets.cdn-base-url", () -> "https://cdn.example.test");
     }
 
     @Autowired
@@ -137,7 +137,9 @@ class TenantAssetMinioIntegrationTests {
         var head = s3Client.headObject(HeadObjectRequest.builder().bucket(BUCKET).key(key).build());
 
         assertThat(replay).isEqualTo(first);
-        assertThat(first.publicUrl()).hasToString("https://cdn.example.test/assets/" + key);
+        assertThat(first.publicUrl()).hasToString(
+                "https://cdn.example.test/" + key.replaceFirst("^tenants/", "assets/"));
+        assertThat(first.publicUrl().getPath()).doesNotContain("/tenants/");
         assertThat(first.publicUrl().getUserInfo()).isNull();
         assertThat(head.contentType()).isEqualTo("image/png");
         assertThat(head.cacheControl()).isEqualTo(S3AssetObjectStorage.IMMUTABLE_CACHE_CONTROL);
@@ -196,8 +198,10 @@ class TenantAssetMinioIntegrationTests {
 
         TenantAsset tenantBAsset = assetService.importAsset(TENANT_B, pngLogo());
         assertThat(tenantBAsset.id()).isNotEqualTo(tenantAAsset.id());
-        assertThat(tenantAAsset.publicUrl().toString()).contains("/tenants/" + TENANT_A.value() + "/");
-        assertThat(tenantBAsset.publicUrl().toString()).contains("/tenants/" + TENANT_B.value() + "/");
+        assertThat(tenantAAsset.publicUrl().toString()).contains("/assets/" + TENANT_A.value() + "/");
+        assertThat(tenantBAsset.publicUrl().toString()).contains("/assets/" + TENANT_B.value() + "/");
+        assertThat(tenantAAsset.publicUrl().getPath()).doesNotContain("/tenants/");
+        assertThat(tenantBAsset.publicUrl().getPath()).doesNotContain("/tenants/");
         assertThat(objectKeys()).containsExactlyInAnyOrder(
                 expectedKey(TENANT_A, AssetKind.LOGO, tenantAAsset.sha256(), "png"),
                 expectedKey(TENANT_B, AssetKind.LOGO, tenantBAsset.sha256(), "png"));

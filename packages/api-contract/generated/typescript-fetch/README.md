@@ -27,6 +27,8 @@ async function example() {
   const body = {
     // string | Public tenant slug resolved together with the trusted request host.
     tenantSlug: adamas,
+    // string | Previously received entity tag. A matching value returns a bodyless `304` response. (optional)
+    ifNoneMatch: "menu-stambul-v3",
   } satisfies GetPublicMenuRequest;
 
   try {

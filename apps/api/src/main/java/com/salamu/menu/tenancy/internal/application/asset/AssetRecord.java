@@ -27,5 +27,17 @@ public record AssetRecord(
         if (sizeBytes <= 0) {
             throw new IllegalArgumentException("sizeBytes must be positive");
         }
+        String extension = switch (contentType) {
+            case "image/png" -> "png";
+            case "image/jpeg" -> "jpg";
+            case "image/webp" -> "webp";
+            case "image/x-icon", "image/vnd.microsoft.icon" -> "ico";
+            default -> throw new IllegalArgumentException("Unsupported persisted asset content type");
+        };
+        String expectedObjectKey = "tenants/%s/%s/%s.%s".formatted(
+                tenantId.value(), kind.storageName(), sha256.value(), extension);
+        if (!expectedObjectKey.equals(objectKey.value())) {
+            throw new IllegalArgumentException("Persisted asset key is inconsistent with its tenant metadata");
+        }
     }
 }

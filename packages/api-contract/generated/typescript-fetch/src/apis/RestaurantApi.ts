@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * E-menu Public API
- * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`; внутренние идентификаторы tenant и конфигурация внешних integrations не раскрываются.
+ * Публичный multi-tenant контракт электронной white-label платформы меню. Tenant разрешается сервером по trusted host и `tenantSlug`. Внутренний `tenantId`, persistence fields и конфигурация внешних integrations не возвращаются отдельными DTO fields. Согласно ADR-0001 immutable public asset URL может содержать opaque UUID storage namespace; этот namespace не является credential, authorization boundary или доказательством принадлежности ресурса tenant.
  *
  * The version of the OpenAPI document: 1.0.0
  *
@@ -26,6 +26,7 @@ import {
 
 export interface GetPublicRestaurantRequest {
     tenantSlug: string;
+    ifNoneMatch?: string;
 }
 
 /**
@@ -38,6 +39,7 @@ export interface RestaurantApiInterface {
     /**
      * Creates request options for getPublicRestaurant without sending the request
      * @param {string} tenantSlug Public tenant slug resolved together with the trusted request host.
+     * @param {string} [ifNoneMatch] Previously received entity tag. A matching value returns a bodyless &#x60;304&#x60; response.
      * @throws {RequiredError}
      * @memberof RestaurantApiInterface
      */
@@ -47,6 +49,7 @@ export interface RestaurantApiInterface {
      * Returns only public white-label configuration for the resolved active tenant.
      * @summary Get public restaurant configuration
      * @param {string} tenantSlug Public tenant slug resolved together with the trusted request host.
+     * @param {string} [ifNoneMatch] Previously received entity tag. A matching value returns a bodyless &#x60;304&#x60; response.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof RestaurantApiInterface
@@ -80,6 +83,10 @@ export class RestaurantApi extends runtime.BaseAPI implements RestaurantApiInter
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['ifNoneMatch'] != null) {
+            headerParameters['If-None-Match'] = String(requestParameters['ifNoneMatch']);
+        }
 
 
         let urlPath = `/api/v1/public/{tenantSlug}/restaurant`;

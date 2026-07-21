@@ -57,6 +57,7 @@ type CartStore = PersistedCart & {
     limits: CartLimits,
     menuItemId: string,
     modifiers: CartModifierSelection[],
+    quantity?: number,
   ) => CartAddResult;
   setQuantity: (lineId: string, quantity: number, limits: CartLimits) => void;
   remove: (lineId: string) => void;
@@ -76,10 +77,35 @@ const emptyCart: PersistedCart = {
   items: [],
 };
 
+const memoryStorage = new Map<string, string>();
+
+function reportStorageFallback(operation: string): void {
+  if (typeof window === "undefined") return;
+  document.documentElement.dataset.cartStorage = "memory";
+  window.dispatchEvent(
+    new CustomEvent("e-menu:cart-storage-fallback", { detail: { operation } }),
+  );
+}
+
+function localStorageOrNull(operation: string): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    reportStorageFallback(operation);
+    return null;
+  }
+}
+
 function browserStorage(): PersistStorage<PersistedSlice> {
   return {
     getItem(name): StorageValue<PersistedSlice> | null {
-      const raw = window.localStorage.getItem(name);
+      let raw: string | null = null;
+      try {
+        raw = localStorageOrNull("get")?.getItem(name) ?? memoryStorage.get(name) ?? null;
+      } catch {
+        reportStorageFallback("get");
+        raw = memoryStorage.get(name) ?? null;
+      }
       if (!raw) return null;
       try {
         const envelope = z
@@ -87,15 +113,33 @@ function browserStorage(): PersistStorage<PersistedSlice> {
           .parse(JSON.parse(raw));
         return envelope;
       } catch {
-        window.localStorage.removeItem(name);
+        try {
+          localStorageOrNull("remove-corrupt")?.removeItem(name);
+        } catch {
+          reportStorageFallback("remove-corrupt");
+        }
+        memoryStorage.delete(name);
         return null;
       }
     },
     setItem(name, value): void {
-      window.localStorage.setItem(name, JSON.stringify(value));
+      const serialized = JSON.stringify(value);
+      memoryStorage.set(name, serialized);
+      try {
+        const storage = localStorageOrNull("set");
+        storage?.setItem(name, serialized);
+        if (storage) document.documentElement.dataset.cartStorage = "local";
+      } catch {
+        reportStorageFallback("set");
+      }
     },
     removeItem(name): void {
-      window.localStorage.removeItem(name);
+      memoryStorage.delete(name);
+      try {
+        localStorageOrNull("remove")?.removeItem(name);
+      } catch {
+        reportStorageFallback("remove");
+      }
     },
   };
 }
@@ -123,31 +167,37 @@ export const useCartStore = create<CartStore>()(
         const result = reconcileCart(persisted(get()), catalog, limits);
         set({ ...result.cart, notice: result.notice, revision: get().revision + 1 });
       },
-      add(catalog, rawLimits, menuItemId, rawModifiers) {
+      add(catalog, rawLimits, menuItemId, rawModifiers, rawQuantity = 1) {
         if (get().locked) return "locked";
         const limits = effectiveCartLimits(rawLimits);
         const reconciled = reconcileCart(persisted(get()), catalog, limits);
         const item = catalog.items.find((candidate) => candidate.menuItemId === menuItemId);
         if (!item?.available || !modifiersAreValid(item, rawModifiers)) return "invalid-selection";
+        const requestedQuantity = Math.trunc(rawQuantity);
+        if (!Number.isSafeInteger(requestedQuantity) || requestedQuantity < 1) {
+          return "invalid-selection";
+        }
         const modifiers = normalizedModifiers(rawModifiers);
         const lineId = cartLineId(menuItemId, modifiers);
         const existingItem = reconciled.cart.items.find((line) => line.menuItemId === menuItemId);
         if (existingItem && existingItem.lineId !== lineId) return "variant-conflict";
         const existing = existingItem;
         if (
-          totalItemQuantity(reconciled.cart.items) >= limits.maxTotalItems ||
-          (existing?.quantity ?? 0) >= limits.maxItemQuantity
+          totalItemQuantity(reconciled.cart.items) + requestedQuantity > limits.maxTotalItems ||
+          (existing?.quantity ?? 0) + requestedQuantity > limits.maxItemQuantity
         ) {
           set({ ...reconciled.cart, notice: reconciled.notice });
           return "limit-reached";
         }
         const items = existing
           ? reconciled.cart.items.map((line) =>
-              line.lineId === lineId ? { ...line, quantity: line.quantity + 1 } : line,
+              line.lineId === lineId
+                ? { ...line, quantity: line.quantity + requestedQuantity }
+                : line,
             )
           : [
               ...reconciled.cart.items,
-              { lineId, menuItemId, quantity: 1, modifiers } satisfies CartLine,
+              { lineId, menuItemId, quantity: requestedQuantity, modifiers } satisfies CartLine,
             ];
         set({
           ...reconciled.cart,
@@ -248,15 +298,28 @@ export const useCartStore = create<CartStore>()(
       },
       onRehydrateStorage: () => () => {
         useCartStore.setState({ hydrated: true, locked: false });
+        if (typeof window !== "undefined") {
+          document.documentElement.dataset.cartHydrated = "true";
+          window.dispatchEvent(new CustomEvent("e-menu:cart-hydrated"));
+        }
       },
     },
   ),
 );
 
-export function hydrateCart(): void {
-  if (!useCartStore.persist.hasHydrated()) void useCartStore.persist.rehydrate();
+export async function hydrateCart(): Promise<void> {
+  try {
+    if (!useCartStore.persist.hasHydrated()) await useCartStore.persist.rehydrate();
+  } finally {
+    useCartStore.setState({ hydrated: true, locked: false });
+    if (typeof window !== "undefined") {
+      document.documentElement.dataset.cartHydrated = "true";
+      window.dispatchEvent(new CustomEvent("e-menu:cart-hydrated"));
+    }
+  }
 }
 
 export function resetCartStoreForTests(): void {
+  memoryStorage.clear();
   useCartStore.setState({ ...emptyCart, hydrated: false, locked: false, notice: null, revision: 0 });
 }

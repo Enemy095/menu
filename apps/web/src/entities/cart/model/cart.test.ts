@@ -1,5 +1,5 @@
 import type { MenuItem } from "@e-menu/api-contract/generated";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CART_SCHEMA_VERSION,
@@ -142,6 +142,31 @@ describe("cart domain", () => {
     await useCartStore.persist.rehydrate();
     expect(window.localStorage.getItem(CART_STORAGE_KEY)).not.toContain('"schemaVersion":2');
     expect(useCartStore.getState().items).toEqual([]);
+  });
+
+  it("falls back to in-memory persistence when browser storage is unavailable", async () => {
+    const storage = vi
+      .spyOn(window, "localStorage", "get")
+      .mockImplementation(() => {
+        throw new DOMException("Storage is blocked", "SecurityError");
+      });
+
+    try {
+      await useCartStore.persist.rehydrate();
+      expect(useCartStore.getState().hydrated).toBe(true);
+      expect(
+        useCartStore.getState().add(
+          catalog,
+          { maxItemQuantity: 99, maxTotalItems: 200 },
+          "pizza",
+          [],
+        ),
+      ).toBe("added");
+      expect(useCartStore.getState().items).toHaveLength(1);
+      expect(document.documentElement.dataset.cartStorage).toBe("memory");
+    } finally {
+      storage.mockRestore();
+    }
   });
 
   it("clears state when a persisted restaurant scope does not match", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 type FilterCategory = {
   id: string;
@@ -12,53 +12,87 @@ type FilterCategory = {
 type CategoryFilterProps = {
   categories: FilterCategory[];
   totalItemCount: number;
-  children: ReactNode;
+  heading: ReactNode;
+  children: (selectedCategories: ReadonlySet<string>) => ReactNode;
 };
 
-const ALL_CATEGORIES = "__all__";
-
-export function CategoryFilter({ categories, totalItemCount, children }: CategoryFilterProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [activeCategory, setActiveCategory] = useState(ALL_CATEGORIES);
-
-  useEffect(() => {
-    for (const item of rootRef.current?.querySelectorAll<HTMLElement>("[data-menu-category]") ?? []) {
-      item.hidden = activeCategory !== ALL_CATEGORIES && item.dataset.menuCategory !== activeCategory;
-    }
-  }, [activeCategory]);
+export function CategoryFilter({ categories, totalItemCount, heading, children }: CategoryFilterProps) {
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() => new Set());
+  const allCategoriesSelected = selectedCategories.size === 0;
 
   const visibleCount =
-    activeCategory === ALL_CATEGORIES
+    allCategoriesSelected
       ? totalItemCount
-      : (categories.find((category) => category.id === activeCategory)?.itemCount ?? 0);
+      : categories.reduce(
+          (count, category) =>
+            count + (selectedCategories.has(category.id) ? category.itemCount : 0),
+          0,
+        );
+
+  function toggleCategory(categoryId: string) {
+    setSelectedCategories((current) => {
+      const next = new Set(current);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
+  }
+
+  function resetCategories() {
+    setSelectedCategories(new Set());
+  }
 
   return (
-    <div ref={rootRef}>
-      {categories.length ? (
-        <div className="category-list" role="group" aria-label="Категории меню">
-          <button
-            type="button"
-            aria-pressed={activeCategory === ALL_CATEGORIES}
-            onClick={() => setActiveCategory(ALL_CATEGORIES)}
-          >
-            Все
-          </button>
-          {categories.map((category) => (
+    <div>
+      <div className="menu-toolbar">
+        {heading}
+        {categories.length ? (
+          <div className="category-list" role="group" aria-label="Категории меню">
+            <div className="category-list__all">
+              <button
+                type="button"
+                className="category-list__all-button"
+                aria-pressed={allCategoriesSelected}
+                onClick={resetCategories}
+              >
+                Все
+              </button>
+            </div>
+            <div className="category-list__options">
+              {categories.map((category) => {
+                const selected = selectedCategories.has(category.id);
+                return (
+                  <button
+                    type="button"
+                    key={category.id}
+                    aria-pressed={selected}
+                    onClick={() => toggleCategory(category.id)}
+                  >
+                    <span className="category-list__check" aria-hidden="true">✓</span>
+                    {category.name}
+                  </button>
+                );
+              })}
+            </div>
             <button
+              className="category-list__reset"
               type="button"
-              key={category.id}
-              aria-pressed={activeCategory === category.id}
-              onClick={() => setActiveCategory(category.id)}
+              disabled={allCategoriesSelected}
+              onClick={resetCategories}
             >
-              {category.name}
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 5h16l-6.2 7v5.2l-3.6 1.8v-7Z" />
+                <path d="m16.5 15.5 4 4m0-4-4 4" />
+              </svg>
+              Сбросить
             </button>
-          ))}
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+      </div>
       <p className="sr-only" aria-live="polite">
         Показано позиций: {visibleCount}
       </p>
-      {children}
+      {children(selectedCategories)}
     </div>
   );
 }

@@ -13,7 +13,6 @@ type RootRouteProps = {
   params: Promise<{ route?: string[] }>;
 };
 
-export const dynamic = "force-static";
 export const dynamicParams = true;
 export const revalidate = 60;
 

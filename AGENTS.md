@@ -14,8 +14,10 @@ tenant. ADR-0003 является источником решения.
 ADR. Архитектурное отклонение требует сначала обновить ADR и migration plan.
 
 Запрещено преждевременно добавлять WebFlux, R2DBC, Kafka, Kubernetes, microservices,
-GraalVM, Redis или второй database. Legacy-каталог `Электронное меню/` остаётся
-read-only источником поведения до согласованного migration slice.
+GraalVM, Redis или второй database. Legacy-каталог `Электронное меню/` удалён после
+завершения миграции. Не восстанавливайте его, не подключайте как runtime/build/test
+dependency и не используйте как источник поведения. Источник истины — текущие
+domain rules, OpenAPI, versioned data bundles и automated tests.
 
 ## 2. Утверждённый технологический стек
 
@@ -71,7 +73,6 @@ read-only источником поведения до согласованно�
     architecture/
     adr/
     migration/
-  Электронное меню/       # read-only legacy
 ```
 
 - `apps/web` — публичное приложение единственного клиента.
@@ -124,8 +125,9 @@ context и не участвует в repository queries.
 - выбирать Stambul/Adamas через runtime slug/host/branch;
 - создавать второй dataset внутри production deployment без нового ADR.
 
-Stambul и Adamas — legacy reference datasets. Production import выбирает ровно один
-dataset явным deployment/migration decision; второй не становится runtime mode.
+Stambul и Adamas — исторические названия импортированных datasets. Production
+deployment содержит ровно один выбранный dataset; эти названия не создают runtime
+mode и не требуют возвращения удалённых raw legacy sources.
 
 ## 5. Общесистемная архитектура
 
@@ -518,21 +520,23 @@ committed secret.
 
 ## 17. Migration guardrails
 
-- Legacy остаётся поведенческим эталоном до production validation.
-- Сначала существующие сценарии фиксируются acceptance/E2E tests.
+- Удалённый legacy-каталог не является поведенческим эталоном и не возвращается.
+- Актуальное поведение фиксируется OpenAPI, domain rules и acceptance/E2E tests.
 - Перенос выполняется vertical slices.
 - ADR-0003 отменяет multi-tenant target и двух-tenant importer.
 - V1–V5 не редактируются; single-client pivot append-only.
 - Сначала вводится single-client replacement, затем переключаются callers, затем
   удаляются tenancy/migration structures.
 - Не оставляйте constant/default tenant compatibility layer.
-- Legacy Stambul/Adamas branches преобразуются в выбранные client configuration,
-  feature modules или честный client-specific code, но не runtime tenant switch.
+- Исторические Stambul/Adamas различия выражаются выбранной client configuration,
+  feature modules или честным client-specific code, но не runtime tenant switch.
 - Один production dataset выбирается до content import.
 - Старый и новый frontend не создают параллельные реальные orders.
 - Каждая функция получает acceptance tests.
 - Не переносите global `window.*`, двойной state и API inconsistencies.
-- Legacy удаляется после production validation и rollback window.
+- Historical ADR, Flyway migrations и migration reports могут упоминать legacy как
+  завершённый этап, но active code, tests и operator workflows не читают удалённый
+  каталог `Электронное меню/`.
 
 ## 18. Definition of Done
 

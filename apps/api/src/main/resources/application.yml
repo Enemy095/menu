@@ -107,6 +107,14 @@ app:
     max-backoff: ${APP_WORKER_MAX_BACKOFF:15m}
     jitter-ratio: ${APP_WORKER_JITTER_RATIO:0.2}
     shutdown-timeout: ${APP_WORKER_SHUTDOWN_TIMEOUT:30s}
+  notification:
+    telegram:
+      enabled: ${TELEGRAM_NOTIFICATIONS_ENABLED:false}
+      api-base-url: ${TELEGRAM_API_BASE_URL:https://api.telegram.org}
+      bot-token: ${TELEGRAM_BOT_TOKEN:}
+      chat-id: ${TELEGRAM_CHAT_ID:}
+      message-thread-id: ${TELEGRAM_MESSAGE_THREAD_ID:}
+      destination-secret-reference: ${TELEGRAM_DESTINATION_SECRET_REFERENCE:secret://application/telegram/orders}
   external:
     public-base-url: ${PUBLIC_BASE_URL}
     asset-base-url: ${ASSET_BASE_URL}

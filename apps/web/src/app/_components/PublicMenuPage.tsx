@@ -25,21 +25,35 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
       locale={configuration.locale}
       currency={configuration.currency}
       orderingEnabled={orderingEnabled}
+      fallbackImageUrl={configuration.branding.logoUrl}
     />
+  );
+
+  const content = (
+    <div className="content-column">
+      <Hero hero={configuration.branding.hero} text={text} />
+      {menuBrowser}
+      <Contacts
+        profile={configuration.profile}
+        features={configuration.features}
+        schedule={configuration.schedule}
+      />
+    </div>
   );
 
   return (
     <div className="site" style={themeStyle(configuration.branding.designTokens)}>
-      <SiteHeader
-        branding={configuration.branding}
-        text={text}
-        profile={configuration.profile}
-        features={configuration.features}
-      />
-      <main>
-        <Hero hero={configuration.branding.hero} text={text} />
-        {orderingEnabled && menu ? (
-          <CartExperience
+      {orderingEnabled && menu ? (
+        <CartExperience
+          header={(
+            <SiteHeader
+              branding={configuration.branding}
+              text={text}
+              profile={configuration.profile}
+              features={configuration.features}
+              showCartButton
+            />
+          )}
             catalog={{
               restaurantId: menu.restaurantId,
               menuVersion: menu.version,
@@ -51,15 +65,19 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
             currency={configuration.currency}
             title={text.cartTitle}
           >
-            {menuBrowser}
-          </CartExperience>
-        ) : menuBrowser}
-        <Contacts
-          profile={configuration.profile}
-          features={configuration.features}
-          schedule={configuration.schedule}
-        />
-      </main>
+            {content}
+        </CartExperience>
+      ) : (
+        <>
+          <SiteHeader
+            branding={configuration.branding}
+            text={text}
+            profile={configuration.profile}
+            features={configuration.features}
+          />
+          <main className="single-layout" id="main-content">{content}</main>
+        </>
+      )}
       <footer className="site-footer">
         <div className="shell">{text.displayName}</div>
       </footer>

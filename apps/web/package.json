@@ -4,11 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:background": "node scripts/launch-dev.mjs",
     "build": "next build",
     "start": "next start",
+    "preview:public": "pnpm build && node scripts/launch-public-preview.mjs",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:production": "pnpm build && playwright test --config=playwright.production.config.ts",
     "test:integration": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-production-status.mjs",
     "test:watch": "vitest",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:integration"
@@ -16,7 +20,7 @@
   "dependencies": {
     "@e-menu/api-contract": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
-    "next": "16.2.10",
+    "next": "15.5.20",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-hook-form": "^7.81.0",
@@ -25,6 +29,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",
@@ -42,5 +47,12 @@
   },
   "engines": {
     "node": ">=24"
-  }
+  },
+  "browserslist": [
+    "chrome 64",
+    "edge 79",
+    "firefox 67",
+    "opera 51",
+    "safari 12"
+  ]
 }

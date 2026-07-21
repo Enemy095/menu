@@ -31,6 +31,7 @@
 | SC-CART-001 | Single-client persisted cart и checkout | SC-WEB-001, SC-ORD-001 | P5 | done |
 | SC-ORD-001 | Orders, global idempotency и totals | SC-BE-001, SC-API-001, SC-SEC-001 | P5 | done |
 | SC-OUT-001 | Transactional outbox worker | SC-ORD-001 | P6 | done |
+| SC-TG-001 | Telegram order notification provider | SC-OUT-001 | P6 | done |
 | SC-VAL-001 | Full-system validation foundation; data/cart acceptance pending | all SC implementation tasks | P7 | in_progress |
 | SC-CUTOVER-001 | Production cutover и legacy retirement | SC-VAL-001 | P8 | blocked |
 | WEB-001 | Next.js SSR tenant shell | API-001 | 5 | superseded |

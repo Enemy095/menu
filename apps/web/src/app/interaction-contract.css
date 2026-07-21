@@ -1,0 +1,383 @@
+/*
+ * Cross-device interaction contract.
+ *
+ * This file is intentionally imported after the visual theme. Keep only
+ * behavioural invariants here: touch handling, stacking, safe areas and the
+ * shared mobile/tablet cart. Decorative component rules belong in globals.css.
+ */
+
+html {
+  overflow-x: hidden;
+  overflow-x: clip;
+  background: #080808;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #080808;
+  overscroll-behavior-y: none;
+}
+
+html[data-overlay-open="true"],
+html[data-overlay-open="true"] body {
+  overscroll-behavior: none;
+}
+
+.bootstrap-status[hidden] {
+  display: none !important;
+}
+
+.bootstrap-status {
+  position: fixed;
+  z-index: 2000;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  display: grid;
+  max-width: 520px;
+  gap: 6px;
+  margin-inline: auto;
+  border: 1px solid #ef4444;
+  border-radius: 12px;
+  padding: 14px;
+  background: #241010;
+  color: #f5e8e4;
+  box-shadow: 0 18px 60px rgb(0 0 0 / 75%);
+  font: 500 14px/1.4 "Inter Local", Inter, Arial, sans-serif;
+}
+
+.bootstrap-status button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--delivery-accent, #facc15);
+  color: #111;
+  font-weight: 800;
+}
+
+.bootstrap-status pre {
+  max-height: min(40dvh, 280px);
+  overflow: auto;
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bootstrap-status--debug {
+  border-color: #5f5f5f;
+  background: #151515;
+}
+
+.bootstrap-status--debug > :not(pre) {
+  display: none;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary,
+.menu-card__open {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.menu-card__open {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.site-header {
+  z-index: 300;
+  isolation: isolate;
+}
+
+.menu-toolbar {
+  z-index: 100;
+}
+
+.cart-mobile-bar {
+  z-index: 200;
+}
+
+.cart-backdrop {
+  z-index: 900;
+}
+
+.cart-panel {
+  z-index: 910;
+}
+
+.dish-dialog-layer {
+  --delivery-card: #171717;
+  --delivery-line: #2c2c2c;
+  --delivery-accent: #facc15;
+  --delivery-text: #d8d4ca;
+  --delivery-muted: #a29e96;
+  z-index: 1000;
+  font-family: "Inter Local", Inter, Arial, sans-serif;
+  touch-action: pan-y;
+}
+
+.dish-dialog {
+  overscroll-behavior: contain;
+}
+
+.dish-dialog__add:not(:disabled) {
+  border: 1px solid #facc15;
+  background: #facc15;
+  color: #111;
+  opacity: 1;
+  box-shadow: 0 8px 24px rgb(250 204 21 / 18%);
+}
+
+.dish-dialog__add:not(:disabled) strong {
+  color: #111;
+}
+
+.dish-dialog__add:disabled {
+  border: 1px solid #454545;
+  background: #292929;
+  color: #aaa69c;
+  opacity: 1;
+}
+
+.dish-dialog__add:disabled strong {
+  color: #aaa69c;
+}
+
+.menu-card__open {
+  touch-action: manipulation;
+}
+
+@media (max-width: 1023px) {
+  /*
+   * One cart appearance for every non-desktop width. This deliberately
+   * overrides the old theme-primary rule that made the bar yellow at
+   * intermediate widths.
+   */
+  .cart-mobile-bar {
+    border: 2px solid rgb(250 204 21 / 55%);
+    background: #171717;
+    color: var(--delivery-accent);
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 8%),
+      0 12px 32px rgb(0 0 0 / 62%),
+      0 0 20px rgb(250 204 21 / 9%);
+  }
+
+  .cart-mobile-bar__count,
+  .cart-mobile-bar__label {
+    color: var(--delivery-accent);
+  }
+
+  .cart-mobile-bar__total {
+    color: var(--delivery-text);
+  }
+
+  .cart-mobile-bar--loading {
+    cursor: wait;
+    opacity: 0.82;
+  }
+
+  .cart-panel {
+    top: var(--app-viewport-offset-top, 0px);
+    bottom: auto;
+    height: 100vh;
+    height: var(--app-viewport-height, 100vh);
+    max-height: 100vh;
+    max-height: var(--app-viewport-height, 100vh);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-right: max(18px, env(safe-area-inset-right));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    padding-left: max(18px, env(safe-area-inset-left));
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scroll-padding-top: 84px;
+  }
+
+  .cart-backdrop {
+    top: var(--app-viewport-offset-top, 0px);
+    right: 0;
+    bottom: auto;
+    left: 0;
+    height: 100vh;
+    height: var(--app-viewport-height, 100vh);
+    background: #080808;
+  }
+
+  .cart-panel__header {
+    position: sticky;
+    z-index: 3;
+    top: calc(-1 * max(18px, env(safe-area-inset-top)));
+    margin:
+      calc(-1 * max(18px, env(safe-area-inset-top)))
+      calc(-1 * max(18px, env(safe-area-inset-right)))
+      0
+      calc(-1 * max(18px, env(safe-area-inset-left)));
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(18px, env(safe-area-inset-right))
+      14px
+      max(18px, env(safe-area-inset-left));
+    background: #141414;
+  }
+
+  .cart-line__controls {
+    flex: 0 0 auto;
+  }
+
+  .cart-panel__close {
+    box-sizing: border-box;
+    display: grid;
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    flex: 0 0 48px;
+    place-items: center;
+    padding: 0;
+    line-height: 0;
+  }
+
+  .cart-panel__close svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentcolor;
+    stroke-linecap: round;
+    stroke-width: 2.25;
+  }
+
+  .cart-line__controls .cart-line__remove {
+    box-sizing: border-box;
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    flex: 0 0 32px;
+    margin-left: 18px;
+    padding: 0;
+  }
+
+  .checkout-form input,
+  .checkout-form textarea,
+  .checkout-form select {
+    font-size: 16px !important;
+    line-height: 1.35;
+  }
+}
+
+@media (max-width: 559px) {
+  :root {
+    --mobile-header-height: 72px;
+  }
+
+  .site {
+    padding-top: calc(var(--mobile-header-height) + env(safe-area-inset-top));
+  }
+
+  /*
+   * fixed is more reliable than sticky inside iOS Telegram/WKWebView while
+   * its address bar changes the visual viewport. The negative cap prevents
+   * page content from flashing above the header during rubber-band scrolling.
+   */
+  .site-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    min-height: calc(var(--mobile-header-height) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    background: rgb(8 8 8 / 98%);
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  .site-header::before {
+    position: absolute;
+    z-index: -1;
+    right: 0;
+    bottom: 100%;
+    left: 0;
+    height: 160px;
+    background: #080808;
+    content: "";
+    pointer-events: none;
+  }
+
+  .menu-toolbar {
+    top: calc(var(--mobile-header-height) + env(safe-area-inset-top));
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .cart-panel {
+    width: 100%;
+    border-radius: 0;
+  }
+
+  .dish-dialog__close,
+  .dish-dialog__quantity button,
+  .menu-card__order .button,
+  .header-cart {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .dish-dialog-layer {
+    top: var(--app-viewport-offset-top, 0px);
+    bottom: auto;
+    height: 100vh;
+    height: var(--app-viewport-height, 100vh);
+    min-height: 0;
+    overflow: hidden;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(10px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom));
+  }
+
+  .dish-dialog {
+    width: 100%;
+    max-width: 620px;
+    max-height: calc(var(--app-viewport-height, 100vh) - 20px);
+    min-height: 0;
+  }
+
+  .dish-dialog__close {
+    box-sizing: border-box;
+    width: 48px;
+    min-width: 48px;
+    max-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    max-height: 48px;
+    flex: 0 0 48px;
+    padding: 0;
+    border-radius: 999px;
+    line-height: 1;
+  }
+
+  .dish-dialog__content {
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dish-dialog__footer {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}

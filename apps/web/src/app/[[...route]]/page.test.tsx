@@ -42,7 +42,9 @@ describe("public route", () => {
   it("server-renders the public composition", async () => {
     render(await Page({ params: rootParams }));
 
-    expect(screen.getByRole("heading", { level: 1, name: "Ужин начинается здесь" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Вкусная едаБыстрая доставка" }),
+    ).toBeInTheDocument();
   });
 
   it("does not turn a post-preflight API 503 into successful fallback content", async () => {

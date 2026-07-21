@@ -7,7 +7,7 @@ const apiMocks = vi.hoisted(() => ({
 
 vi.mock("@/shared/api/public-api", () => apiMocks);
 
-import { proxy } from "./proxy";
+import { middleware as proxy } from "./middleware";
 
 beforeEach(() => {
   apiMocks.probePublicApiReadiness.mockResolvedValue(undefined);

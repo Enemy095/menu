@@ -65,7 +65,7 @@ app/[[...route]]/page.tsx (on-demand ISR Server Component for `/`)
 → features/category-filter (minimal category IDs/names/counts only)
 ```
 
-`src/proxy.ts` performs the dependency preflight for `/` with fresh `cache: no-store`
+`src/middleware.ts` performs the dependency preflight for `/` with fresh `cache: no-store`
 requests to both canonical read endpoints. This readiness path is deliberately separate
 from cached ISR/content fetches and cancels response bodies after inspecting status, so a
 warm cache cannot hide a current outage. A dependency 5xx/transport failure is answered

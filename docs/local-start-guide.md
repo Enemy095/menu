@@ -81,6 +81,9 @@ Worker намеренно выключен, потому что локально
 WhatsApp или другой notification provider. Заказы сохраняются в PostgreSQL, но
 внешние сообщения не отправляются.
 
+Чтобы включить готовую Telegram-доставку заказов, выполните отдельную инструкцию:
+[telegram-order-notifications.md](telegram-order-notifications.md).
+
 ### Шаг 3. Next.js frontend
 
 Откройте третье окно PowerShell:

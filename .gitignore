@@ -19,6 +19,8 @@ node_modules/
 dist/
 build/
 .next/
+.next-dev/
+.runtime/
 .turbo/
 *.tsbuildinfo
 
@@ -37,3 +39,5 @@ tmp/
 # Coverage
 coverage/
 *.cover
+**/playwright-report/
+**/test-results/

@@ -14,10 +14,9 @@ export function Contacts({ profile, features, schedule }: ContactsProps) {
   const showSocials = features.socialLinks && profile.socialLinks.length > 0;
 
   return (
-    <section className="contacts" aria-labelledby="contacts-title">
+    <section className="contacts" id="contacts" aria-labelledby="contacts-title">
       <div className="shell">
-        <p className="eyebrow">Контакты</p>
-        <h2 id="contacts-title">Свяжитесь с нами</h2>
+        <p className="eyebrow" id="contacts-title">Контакты</p>
         <div className="contacts__grid">
           <address className="contact-card">
             <span>{profile.publicPhoneLabel}</span>

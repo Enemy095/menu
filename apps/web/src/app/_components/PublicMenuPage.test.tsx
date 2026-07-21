@@ -10,8 +10,10 @@ describe("PublicMenuPage", () => {
   it("renders configuration and menu data at the SSR composition boundary", () => {
     render(<PublicMenuPage configuration={configurationFixture()} menu={menuFixture()} />);
 
-    expect(screen.getByRole("heading", { level: 1, name: "Ужин начинается здесь" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Наше меню" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Вкусная едаБыстрая доставка" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Популярное" })).toBeInTheDocument();
     expect(screen.getByText("Ежедневно 10:00–22:00")).toBeInTheDocument();
     expect(screen.getByText(/490,00\s₽/u)).toBeInTheDocument();
   });

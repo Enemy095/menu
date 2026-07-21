@@ -5,12 +5,14 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 
 import {
   estimatedCartTotalMinor,
+  estimatedLineTotalMinor,
   findCatalogItem,
   totalItemQuantity,
   type CartCatalog,
 } from "@/entities/cart/model/cart";
 import { useCartStore } from "@/entities/cart/model/cart-store";
 import { CartProvider } from "@/features/cart/model/cart-context";
+import { CartOverlayProvider, useCartOverlay } from "@/features/cart/model/cart-overlay-context";
 import { CheckoutForm } from "@/features/checkout/ui/CheckoutForm";
 import { formatMoney } from "@/shared/lib/format-money";
 
@@ -21,6 +23,7 @@ type CartExperienceProps = {
   locale: string;
   currency: string;
   title: string;
+  header?: ReactNode;
   children: ReactNode;
 };
 
@@ -61,19 +64,22 @@ function isVisibleAndFocusable(element: HTMLElement): boolean {
 export function CartExperience(props: CartExperienceProps) {
   return (
     <CartProvider catalog={props.catalog} limits={props.limits}>
-      {props.children}
-      <CartPanel {...props} />
+      <CartOverlayProvider>
+        {props.header}
+        <main className="desktop-layout" id="main-content">
+          {props.children}
+          <CartPanel {...props} />
+        </main>
+      </CartOverlayProvider>
     </CartProvider>
   );
 }
 
 function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: CartExperienceProps) {
-  const [open, setOpen] = useState(false);
+  const { open, openCart, closeCart } = useCartOverlay();
   const [receiptVisible, setReceiptVisible] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
   const hydrated = useCartStore((state) => state.hydrated);
   const locked = useCartStore((state) => state.locked);
   const items = useCartStore((state) => state.items);
@@ -94,20 +100,10 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
   );
 
   useEffect(() => {
-    if (open) closeButtonRef.current?.focus();
+    if (!open) return;
+    if (panelRef.current) panelRef.current.scrollTop = 0;
+    closeButtonRef.current?.focus();
   }, [open]);
-
-  function openCart() {
-    previousFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : mobileTriggerRef.current;
-    setOpen(true);
-  }
-
-  function closeCart() {
-    setOpen(false);
-    requestAnimationFrame(() => previousFocusRef.current?.focus());
-  }
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (!open) return;
@@ -137,17 +133,43 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
     if (!visible && open) closeCart();
   }
 
-  if (!hydrated) return null;
-
   return (
     <>
-      {count || receiptVisible ? (
-        <button ref={mobileTriggerRef} className="cart-mobile-bar" type="button" onClick={openCart}>
-          <span>{receiptVisible && !count ? "Заказ принят" : `${title}: ${count}`}</span>
-          {count ? <strong>≈ {formatMoney(estimate, currency, locale)}</strong> : null}
-        </button>
-      ) : null}
-      {open ? <div className="cart-backdrop" aria-hidden="true" onMouseDown={closeCart} /> : null}
+      <button
+        className={`cart-mobile-bar${hydrated ? "" : " cart-mobile-bar--loading"}`}
+        type="button"
+        onClick={openCart}
+        disabled={!hydrated}
+        aria-busy={!hydrated || undefined}
+        aria-label={
+          !hydrated
+            ? "Загрузка корзины"
+            : receiptVisible && !count
+              ? "Заказ принят"
+              : `${title}: ${count}`
+        }
+      >
+        <span className="cart-mobile-bar__count" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 4h2l2.2 10.1a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 1.9-1.4L21 7H7" />
+            <circle cx="10" cy="20" r="1.25" />
+            <circle cx="18" cy="20" r="1.25" />
+          </svg>
+        </span>
+        <span className="cart-mobile-bar__label" aria-hidden="true">
+          {!hydrated
+            ? "Загрузка корзины…"
+            : receiptVisible && !count
+              ? "Заказ принят"
+              : "Ваш заказ"}
+        </span>
+        {hydrated ? (
+          <strong className="cart-mobile-bar__total" aria-hidden="true">
+            {formatMoney(estimate, currency, locale)}
+          </strong>
+        ) : null}
+      </button>
+      {open ? <div className="cart-backdrop" aria-hidden="true" onPointerDown={closeCart} /> : null}
       <aside
         ref={panelRef}
         className={`cart-panel${open ? " cart-panel--open" : ""}`}
@@ -159,10 +181,19 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
       >
         <header className="cart-panel__header">
           <div>
-            <p className="eyebrow">Ваш заказ</p>
             <h2 id="cart-panel-title">{title}</h2>
           </div>
-          <button ref={closeButtonRef} className="cart-panel__close" type="button" onClick={closeCart} aria-label="Закрыть корзину">×</button>
+          <button
+            ref={closeButtonRef}
+            className="cart-panel__close"
+            type="button"
+            onClick={closeCart}
+            aria-label="Закрыть корзину"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M7 7l10 10M17 7 7 17" />
+            </svg>
+          </button>
         </header>
         {notice ? (
           <div className="cart-notice" role="status">
@@ -197,11 +228,27 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
                       ) : null}
                     </div>
                     <div className="cart-line__controls">
-                      <button disabled={locked} type="button" aria-label={`Уменьшить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity - 1, limits)}>−</button>
-                      <output aria-label={`Количество: ${item.name}`}>{line.quantity}</output>
-                      <button disabled={locked} type="button" aria-label={`Увеличить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity + 1, limits)}>+</button>
-                      <button disabled={locked} className="cart-line__remove" type="button" onClick={() => remove(line.lineId)}>Удалить</button>
+                      <div className="cart-line__quantity">
+                        <button disabled={locked} type="button" aria-label={`Уменьшить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity - 1, limits)}>−</button>
+                        <output aria-label={`Количество: ${item.name}`}>{line.quantity}</output>
+                        <button disabled={locked} type="button" aria-label={`Увеличить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity + 1, limits)}>+</button>
+                      </div>
+                      <button
+                        disabled={locked}
+                        className="cart-line__remove"
+                        type="button"
+                        onClick={() => remove(line.lineId)}
+                        aria-label={`Удалить: ${item.name}`}
+                        title="Удалить"
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 24 24">
+                          <path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v5m4-5v5" />
+                        </svg>
+                      </button>
                     </div>
+                    <strong className="cart-line__total">
+                      {formatMoney(estimatedLineTotalMinor(line, item), currency, locale)}
+                    </strong>
                   </li>
                 );
               })}
@@ -214,7 +261,7 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
         ) : !receiptVisible ? (
           <div className="cart-empty" role="status">
             <p>Корзина пока пуста.</p>
-            <a href="#menu" onClick={() => setOpen(false)}>Перейти к меню</a>
+            <a href="#menu" onClick={closeCart}>Перейти к меню</a>
           </div>
         ) : null}
         {items.length || receiptVisible ? (

@@ -20,13 +20,13 @@ export function CartProvider({
   const reconcile = useCartStore((state) => state.reconcile);
 
   useEffect(() => {
-    hydrateCart();
-    const unsubscribe = useCartStore.persist.onFinishHydration(() => reconcile(catalog, limits));
-    if (useCartStore.persist.hasHydrated()) {
-      useCartStore.setState({ hydrated: true });
-      reconcile(catalog, limits);
-    }
-    return unsubscribe;
+    let active = true;
+    void hydrateCart().then(() => {
+      if (active) reconcile(catalog, limits);
+    });
+    return () => {
+      active = false;
+    };
   }, [catalog, limits, reconcile]);
 
   return <CartContext value={{ catalog, limits }}>{children}</CartContext>;
@@ -36,4 +36,8 @@ export function useCartContext(): CartContextValue {
   const context = useContext(CartContext);
   if (!context) throw new Error("Cart components must be rendered inside CartProvider");
   return context;
+}
+
+export function useOptionalCartContext(): CartContextValue | null {
+  return useContext(CartContext);
 }

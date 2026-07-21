@@ -8,7 +8,7 @@ import type {
   OrderLimits,
 } from "@e-menu/api-contract/generated";
 import { useMemo, useState } from "react";
-import { useForm, useWatch, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type FieldErrors, type Resolver } from "react-hook-form";
 
 import type { CartLine, CartOrderType } from "@/entities/cart/model/cart";
 import { useCartStore } from "@/entities/cart/model/cart-store";
@@ -22,6 +22,7 @@ import {
   submitPublicOrder,
 } from "@/shared/api/orders-api";
 import { formatMoney } from "@/shared/lib/format-money";
+import { createClientId } from "@/shared/lib/client-id";
 
 type CheckoutFormProps = {
   items: CartLine[];
@@ -111,13 +112,14 @@ export function CheckoutForm({
       name: "",
       phone: "",
       address: "",
-      guestCount: undefined,
+      guestCount: 1,
       comment: "",
     },
   });
   const [submission, setSubmission] = useState<SubmissionState>({ status: "idle" });
   const [pending, setPending] = useState<PendingSubmission | null>(null);
   const orderType = useWatch({ control: form.control, name: "orderType" });
+  const cutleryCount = useWatch({ control: form.control, name: "guestCount" }) ?? 1;
 
   async function submit(fields: CheckoutFields) {
     const snapshot = beginSubmission();
@@ -134,7 +136,7 @@ export function CheckoutForm({
     const attempt =
       pending?.fingerprint === fingerprint
         ? pending
-        : { fingerprint, idempotencyKey: crypto.randomUUID(), request };
+        : { fingerprint, idempotencyKey: createClientId(), request };
     if (attempt !== pending) setPending(attempt);
     setSubmission({ status: "submitting" });
     try {
@@ -156,6 +158,22 @@ export function CheckoutForm({
           : { status: "error", message: mapped.message, retryable: mapped.retryable },
       );
     }
+  }
+
+  function handleInvalid(errors: FieldErrors<CheckoutFields>) {
+    const firstName = Object.keys(errors)[0] as keyof CheckoutFields | undefined;
+    setSubmission({
+      status: "error",
+      message: "Проверьте выделенные поля и повторите отправку.",
+      retryable: false,
+    });
+    if (!firstName) return;
+    requestAnimationFrame(() => {
+      form.setFocus(firstName);
+      document.querySelector<HTMLElement>(`[name="${firstName}"]`)?.scrollIntoView({
+        block: "center",
+      });
+    });
   }
 
   if (submission.status === "success") {
@@ -195,7 +213,11 @@ export function CheckoutForm({
   }
 
   return (
-    <form className="checkout-form" onSubmit={form.handleSubmit(submit)} noValidate>
+    <form
+      className="checkout-form"
+      onSubmit={form.handleSubmit(submit, handleInvalid)}
+      noValidate
+    >
       <fieldset disabled={submission.status === "submitting"}>
         <legend>Способ получения</legend>
         <div className="order-types">
@@ -245,11 +267,34 @@ export function CheckoutForm({
             )}
           </Field>
         ) : null}
-        {orderType !== "pickup" ? (
-          <Field id="checkout-guests" label="Количество гостей" error={form.formState.errors.guestCount?.message}>
-            {(a11y) => <input {...a11y} type="number" inputMode="numeric" min={1} max={99} {...form.register("guestCount")} />}
-          </Field>
-        ) : null}
+        <div className="form-field form-field--stepper">
+          <label id="checkout-cutlery-label" htmlFor="checkout-cutlery-count">Количество приборов</label>
+          <input type="hidden" {...form.register("guestCount", { valueAsNumber: true })} />
+          <div className="cutlery-stepper" role="group" aria-labelledby="checkout-cutlery-label">
+            <button
+              type="button"
+              aria-label="Уменьшить количество приборов"
+              disabled={cutleryCount <= 1}
+              onClick={() => form.setValue("guestCount", Math.max(1, cutleryCount - 1), { shouldDirty: true, shouldValidate: true })}
+            >
+              −
+            </button>
+            <output id="checkout-cutlery-count" aria-live="polite">{cutleryCount}</output>
+            <button
+              type="button"
+              aria-label="Увеличить количество приборов"
+              disabled={cutleryCount >= 99}
+              onClick={() => form.setValue("guestCount", Math.min(99, cutleryCount + 1), { shouldDirty: true, shouldValidate: true })}
+            >
+              +
+            </button>
+          </div>
+          {form.formState.errors.guestCount?.message ? (
+            <small className="form-field__error" role="alert" aria-live="polite">
+              {form.formState.errors.guestCount.message}
+            </small>
+          ) : null}
+        </div>
         <Field id="checkout-comment" label="Комментарий" optional error={form.formState.errors.comment?.message}>
           {(a11y) => <textarea {...a11y} maxLength={Math.min(500, limits.maxCommentLength)} rows={3} {...form.register("comment")} />}
         </Field>

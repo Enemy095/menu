@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CART_STORAGE_KEY } from "@/entities/cart/model/cart";
 import { resetCartStoreForTests, useCartStore } from "@/entities/cart/model/cart-store";
 import { AddToCartControl } from "@/features/cart/ui/AddToCartControl";
+import { CartHeaderButton } from "@/features/cart/ui/CartHeaderButton";
 import { formatMoney } from "@/shared/lib/format-money";
 
 import { CartExperience } from "./CartExperience";
@@ -53,6 +54,7 @@ function renderCart() {
       locale="ru-RU"
       currency="RUB"
       title="Корзина"
+      header={<CartHeaderButton />}
     >
       <AddToCartControl menuItemId="salad" locale="ru-RU" currency="RUB" />
     </CartExperience>,
@@ -64,6 +66,26 @@ describe("CartExperience", () => {
     window.localStorage.clear();
     resetCartStoreForTests();
     submitMock.mockReset();
+  });
+
+  it("opens the same mobile cart from the header badge and bottom summary", async () => {
+    const user = userEvent.setup();
+    renderCart();
+
+    const headerTrigger = screen.getByRole("button", { name: "Открыть корзину" });
+    expect(headerTrigger).toHaveTextContent("0");
+
+    await user.click(screen.getByRole("button", { name: "Добавить" }));
+    await waitFor(() => expect(headerTrigger).toHaveTextContent("1"));
+    const bottomTrigger = await screen.findByRole("button", { name: "Корзина: 1" });
+
+    await user.click(headerTrigger);
+    expect(screen.getByRole("dialog", { name: "Корзина" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Закрыть корзину" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    await user.click(bottomTrigger);
+    expect(screen.getByRole("dialog", { name: "Корзина" })).toBeInTheDocument();
   });
 
   it("keeps the idempotency key stable while retrying the same semantic draft", async () => {

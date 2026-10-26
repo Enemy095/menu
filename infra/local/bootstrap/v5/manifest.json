@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "version": "v5",
+  "requiredFlywayVersion": "10",
+  "purpose": "Owner photo: 19 exact menu positions/prices and В.А.М. Пицца branding",
+  "tables": {
+    "assets": 1,
+    "restaurants": 1,
+    "menu_versions": 2,
+    "menu_categories": 8,
+    "menu_items": 42,
+    "menu_modifier_groups": 0,
+    "menu_modifier_options": 0,
+    "site_configuration": 1,
+    "site_branding": 1,
+    "site_profile": 1,
+    "site_features": 13
+  },
+  "assets": [
+    {
+      "object_key": "assets/logo/90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b.png",
+      "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b",
+      "size_bytes": 43728,
+      "content_type": "image/png"
+    }
+  ],
+  "frontendAssetsDirectory": "apps/web/public",
+  "frontendAssets": [
+    {
+      "path": "assets/brand/delivery-mascot.png",
+      "sha256": "cd44894294793424259ca929e4cc1e3859ae2c79d40db37dfad7c377e8c9794e",
+      "sizeBytes": 1701072
+    },
+    {
+      "path": "assets/menu/burger-chicken.webp",
+      "sha256": "709346b8faffa8b9456958f989217996a5f2bd2faa649aca5ebb8999c6db795a",
+      "sizeBytes": 174652
+    },
+    {
+      "path": "assets/menu/cezar-roll-chicken.webp",
+      "sha256": "6428448664ee136b3b22a45b1b991f2d09ac8931bd3856bcdb80f84675aa2660",
+      "sizeBytes": 190626
+    },
+    {
+      "path": "assets/menu/cezar-roll-shrimp.webp",
+      "sha256": "bed794e5e851924fdb16fc68ead9aa4e83c58b8ce7b08285472c1e616a65b3d6",
+      "sizeBytes": 161440
+    },
+    {
+      "path": "assets/menu/french-fries.webp",
+      "sha256": "cb58c280ddcff823277a4a584134bb6cb54b1b4a7c2440433c22f5afc0ae659e",
+      "sizeBytes": 151032
+    },
+    {
+      "path": "assets/menu/hero-burger.webp",
+      "sha256": "12b7381d0bab90ca6c31600ffae91aa4f738da9b03e5a75ccf76606062a77ca8",
+      "sizeBytes": 161598
+    },
+    {
+      "path": "assets/menu/hot-roll-salmon.webp",
+      "sha256": "7df50e03298196d91bd2c7372f5a1c387aa742b7d153355a84db3ba1329361f4",
+      "sizeBytes": 133572
+    },
+    {
+      "path": "assets/menu/nuggets.webp",
+      "sha256": "eb55510af70bbe34eba827b8d3f627cb5719df519ed6896f65e5883db421966c",
+      "sizeBytes": 166612
+    },
+    {
+      "path": "assets/menu/photography-v1/bonito-roll-5a33298cfcc3f459.webp",
+      "sha256": "5a33298cfcc3f45964297eaa92144f32996d465eef1f9b773ef4eab2d69782fd",
+      "sizeBytes": 135376
+    },
+    {
+      "path": "assets/menu/photography-v1/burger-beef-f344e8920973879d.webp",
+      "sha256": "f344e8920973879d3ae24ca456076c284310e6c3b6e67fc7177739cbd48a049c",
+      "sizeBytes": 176326
+    },
+    {
+      "path": "assets/menu/photography-v1/burger-chicken-fddeb97af583712d.webp",
+      "sha256": "fddeb97af583712d6736ff08910b45cba09f0d086a19d0ce16c7009c2520f412",
+      "sizeBytes": 150272
+    },
+    {
+      "path": "assets/menu/photography-v1/cezar-roll-chicken-7dc769982bdab850.webp",
+      "sha256": "7dc769982bdab850535947334ec14e59c91bead19dca73117b0b2fe8d6ff40b1",
+      "sizeBytes": 89940
+    },
+    {
+      "path": "assets/menu/photography-v1/cezar-roll-shrimp-7c50c0f0c6baae58.webp",
+      "sha256": "7c50c0f0c6baae58d22c9411cdb2ce969a2a7283a6fe7ed1d1a174862cb059e0",
+      "sizeBytes": 103662
+    },
+    {
+      "path": "assets/menu/photography-v1/cheese-baked-roll-3b0eb66a0be29d8a.webp",
+      "sha256": "3b0eb66a0be29d8a5d480f6c4d9b363e97f25c8dd5dea9a6f169a6998a05a875",
+      "sizeBytes": 125506
+    },
+    {
+      "path": "assets/menu/photography-v1/french-fries-938f1d0f75c318a0.webp",
+      "sha256": "938f1d0f75c318a07c01dbb760c442108090434854871786c52c9508edc63043",
+      "sizeBytes": 145846
+    },
+    {
+      "path": "assets/menu/photography-v1/hot-roll-salmon-123388ade11f92fd.webp",
+      "sha256": "123388ade11f92fd2f51433d4a15336f4683dd0e3a999e4d72c5a5b609f9faab",
+      "sizeBytes": 125980
+    },
+    {
+      "path": "assets/menu/photography-v1/nuggets-98870f81e1ec5483.webp",
+      "sha256": "98870f81e1ec54837e5c03e9cd1c4784df89a891ec1b9741b2bb4c9e1935850b",
+      "sizeBytes": 136262
+    },
+    {
+      "path": "assets/menu/photography-v1/philadelphia-chicken-roll-afd6c28c3bcd5c1b.webp",
+      "sha256": "afd6c28c3bcd5c1bab22f23f1b7d65d8a0d1c1bf1f8d59b5bfb427c4dad67ff9",
+      "sizeBytes": 82790
+    },
+    {
+      "path": "assets/menu/photography-v1/philadelphia-roll-db54c61e3091c8e1.webp",
+      "sha256": "db54c61e3091c8e1dea6f6f0e7ff5ebff8190a1c86609c0efe0e2da40c57452e",
+      "sizeBytes": 121554
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-assorti-3f6ca4bba2b58549.webp",
+      "sha256": "3f6ca4bba2b585499ea217a834078008041289a6b56d3d1a19d173c8d22a4a95",
+      "sizeBytes": 257018
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-caesar-63115e2201295be7.webp",
+      "sha256": "63115e2201295be75370329255b6cc43c9551c4e1ea94ffc374690be84c07994",
+      "sizeBytes": 185516
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-cheese-fa1398bcafa98e81.webp",
+      "sha256": "fa1398bcafa98e81129305f529b3544807d191e3048540f280e2d21d7c1a01a8",
+      "sizeBytes": 194888
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-chicken-a44491421957ba32.webp",
+      "sha256": "a44491421957ba321b4bdf4e9b457e16b5ca2b7362b52ac924244c78019c0c35",
+      "sizeBytes": 202836
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-four-cheese-e045ebee06a3b2cd.webp",
+      "sha256": "e045ebee06a3b2cd8fb4b4b281e7df775e1d58f6c9cec0c068b0903f9c62db2e",
+      "sizeBytes": 209064
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-hunter-d3cb381b50b38846.webp",
+      "sha256": "d3cb381b50b38846102c6a5948a803da5ccf83ef18ee0d2778124f314cba2eae",
+      "sizeBytes": 199220
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-julienne-e96e11836c1f7693.webp",
+      "sha256": "e96e11836c1f7693eb557441adbf25ce638b5d20208219de74bb039ea8354bc6",
+      "sizeBytes": 175124
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-margherita-5631ca238a882b7b.webp",
+      "sha256": "5631ca238a882b7b9171885060e88f2e60e1e056236bacdd430bcfced3f6b2b4",
+      "sizeBytes": 196114
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-mushroom-c62268ed0c9c75d4.webp",
+      "sha256": "c62268ed0c9c75d40e225ef1c753ce1d761152c347574490106c24e51c16d284",
+      "sizeBytes": 216924
+    },
+    {
+      "path": "assets/menu/photography-v1/pizza-pepperoni-d459e3ea7b1d7a2f.webp",
+      "sha256": "d459e3ea7b1d7a2febb0a2af319c45f5972149a1674ab3d352764824b0036f1d",
+      "sizeBytes": 213674
+    },
+    {
+      "path": "assets/menu/photography-v1/sake-maki-8170d304e0776d61.webp",
+      "sha256": "8170d304e0776d61239e882a19c05fb80619ec8323c163446520bff0c5ff6ab4",
+      "sizeBytes": 101150
+    },
+    {
+      "path": "assets/menu/photography-v1/village-potato-62a24a78cb95e50f.webp",
+      "sha256": "62a24a78cb95e50f4d79a7af8f2164686d6808a65b024e2220ded9c5082df3b5",
+      "sizeBytes": 162500
+    },
+    {
+      "path": "assets/menu/pizza-pepperoni.webp",
+      "sha256": "b25dc7c8bd5647e9d156a3eec11988e6d424302ced362eb0752fd2df7aa2a344",
+      "sizeBytes": 210556
+    },
+    {
+      "path": "assets/menu/sake-maki.webp",
+      "sha256": "b4421889b563703f9b605c28ae6d558e848f18c3e1c0b7bc541ea99ac0f7505f",
+      "sizeBytes": 128940
+    },
+    {
+      "path": "assets/menu/village-potato.webp",
+      "sha256": "3845301a8ad9296d27689ad3c9589cfc8283a3df502c266ab27a42ab1bac6eed",
+      "sizeBytes": 244898
+    },
+    {
+      "path": "fonts/inter-cyrillic.woff2",
+      "sha256": "71d5ee93cc1e9f1d520a3a8b66456de18c7879d8df09d57fcd2eaff75fef0075",
+      "sizeBytes": 18748
+    },
+    {
+      "path": "fonts/inter-latin.woff2",
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+      "sizeBytes": 48256
+    },
+    {
+      "path": "fonts/montserrat-cyrillic.woff2",
+      "sha256": "a187b077090fe8ae3fd2d7496aabbeae604819c718a282e0afc92df72b450766",
+      "sizeBytes": 23828
+    },
+    {
+      "path": "fonts/montserrat-latin.woff2",
+      "sha256": "06b16db7a969135d48d38c49183be7fb88d4452e2a3011957c7851941f4e4879",
+      "sizeBytes": 37956
+    },
+    {
+      "path": "fonts/oswald-cyrillic.woff2",
+      "sha256": "92867238f947d9b25b2d22c0ef38916e10824f5482f6ba078190738e392c1246",
+      "sizeBytes": 6752
+    },
+    {
+      "path": "fonts/oswald-latin.woff2",
+      "sha256": "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16",
+      "sizeBytes": 12672
+    },
+    {
+      "path": "assets/menu/photography-v2/pizza-meat-ebce456faa1c6121.webp",
+      "sha256": "ebce456faa1c6121173dd76849f91b16712180bf81e3f8f3d578b6236446bb8d",
+      "sizeBytes": 260354
+    },
+    {
+      "path": "assets/menu/photography-v2/pizza-sicilian-3a1fa7e81b75b342.webp",
+      "sha256": "3a1fa7e81b75b3428f847d80c495a8691f3d3baf3e4926bddad5859ea28b8667",
+      "sizeBytes": 275986
+    }
+  ]
+}

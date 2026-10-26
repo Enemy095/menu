@@ -103,7 +103,7 @@ if ($recipientDetails.ok -and $recipientDetails.result.type -eq "private") {
 
 $testPayload = @{
     chat_id = $env:TELEGRAM_CHAT_ID
-    text = "✅ Бот «Вам пицца» подключён. Новые заказы будут приходить в этот чат."
+    text = "✅ Бот «В.А.М. Пицца» подключён. Новые заказы будут приходить в этот чат."
 } | ConvertTo-Json -Compress
 try {
     $testResult = Invoke-RestMethod `

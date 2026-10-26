@@ -3458,3 +3458,25 @@ body {
   }
   .site-header__nav a { min-height: 32px; display: inline-flex; align-items: center; font-size: 14px; }
 }
+
+/* Keep the hero photograph behind its copy between phone and desktop layouts. */
+@media (min-width: 560px) and (max-width: 1023px) {
+  .hero__grid:has(.hero__media) { display: block; min-height: 306px; }
+  .hero__content { width: 65%; max-width: 570px; min-height: 306px; }
+  .hero__media {
+    position: absolute;
+    inset: 0 0 0 20%;
+    width: auto;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    aspect-ratio: auto;
+  }
+  .hero__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 67% 50%;
+    mask-image: linear-gradient(to right, transparent, #000 35%);
+  }
+}

@@ -2,7 +2,7 @@
 
 This is the Git-distributed starting content for the single-client local Docker
 deployment. `start-docker.cmd` loads the frozen **v1** snapshot into a fresh database,
-then applies **v2** branding, **v3** pickup-address and **v4** fulfillment updates automatically.
+then applies **v2–v5** content releases automatically, including the current owner-approved menu.
 Existing databases receive only pending content releases, once each.
 No separate import command is needed on a new Windows machine.
 
@@ -22,7 +22,10 @@ No separate import command is needed on a new Windows machine.
 | `v3/manifest.json`, `v3/checksums.sha256` | Frozen pickup release inventory and integrity checks |
 | `v3/public-config.json`, `v3/public-menu.json` | Frozen v3 expected public API responses |
 | `v4/update.sql` | Delivery and pickup only; preorder disabled |
-| `v4/manifest.json`, `v4/checksums.sha256`, `v4/public-*.json` | Current asset inventory, integrity checks and expected API responses |
+| `v4/manifest.json`, `v4/checksums.sha256`, `v4/public-*.json` | Frozen delivery/pickup release |
+| `v5/menu-source.json` | Exact transcription of the owner's printed menu: 19 positions/prices |
+| `v5/update.sql` | Publishes menu version 2 and “В.А.М. Пицца” branding once |
+| `v5/manifest.json`, `v5/checksums.sha256`, `v5/public-*.json` | Current asset inventory, integrity checks and expected API responses |
 | `bootstrap.sh`, `is-empty.sql`, `apply.sql` | Local initialization, empty-database guard and transaction |
 
 The snapshot was exported from the existing application on 2026-10-26. It preserves
@@ -63,8 +66,13 @@ notification setup must be configured separately on another machine.
    latitude/longitude and geo-location feature. No orders, prices or closures change.
 8. The transaction applies `vam-pizza-order-types-v4` once: delivery becomes the
    default, pickup remains available, preorder is disabled for both UI and API.
-9. The frontend starts after successful bootstrap completion. Its 23 approved dish
-   photographs are versioned files in `apps/web/public/assets/menu/photography-v1`.
+9. The transaction applies `vam-pizza-menu-v5` once: archives menu version 1,
+   publishes version 2 with exactly 19 positions/prices and changes branding to
+   “В.А.М. Пицца”. Old menu/item rows remain for order references. If a different
+   menu was manually published, initialization stops for review instead of overwriting it.
+10. The frontend starts after successful bootstrap completion. The current menu
+    uses 17 existing photos and two new pizza photos in `photography-v2`.
+    Older immutable assets remain available for pinned snapshots.
 
 An interrupted upload can be retried. A failed SQL apply rolls back all rows. A
 concurrent second initializer skips after the first transaction commits. Re-running
@@ -84,7 +92,7 @@ With the local application and MinIO running, export a **new** version from the
 repository root:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/export-local-bootstrap.ps1 -Version v5
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/export-local-bootstrap.ps1 -Version v6
 ```
 
 The exporter refuses to overwrite an existing version. It uses the explicit table

@@ -72,6 +72,8 @@ Pickup location: [APP-LOCAL-007](APP-LOCAL-007.md) shares the configured address
 Yandex Maps preview between contacts and pickup checkout, with a v3 content release.
 Checkout configuration: [APP-LOCAL-008](APP-LOCAL-008.md) disables preorder and keeps
 delivery and pickup, including existing-installation upgrades.
+Printed-menu parity: [APP-LOCAL-009](APP-LOCAL-009.md) publishes the owner's 19 dishes,
+two new pizza photos, corrected prices and “В.А.М. Пицца” branding.
 
 Каждый task-файл обязан содержать:
 

@@ -96,7 +96,7 @@ volumes:
     }
     if ($model.name -ne $project) { throw "Unsafe test project name." }
     $cleanupAllowed = $true
-    $manifest = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v4/manifest.json") -Raw | ConvertFrom-Json
+    $manifest = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v5/manifest.json") -Raw | ConvertFrom-Json
     $queryPrefix = @("exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", $model.services.postgres.environment.POSTGRES_USER,
         "-d", $model.services.postgres.environment.POSTGRES_DB, "-At", "-c")
     Invoke-TestCompose -Arguments @("up", "--no-build", "--detach", "--wait", "--wait-timeout", "180", "api")
@@ -123,7 +123,8 @@ volumes:
     Invoke-TestCompose -Arguments @("up", "--no-build", "--detach", "--wait", "--wait-timeout", "180")
 
     $menu = Invoke-RestMethod -Uri "http://localhost:$apiPort/api/v1/public/menu"
-    if ($menu.items.Count -ne $manifest.tables.menu_items -or $menu.categories.Count -ne $manifest.tables.menu_categories) {
+    $expectedMenu = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v5/public-menu.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($menu.items.Count -ne $expectedMenu.items.Count -or $menu.categories.Count -ne $expectedMenu.categories.Count) {
         throw "Seeded public menu counts differ from the snapshot."
     }
     $web = Invoke-WebRequest -Uri "http://localhost:$webPort/" -UseBasicParsing
@@ -131,7 +132,7 @@ volumes:
     foreach ($resource in @("config", "menu")) {
         $response = Invoke-WebRequest -Uri "http://localhost:$apiPort/api/v1/public/$resource" -UseBasicParsing
         $actual = [Text.Encoding]::UTF8.GetString($response.RawContentStream.ToArray()).Replace("http://localhost:$assetPort/menu-assets-local", "{{ASSET_BASE_URL}}")
-        $expected = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v4/public-$resource.json") -Raw -Encoding UTF8
+        $expected = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v5/public-$resource.json") -Raw -Encoding UTF8
         if ($actual.Trim() -ne $expected.Trim()) { throw "Fresh public $resource differs from the exported source response." }
     }
 
@@ -159,8 +160,8 @@ volumes:
     # A local edit must survive subsequent startup. This touches only the disposable database.
     Invoke-TestCompose -Arguments ($queryPrefix + @("UPDATE menu_items SET price_minor = price_minor + 1"))
     $totalBefore = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT sum(price_minor) FROM menu_items"))
-    # Simulate a developer updating the old branded installation with existing edits.
-    Invoke-TestCompose -Arguments ($queryPrefix + @("DELETE FROM site_content_releases WHERE release_id = 'vam-pizza-v2'; UPDATE site_branding SET display_name = 'Old local name'; INSERT INTO restaurant_closed_dates(closed_date) VALUES (CURRENT_DATE + 1) ON CONFLICT DO NOTHING"))
+    # Replay after edits; older branding releases must not be deliberately reapplied over v5.
+    Invoke-TestCompose -Arguments ($queryPrefix + @("INSERT INTO restaurant_closed_dates(closed_date) VALUES (CURRENT_DATE + 1) ON CONFLICT DO NOTHING"))
     Invoke-TestCompose -Arguments ($queryPrefix + @("DELETE FROM site_content_releases WHERE release_id = 'vam-pizza-pickup-v3'; UPDATE site_profile SET address_text = NULL, latitude = NULL, longitude = NULL; UPDATE site_features SET enabled = false WHERE feature_key = 'geo_location'"))
     Invoke-TestCompose -Arguments ($queryPrefix + @("DELETE FROM site_content_releases WHERE release_id = 'vam-pizza-order-types-v4'; UPDATE site_features SET enabled = true, config = jsonb_set(config, '{default}', to_jsonb(feature_key = 'preorder'), true) WHERE feature_key IN ('preorder', 'delivery', 'pickup')"))
     $replay = Invoke-TestCompose -Arguments @("run", "--rm", "--no-deps", "bootstrap")
@@ -168,7 +169,7 @@ volumes:
     $totalAfter = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT sum(price_minor) FROM menu_items"))
     if ("$totalBefore" -ne "$totalAfter") { throw "Bootstrap overwrote a local content edit." }
     $upgradedName = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT display_name FROM site_branding"))
-    $expectedConfiguration = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v4/public-config.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+    $expectedConfiguration = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v5/public-config.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     if ("$upgradedName" -ne $expectedConfiguration.branding.localizedTexts[0].shortName) { throw "Existing branding was not upgraded." }
     $calendarRows = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT count(*) FROM restaurant_closed_dates"))
     if ([int] "$calendarRows" -ne 1) { throw "Content upgrade overwrote operational calendar settings." }
@@ -176,6 +177,8 @@ volumes:
     if ([int] "$pickup" -ne 1) { throw "Pickup address release was not applied." }
     $orderTypes = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT count(*) FROM site_features WHERE (feature_key = 'preorder' AND NOT enabled AND config->>'default' = 'false') OR (feature_key = 'delivery' AND enabled AND config->>'default' = 'true') OR (feature_key = 'pickup' AND enabled AND config->>'default' = 'false')"))
     if ([int] "$orderTypes" -ne 3) { throw "Delivery/pickup release was not applied." }
+    $menuHistory = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT count(*) FROM menu_items i JOIN menu_versions v ON v.id = i.menu_version_id WHERE v.status = 'archived'"))
+    if ([int] "$menuHistory" -ne 23) { throw "Historical menu items were not preserved." }
     Write-Host "Bootstrap acceptance passed: fresh Flyway schema, complete content graph, matching images/fonts, no operational data, safe replay."
 } catch {
     if ($cleanupAllowed) { & docker @script:testCompose logs --tail 40 bootstrap }

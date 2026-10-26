@@ -23,6 +23,11 @@ class TelegramCalendarTests {
         var configuration=mock(SiteConfigurationSnapshot.class);
         when(site.current()).thenReturn(configuration);
         when(configuration.timezone()).thenReturn("Europe/Moscow");
+        var branding = mock(com.salamu.menu.site.api.Branding.class);
+        var text = mock(com.salamu.menu.site.api.LocalizedSiteText.class);
+        when(configuration.branding()).thenReturn(branding);
+        when(branding.localizedTexts()).thenReturn(List.of(text));
+        when(text.displayName()).thenReturn("В.А.М. Пицца");
         when(calendar.current(ZoneId.of("Europe/Moscow"))).thenReturn(new CalendarSnapshot(LocalDate.of(2026,10,26),List.of(),List.of()));
     }
     @Test void rejectsUnknownUsersAndGroupCallbacksWithoutAccessingBusinessData() {

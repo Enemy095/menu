@@ -17,6 +17,8 @@ type MenuBrowserProps = {
 };
 
 const GENERATED_DISH_IMAGES: Readonly<Record<string, string>> = {
+  "pizza-meat": "/assets/menu/photography-v2/pizza-meat-ebce456faa1c6121.webp",
+  "pizza-sicilian": "/assets/menu/photography-v2/pizza-sicilian-3a1fa7e81b75b342.webp",
   "cezar-roll-chicken": "/assets/menu/photography-v1/cezar-roll-chicken-7dc769982bdab850.webp",
   "cezar-roll-shrimp": "/assets/menu/photography-v1/cezar-roll-shrimp-7c50c0f0c6baae58.webp",
   "sake-maki": "/assets/menu/photography-v1/sake-maki-8170d304e0776d61.webp",
@@ -45,6 +47,7 @@ const GENERATED_DISH_IMAGES: Readonly<Record<string, string>> = {
 const SINGULAR_CATEGORY_NAMES: Readonly<Record<string, string>> = {
   "бургеры": "Бургер",
   "гарниры": "Гарнир",
+  "гарнир/закуски": "Закуска",
   "пицца": "Пицца",
   "роллы": "Ролл",
 };

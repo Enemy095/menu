@@ -30,7 +30,8 @@ final class TelegramCalendarUpdateHandler {
         // Telegram user ID is the authorization boundary, never a group/chat destination.
         if (!owners.ownerUserIds().contains(user) || chat != user
                 || !message.path("chat").path("type").asText("").equals("private")) return;
-        ZoneId zone = ZoneId.of(site.current().timezone());
+        var configuration = site.current();
+        ZoneId zone = ZoneId.of(configuration.timezone());
         var state = calendar.current(zone);
         if (!callback) {
             String command = event.path("text").asText("");
@@ -45,7 +46,7 @@ final class TelegramCalendarUpdateHandler {
                 String dates = state.closedDates().stream().map(dateFormat::format).collect(java.util.stream.Collectors.joining(", "));
                 bot.send(chat, "Еженедельно: " + (days.isBlank() ? "нет" : days) + "\nДаты: " + (dates.isBlank() ? "нет" : dates), TelegramCalendarKeyboard.menu());
             } else {
-                bot.send(chat, "Управление выходными «Вам пицца». Выберите действие.", TelegramCalendarKeyboard.menu());
+                bot.send(chat, "Управление выходными «" + configuration.branding().localizedTexts().getFirst().displayName() + "». Выберите действие.", TelegramCalendarKeyboard.menu());
             }
             return;
         }

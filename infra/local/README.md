@@ -273,6 +273,11 @@ when **Самовывоз** is selected. The v3 content release provisions the o
 address and coordinates once on existing and fresh local installations.
 The v4 content release leaves only **Доставка** (default) and **Самовывоз** in
 checkout. Preorder is disabled server-side as well; historical orders are retained.
+The v5 release publishes the owner's 19-position printed menu with corrected names
+and prices, two new pizza photos, and “В.А.М. Пицца” branding. It archives the old
+menu without deleting rows referenced by orders. Repeating startup does not replace
+subsequent local edits. If a custom menu has already been published, v5 stops for
+review instead of silently replacing it.
 
 Only configured user IDs in their own private chat can change the calendar; a group
 notification destination does not grant access. The public HTTP endpoint is read-only.

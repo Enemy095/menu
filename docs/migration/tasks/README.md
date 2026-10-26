@@ -1,5 +1,8 @@
 # Agent task registry
 
+Public sharing: [APP-LOCAL-012](APP-LOCAL-012-ngrok.md) adds manual Windows ngrok
+start/stop launchers and published-image proxying for external visitors.
+
 Статусы: `planned`, `ready`, `in_progress`, `review`, `done`, `blocked`, `superseded`.
 
 | ID | Задача | Dependencies | Wave | Status |

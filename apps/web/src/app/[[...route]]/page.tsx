@@ -32,11 +32,16 @@ export async function generateMetadata({ params }: RootRouteProps): Promise<Meta
   try {
     const configuration = await getPublicConfiguration();
     const image = configuration.seo.openGraphImageUrl;
+    const deploymentUrl = process.env.PUBLIC_BASE_URL;
+    const canonical = deploymentUrl ? new URL(deploymentUrl) : new URL(configuration.seo.canonicalUrl);
+    if (!["http:", "https:"].includes(canonical.protocol) || canonical.username || canonical.password) {
+      throw new Error("Invalid deployment URL");
+    }
 
     return {
       title: configuration.seo.title,
       description: configuration.seo.description,
-      alternates: { canonical: configuration.seo.canonicalUrl },
+      alternates: { canonical: canonical.href },
       icons: configuration.branding.faviconUrl
         ? { icon: configuration.branding.faviconUrl }
         : undefined,
@@ -44,7 +49,7 @@ export async function generateMetadata({ params }: RootRouteProps): Promise<Meta
         type: "website",
         title: configuration.seo.title,
         description: configuration.seo.description,
-        url: configuration.seo.canonicalUrl,
+        url: canonical.href,
         images: image ? [{ url: image }] : undefined,
       },
       robots: { index: true, follow: true },

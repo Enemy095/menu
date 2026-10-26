@@ -54,6 +54,8 @@ services:
       dockerfile: infra/docker/web.Dockerfile
     environment:
       MENU_API_BASE_URL: http://api:8080
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      ASSET_PROXY_BASE_URL: http://minio:9000/${MINIO_BUCKET:-menu-assets-local}
     ports:
       - "127.0.0.1:${WEB_PORT:-3000}:3000"
     depends_on:
@@ -63,6 +65,7 @@ services:
         condition: service_completed_successfully
     networks:
       - backend
+      - assets
     healthcheck:
       # The app intentionally returns 404 before site configuration is published.
       # Liveness must not mistake an unprovisioned database for a crashed server.

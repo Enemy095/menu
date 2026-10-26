@@ -4,7 +4,8 @@ param(
     [int] $DockerTimeoutSeconds = 180,
     [ValidateRange(30, 1800)]
     [int] $WaitTimeoutSeconds = 180,
-    [switch] $Observability
+    [switch] $Observability,
+    [switch] $PublicTunnel
 )
 
 Set-StrictMode -Version Latest
@@ -91,6 +92,11 @@ try {
     if (Test-Path -LiteralPath $telegramFile) {
         $compose += @("--env-file", $telegramFile)
         Write-Host "Using existing local Telegram configuration."
+    }
+    if ($PublicTunnel) {
+        $publicFile = Join-Path $root ".env.ngrok.local"
+        if (-not (Test-Path -LiteralPath $publicFile)) { throw "Run start-ngrok.cmd to configure the public tunnel first." }
+        $compose += @("--env-file", $publicFile)
     }
     $compose += @("--profile", "assets", "--profile", "app")
     if ($Observability) { $compose += @("--profile", "observability") }

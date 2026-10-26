@@ -26,6 +26,7 @@ import Page, { generateMetadata, generateStaticParams, revalidate } from "./page
 const rootParams = Promise.resolve({});
 
 beforeEach(() => {
+  vi.stubEnv("PUBLIC_BASE_URL", "");
   apiMocks.getPublicConfiguration.mockResolvedValue(configurationFixture());
   apiMocks.getPublicPageData.mockResolvedValue({
     configuration: configurationFixture(),
@@ -69,5 +70,12 @@ describe("public route", () => {
     const metadata = await generateMetadata({ params: rootParams });
 
     expect(metadata.robots).toEqual({ index: false, follow: false });
+  });
+
+  it("uses the configured deployment URL for canonical and share metadata", async () => {
+    vi.stubEnv("PUBLIC_BASE_URL", "https://public.ngrok-free.app");
+    const metadata = await generateMetadata({ params: rootParams });
+    expect(metadata.alternates).toEqual({ canonical: "https://public.ngrok-free.app/" });
+    expect(metadata.openGraph).toMatchObject({ url: "https://public.ngrok-free.app/" });
   });
 });

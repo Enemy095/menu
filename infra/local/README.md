@@ -271,6 +271,8 @@ The contacts section also shows the configured pickup address and a clickable
 Yandex Maps preview. Checkout shows the same point below fulfillment choices only
 when **Самовывоз** is selected. The v3 content release provisions the owner-approved
 address and coordinates once on existing and fresh local installations.
+The v4 content release leaves only **Доставка** (default) and **Самовывоз** in
+checkout. Preorder is disabled server-side as well; historical orders are retained.
 
 Only configured user IDs in their own private chat can change the calendar; a group
 notification destination does not grant access. The public HTTP endpoint is read-only.

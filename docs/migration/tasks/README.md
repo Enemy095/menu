@@ -70,6 +70,8 @@ Presentation follow-up: [APP-LOCAL-006](APP-LOCAL-006.md) formats Telegram order
 messages and adds the synchronized public work calendar.
 Pickup location: [APP-LOCAL-007](APP-LOCAL-007.md) shares the configured address and
 Yandex Maps preview between contacts and pickup checkout, with a v3 content release.
+Checkout configuration: [APP-LOCAL-008](APP-LOCAL-008.md) disables preorder and keeps
+delivery and pickup, including existing-installation upgrades.
 
 Каждый task-файл обязан содержать:
 

@@ -18,4 +18,5 @@ SELECT pg_advisory_xact_lock(1835363957, 1);
 \endif
 \ir v2/update.sql
 \ir v3/update.sql
+\ir v4/update.sql
 COMMIT;

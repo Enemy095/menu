@@ -31,6 +31,8 @@ For this local workflow, the launcher disables default build provenance only for
 its build subprocess. This prevents timestamped attestations from changing an
 otherwise cached image and unnecessarily recreating containers. It restores the
 previous environment setting immediately after the build.
+This also avoids the newer Compose `build.provenance` field, which is rejected
+by Compose 2.35.1 shipped with some Docker Desktop installations.
 
 The stack contains Next.js, the Spring Boot API/notification worker, PostgreSQL,
 MinIO and its bucket initializer. It waits for the database, bucket initialization,

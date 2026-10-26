@@ -100,8 +100,8 @@ try {
 
     Write-Host "[3/4] Building images (unchanged layers use Docker cache)..."
     # Build first: a compilation failure leaves the existing application running.
-    # Some Compose/containerd versions ignore build.provenance=false. Default
-    # attestations add timestamps and change image identity on every cached build.
+    # Use the Buildx environment control for compatibility with Compose 2.35.
+    # Default attestations change image identity on every cached build.
     $previousAttestations = [Environment]::GetEnvironmentVariable("BUILDX_NO_DEFAULT_ATTESTATIONS", "Process")
     try {
         $env:BUILDX_NO_DEFAULT_ATTESTATIONS = "1"

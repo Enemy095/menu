@@ -6,8 +6,6 @@ services:
     build:
       context: .
       dockerfile: infra/docker/api.Dockerfile
-      # Local image identity must stay stable on a fully cached rebuild.
-      provenance: false
     environment:
       SPRING_PROFILES_ACTIVE: local
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-emenu}
@@ -52,7 +50,6 @@ services:
     build:
       context: .
       dockerfile: infra/docker/web.Dockerfile
-      provenance: false
     environment:
       MENU_API_BASE_URL: http://api:8080
     ports:
@@ -79,7 +76,6 @@ services:
     build:
       context: .
       dockerfile: infra/docker/bootstrap.Dockerfile
-      provenance: false
     environment:
       LOCAL_BOOTSTRAP_ENABLED: ${LOCAL_BOOTSTRAP_ENABLED:-true}
       PGHOST: postgres

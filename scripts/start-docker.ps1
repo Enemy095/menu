@@ -122,6 +122,35 @@ try {
     $configuration = & $script:docker @compose config --format json
     if ($LASTEXITCODE -ne 0) { throw "Could not read service ports." }
     $model = ($configuration -join "`n") | ConvertFrom-Json
+    $telegramSettings = $model.services.api.environment
+    if ([string]$telegramSettings.TELEGRAM_NOTIFICATIONS_ENABLED -eq "true") {
+        if ([string]::IsNullOrWhiteSpace([string]$telegramSettings.TELEGRAM_BOT_TOKEN) `
+                -or [string]::IsNullOrWhiteSpace([string]$telegramSettings.TELEGRAM_CHAT_ID)) {
+            throw "Telegram notifications are enabled but TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing."
+        }
+        $destinationReference = [string]$telegramSettings.TELEGRAM_DESTINATION_SECRET_REFERENCE
+        if ($destinationReference -notmatch '^secret://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+$') {
+            throw "TELEGRAM_DESTINATION_SECRET_REFERENCE is invalid."
+        }
+        # Credentials stay in container environment; only the logical reference enters SQL.
+        # A fresh content bootstrap intentionally contains no notification destinations.
+        $destinationSql = @"
+INSERT INTO notification_destinations (
+    id, channel, status, display_name, secret_reference, metadata, created_at, updated_at
+) VALUES (
+    gen_random_uuid(), 'telegram', 'active', 'restaurant-orders',
+    '$destinationReference', '{}'::jsonb, now(), now()
+)
+ON CONFLICT (channel, display_name) DO UPDATE
+   SET status = 'active', secret_reference = EXCLUDED.secret_reference, updated_at = now()
+ WHERE notification_destinations.status <> 'active'
+    OR notification_destinations.secret_reference <> EXCLUDED.secret_reference;
+"@
+        $destinationSql | & $script:docker @compose exec -T postgres `
+            sh -ec 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f -'
+        if ($LASTEXITCODE -ne 0) { throw "Telegram destination database provisioning failed." }
+        Write-Host "Telegram order destination registered in PostgreSQL."
+    }
     $webPort = $model.services.web.ports[0].published
     $apiPort = $model.services.api.ports[0].published
     Write-Host ""

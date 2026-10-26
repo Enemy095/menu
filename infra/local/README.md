@@ -226,6 +226,14 @@ volumes; deleting them is unnecessary for this update.
 
 ## Owner calendar in Telegram
 
+With `TELEGRAM_NOTIFICATIONS_ENABLED=true` and token/chat ID configured, the Windows
+launcher also registers the Telegram order destination in PostgreSQL automatically.
+This step is required even when the local credentials file has been copied from
+another machine: notification destinations are intentionally excluded from the
+public content snapshot. Registration is idempotent and sends no test messages.
+After updating an older installation, rerun the launcher before placing a new order.
+Previously failed outbox events are not automatically resent.
+
 Configure the existing bot token in ignored `.env.telegram.local`, together with:
 
 ```dotenv

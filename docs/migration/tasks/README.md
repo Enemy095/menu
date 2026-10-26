@@ -60,6 +60,8 @@ acceptance остаётся заблокирована до завершения
 
 Local application release: [APP-LOCAL-002](APP-LOCAL-002.md) records approved dish
 photography, “Вам пицца” branding, Telegram owner calendar and the v2 content upgrade.
+Follow-up: [APP-LOCAL-003](APP-LOCAL-003.md) provisions the Telegram destination when
+starting an installation with a copied credentials file.
 
 Каждый task-файл обязан содержать:
 

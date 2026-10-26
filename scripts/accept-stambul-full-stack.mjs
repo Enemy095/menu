@@ -13,8 +13,8 @@ const webBuildId = path.join(repositoryRoot, "apps", "web", ".next", "BUILD_ID")
 const approvedBundle = path.join(repositoryRoot, "docs", "migration", "data", "stambul-approved-v1.json");
 const expectedNormalized = path.join(repositoryRoot, "docs", "fixtures", "stambul", "expected-normalized-v1.json");
 const postgresImage = "postgres:17.5-alpine3.21";
-const minioImage = "minio/minio:RELEASE.2025-04-22T22-12-26Z";
-const minioClientImage = "minio/mc:RELEASE.2025-04-16T18-13-26Z";
+const minioImage = "emenu/minio-server:RELEASE.2025-04-22T22-12-26Z-local";
+const minioClientImage = "emenu/minio-client:RELEASE.2025-04-16T18-13-26Z-local";
 const runId = randomUUID();
 const runLabel = "com.salamu.validation.acceptance-run-id";
 const shortRunId = runId.slice(0, 8);
@@ -172,6 +172,14 @@ function assertApprovedBundle(bundle, expected) {
 }
 
 function prepareBuilds() {
+  for (const [target, image] of [["server", minioImage], ["client", minioClientImage]]) {
+    runChecked(
+      "docker",
+      ["build", "--file", "infra/docker/object-storage.Dockerfile", "--target", target, "--tag", image, "."],
+      `Pinned object-storage ${target} build`,
+      { timeoutMilliseconds: 240_000, env: { ...process.env, BUILDX_NO_DEFAULT_ATTESTATIONS: "1" } },
+    );
+  }
   runChecked(
     "node",
     ["--test", "docs/fixtures/stambul/verify-expected-normalized-v1.mjs"],

@@ -19,6 +19,15 @@ Install Docker Desktop with the WSL 2 backend and Linux containers once. Accept
 Docker Desktop's initial setup before the first run. Host Java, Node.js, pnpm and
 Gradle installations are not needed: both application builds run inside Docker.
 The first build requires internet access to download images and dependencies.
+MinIO server/client images are built locally from the same pinned official release
+binaries downloaded from GitHub Releases with hard-coded SHA-256 checks. Startup
+does not require access to the unavailable MinIO Docker Hub repositories. Existing
+MinIO volumes and release versions are preserved.
+The binary sources are the official
+[MinIO server release](https://github.com/minio/minio/releases/tag/RELEASE.2025-04-22T22-12-26Z)
+and [MinIO client release](https://github.com/minio/mc/releases/tag/RELEASE.2025-04-16T18-13-26Z).
+For infrastructure-only setup, build `minio` and `minio-init` with the assets
+profile before running them. The Windows launcher performs this automatically.
 
 The launcher starts Docker Desktop if its engine is unavailable, waits up to
 180 seconds, creates `.env` from `.env.example` only when missing, validates
@@ -157,7 +166,7 @@ Start MinIO and run the idempotent bucket initializer:
 
 ```powershell
 docker compose --profile assets config
-docker compose --profile assets up -d minio
+docker compose --profile assets up -d --build minio minio-init
 docker compose --profile assets run --rm minio-init
 docker compose --profile assets ps
 ```

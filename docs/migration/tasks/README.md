@@ -74,6 +74,8 @@ Checkout configuration: [APP-LOCAL-008](APP-LOCAL-008.md) disables preorder and 
 delivery and pickup, including existing-installation upgrades.
 Printed-menu parity: [APP-LOCAL-009](APP-LOCAL-009.md) publishes the owner's 19 dishes,
 two new pizza photos, corrected prices and “В.А.М. Пицца” branding.
+Visual/navigation follow-up: [APP-LOCAL-010](APP-LOCAL-010.md) revises roll photos
+from delivery references and makes the active header section track navigation.
 
 Каждый task-файл обязан содержать:
 

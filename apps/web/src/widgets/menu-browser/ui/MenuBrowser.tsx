@@ -19,9 +19,9 @@ type MenuBrowserProps = {
 const GENERATED_DISH_IMAGES: Readonly<Record<string, string>> = {
   "pizza-meat": "/assets/menu/photography-v2/pizza-meat-ebce456faa1c6121.webp",
   "pizza-sicilian": "/assets/menu/photography-v2/pizza-sicilian-3a1fa7e81b75b342.webp",
-  "cezar-roll-chicken": "/assets/menu/photography-v1/cezar-roll-chicken-7dc769982bdab850.webp",
-  "cezar-roll-shrimp": "/assets/menu/photography-v1/cezar-roll-shrimp-7c50c0f0c6baae58.webp",
-  "sake-maki": "/assets/menu/photography-v1/sake-maki-8170d304e0776d61.webp",
+  "cezar-roll-chicken": "/assets/menu/photography-v3/cezar-roll-chicken-c13b8a77a78292dc.webp",
+  "cezar-roll-shrimp": "/assets/menu/photography-v3/cezar-roll-shrimp-aed6db4f363a137b.webp",
+  "sake-maki": "/assets/menu/photography-v3/sake-maki-3ed04d43f38bce5b.webp",
   "hot-roll-salmon": "/assets/menu/photography-v1/hot-roll-salmon-123388ade11f92fd.webp",
   "cheese-baked-roll": "/assets/menu/photography-v1/cheese-baked-roll-3b0eb66a0be29d8a.webp",
   "bonito-roll": "/assets/menu/photography-v1/bonito-roll-5a33298cfcc3f459.webp",

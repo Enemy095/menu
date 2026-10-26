@@ -278,6 +278,8 @@ and prices, two new pizza photos, and “В.А.М. Пицца” branding. It ar
 menu without deleting rows referenced by orders. Repeating startup does not replace
 subsequent local edits. If a custom menu has already been published, v5 stops for
 review instead of silently replacing it.
+The v6 release refines three roll descriptions and photographs from delivery-menu
+references, preserving all printed names/prices and earlier menu/order rows.
 
 Only configured user IDs in their own private chat can change the calendar; a group
 notification destination does not grant access. The public HTTP endpoint is read-only.

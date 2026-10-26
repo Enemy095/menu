@@ -1,6 +1,7 @@
 import type { Branding, LocalizedSiteText, PublicProfile, SiteFeatures } from "@e-menu/api-contract/generated";
 
 import { CartHeaderButton } from "@/features/cart/ui/CartHeaderButton";
+import { SiteNavigation } from "./SiteNavigation";
 
 type SiteHeaderProps = {
   branding: Branding;
@@ -27,11 +28,7 @@ export function SiteHeader({ branding, text, profile, features, showCartButton =
           <span className="site-header__type">{text.businessTypeLabel}</span>
           <span className="site-header__name">{text.shortName}</span>
         </div>
-        <nav className="site-header__nav" aria-label="Основная навигация">
-          <a href="#menu">Меню</a>
-          <a href="#contacts">Контакты</a>
-          <a href="#work-schedule">График работы</a>
-        </nav>
+        <SiteNavigation />
         {features.contacts ? (
           <a className="site-header__phone" href={phoneHref}>
             <svg aria-hidden="true" viewBox="0 0 24 24">

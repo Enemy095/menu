@@ -1,18 +1,28 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BusinessCalendarBanner } from "./BusinessCalendarBanner";
 
 afterEach(() => vi.unstubAllGlobals());
 describe("BusinessCalendarBanner", () => {
-  it("uses the server's business date and announces weekly and dated days off", async () => {
+  it("announces today's closure without listing future dates or weekly days", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
       businessDate: "2026-10-28", timezone: "Europe/Moscow", closedToday: true,
       weeklyClosedDays: [3], closedDates: ["2026-11-04"],
     })));
     render(<BusinessCalendarBanner />);
     expect(await screen.findByText("Сегодня выходной")).toBeInTheDocument();
-    expect(screen.getByText(/Еженедельно выходной: среда/)).toBeInTheDocument();
-    expect(screen.getByText(/4 ноября/)).toBeInTheDocument();
+    expect(screen.queryByText(/Еженедельно/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/ноября/)).not.toBeInTheDocument();
+  });
+  it("stays hidden on an open day even with planned dates and weekly closures", async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({
+      businessDate: "2026-10-26", timezone: "Europe/Moscow", closedToday: false,
+      weeklyClosedDays: [3], closedDates: ["2026-10-28"],
+    }));
+    vi.stubGlobal("fetch", fetch);
+    await act(async () => { render(<BusinessCalendarBanner />); });
+    expect(fetch).toHaveBeenCalled();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
   it("does not invent a closed-day announcement from an invalid external response", async () => {
     const fetch = vi.fn().mockResolvedValue(Response.json({ closedToday: true }));

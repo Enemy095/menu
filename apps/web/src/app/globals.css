@@ -1036,6 +1036,33 @@ h2 {
   min-width: 0;
 }
 
+.business-calendar {
+  margin: 24px 0;
+  padding: 20px clamp(18px, 3vw, 28px);
+  border: 1px solid #a98539;
+  border-left: 4px solid #f6c833;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #302718, #211d15);
+  color: #fff2d6;
+  box-shadow: 0 8px 24px #00000024;
+  overflow-wrap: anywhere;
+}
+
+.business-calendar strong {
+  display: block;
+  font: 700 20px/1.35 Arial, sans-serif;
+}
+
+.business-calendar p {
+  margin: 6px 0 0;
+  color: #dfd5bd;
+  font: 14px/1.6 Arial, sans-serif;
+}
+
+@media (max-width: 559px) {
+  .business-calendar { margin-inline: 16px; }
+}
+
 .content-column > .shell {
   width: 100%;
 }
@@ -3231,7 +3258,9 @@ body {
   }
 
   .hero .button {
-    display: none;
+    display: inline-flex;
+    position: relative;
+    z-index: 2;
   }
 
   .hero__media {

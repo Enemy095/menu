@@ -33,13 +33,15 @@ function BenefitIcon({ icon }: { icon: string }) {
 }
 
 export function Hero({ hero, text }: HeroProps) {
-  const benefits = hero.benefits?.length
+  const configuredBenefits = hero.benefits?.length
     ? hero.benefits
     : [
         { icon: "flame", text: "Горячая еда" },
         { icon: "clock", text: "От 40 минут" },
-        { icon: "truck", text: "Доставка от 1000 ₽ бесплатно" },
       ];
+  const benefits = configuredBenefits.filter((benefit) =>
+    !(benefit.icon === "truck" || /доставк/iu.test(benefit.text)) || !/1[\s\u00a0]*000/iu.test(benefit.text),
+  );
 
   return (
     <section className="hero" aria-labelledby="hero-title">

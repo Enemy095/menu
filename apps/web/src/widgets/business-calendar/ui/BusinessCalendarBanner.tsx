@@ -11,10 +11,6 @@ const availabilitySchema = z.object({
   closedDates: z.array(z.iso.date()).max(366),
 }).strict();
 type Availability = z.infer<typeof availabilitySchema>;
-const weekdays = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"];
-const formatDate = (date: string) => new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric", month: "long", weekday: "short", timeZone: "UTC",
-}).format(new Date(`${date}T12:00:00Z`));
 
 export function BusinessCalendarBanner() {
   const [availability, setAvailability] = useState<Availability | null>(null);
@@ -37,14 +33,11 @@ export function BusinessCalendarBanner() {
     window.addEventListener("focus", onFocus);
     return () => { disposed = true; controller?.abort(); window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
   }, []);
-  if (!availability) return null;
-  const future = availability.closedDates.filter(date => date >= availability.businessDate);
-  if (!availability.closedToday && !availability.weeklyClosedDays.length && !future.length) return null;
+  if (!availability?.closedToday) return null;
   return (
-    <aside className="business-calendar shell" aria-label="Выходные дни" aria-live="polite">
-      {availability.closedToday ? <strong>Сегодня выходной</strong> : <strong>Обратите внимание на выходные дни</strong>}
-      {availability.weeklyClosedDays.length ? <p>Еженедельно выходной: {availability.weeklyClosedDays.map(day => weekdays[day - 1]).join(", ")}.</p> : null}
-      {future.length ? <p>Выходные даты: {future.map(formatDate).join("; ")}.</p> : null}
+    <aside className="business-calendar" aria-label="Сегодня выходной" aria-live="polite">
+      <strong>Сегодня выходной</strong>
+      <p>Ждём вас в следующий рабочий день.</p>
     </aside>
   );
 }

@@ -250,8 +250,9 @@ The configured owner receives these controls:
 - **Дни недели** toggles recurring days, such as every Wednesday.
 - **Предстоящие выходные** lists the saved selection.
 
-The website displays “Сегодня выходной” on closed days and lists planned dates and
-recurring days. The date is calculated in the configured business timezone. An open
+The website displays a framed “Сегодня выходной” notice only when today is closed.
+Future dates and recurring rules remain visible in the owner's bot controls, without
+a public announcement on open days. The date uses the configured business timezone. An open
 page refreshes the information every 30 seconds and when it regains focus. These
 controls publish availability notices; they do not change checkout rules or cancel
 orders. Calendar choices persist in PostgreSQL across updates and restarts.

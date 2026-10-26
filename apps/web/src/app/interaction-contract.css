@@ -6,19 +6,6 @@
  * shared mobile/tablet cart. Decorative component rules belong in globals.css.
  */
 
-.business-calendar {
-  margin-top: 22px;
-  margin-bottom: 18px;
-  padding-block: 16px;
-  border-block: 1px solid #e7b85e;
-  color: #fff2d6;
-  background: #332916;
-  border-radius: 10px;
-  overflow-wrap: anywhere;
-}
-.business-calendar strong { display: block; font-size: 19px; }
-.business-calendar p { margin: 7px 0 0; line-height: 1.6; }
-
 html {
   overflow-x: hidden;
   overflow-x: clip;

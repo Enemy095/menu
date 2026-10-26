@@ -11,8 +11,10 @@ describe("PublicMenuPage", () => {
     render(<PublicMenuPage configuration={configurationFixture()} menu={menuFixture()} />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: /— меню$/u }),
+      screen.getByRole("heading", { level: 1, name: /Вкусная еда.*Быстрая доставка/u }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Смотреть меню" })).toHaveAttribute("href", "#menu");
+    expect(screen.queryByText(/Доставка от 1000/u)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Популярное" })).toBeInTheDocument();
     expect(screen.getByText("Ежедневно 10:00–22:00")).toBeInTheDocument();
     expect(screen.getByText(/490,00\s₽/u)).toBeInTheDocument();

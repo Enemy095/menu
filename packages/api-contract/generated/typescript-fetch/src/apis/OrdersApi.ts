@@ -51,7 +51,7 @@ export interface OrdersApiInterface {
     createPublicOrderRequestOpts(requestParameters: CreatePublicOrderRequest): Promise<runtime.RequestOpts>;
 
     /**
-     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config. New orders are rejected with RESTAURANT_CLOSED (409) on a closed business date, including weekly closures. Identical replays still return the original order.
      * @summary Create an order
      * @param {string} idempotencyKey Client-generated UUID reused only when retrying the same canonical order payload.
      * @param {CreateOrderRequest} createOrderRequest
@@ -62,7 +62,7 @@ export interface OrdersApiInterface {
     createPublicOrderRaw(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateOrderResponse>>;
 
     /**
-     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config. New orders are rejected with RESTAURANT_CLOSED (409) on a closed business date, including weekly closures. Identical replays still return the original order.
      * Create an order
      */
     createPublicOrder(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateOrderResponse>;
@@ -115,7 +115,7 @@ export class OrdersApi extends runtime.BaseAPI implements OrdersApiInterface {
     }
 
     /**
-     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config. New orders are rejected with RESTAURANT_CLOSED (409) on a closed business date, including weekly closures. Identical replays still return the original order.
      * Create an order
      */
     async createPublicOrderRaw(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateOrderResponse>> {
@@ -126,7 +126,7 @@ export class OrdersApi extends runtime.BaseAPI implements OrdersApiInterface {
     }
 
     /**
-     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config.
+     * Creates one order per idempotency key. The backend validates the current menu, selected modifiers, item availability, quantities and fulfillment rules. It calculates all prices and resolves external destinations from server-side config. New orders are rejected with RESTAURANT_CLOSED (409) on a closed business date, including weekly closures. Identical replays still return the original order.
      * Create an order
      */
     async createPublicOrder(requestParameters: CreatePublicOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateOrderResponse> {

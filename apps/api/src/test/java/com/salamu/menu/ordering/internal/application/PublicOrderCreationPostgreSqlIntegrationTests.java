@@ -88,6 +88,22 @@ class PublicOrderCreationPostgreSqlIntegrationTests {
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
+    @Test void closedDayCreatesNeitherOrderNorNotificationAndExistingReplayStillWorks() {
+        var command = command(1);
+        when(preparation.prepare(command)).thenThrow(OrderApiException.restaurantClosed());
+        String key = "10000000-0000-4000-8000-000000000099";
+        assertThatThrownBy(() -> service.create(key, command))
+                .isInstanceOfSatisfying(OrderApiException.class,
+                        failure -> assertThat(failure.code()).isEqualTo(OrderApiException.Code.RESTAURANT_CLOSED));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders", Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM outbox_events", Integer.class)).isZero();
+        org.mockito.Mockito.doReturn(prepared(command)).when(preparation).prepare(command);
+        var created = service.create(key, command);
+        when(preparation.prepare(command)).thenThrow(OrderApiException.restaurantClosed());
+        assertThat(service.create(key, command).order().orderId()).isEqualTo(created.order().orderId());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM orders", Integer.class)).isEqualTo(1);
+    }
+
     @Test
     void persistsOrderSnapshotsHistoryAndOutboxInOneTransactionThenReplaysOriginalResult() {
         var command = command(2);

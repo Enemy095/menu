@@ -29,8 +29,8 @@ public class PublicAvailabilityController {
                 || days.contains(snapshot.businessDate().getDayOfWeek().getValue());
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(new Availability(snapshot.businessDate(), configuration.timezone(), closed,
-                        List.copyOf(days), snapshot.closedDates()));
+                        List.copyOf(days), snapshot.closedDates(), snapshot.nextOpenDate(days)));
     }
     public record Availability(LocalDate businessDate, String timezone, boolean closedToday,
-            List<Integer> weeklyClosedDays, List<LocalDate> closedDates) {}
+            List<Integer> weeklyClosedDays, List<LocalDate> closedDates, LocalDate nextOpenDate) {}
 }

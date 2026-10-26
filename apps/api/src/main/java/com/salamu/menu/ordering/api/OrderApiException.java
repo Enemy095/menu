@@ -22,6 +22,10 @@ public final class OrderApiException extends RuntimeException {
         return new OrderApiException(Code.MENU_CHANGED, List.of());
     }
 
+    public static OrderApiException restaurantClosed() {
+        return new OrderApiException(Code.RESTAURANT_CLOSED, List.of());
+    }
+
     public static OrderApiException itemUnavailable(String field) {
         return new OrderApiException(Code.ITEM_UNAVAILABLE, List.of(new Detail(field, "UNAVAILABLE")));
     }
@@ -51,6 +55,7 @@ public final class OrderApiException extends RuntimeException {
     public enum Code {
         VALIDATION_ERROR,
         MENU_CHANGED,
+        RESTAURANT_CLOSED,
         ITEM_UNAVAILABLE,
         MODIFIER_UNAVAILABLE,
         IDEMPOTENCY_CONFLICT,

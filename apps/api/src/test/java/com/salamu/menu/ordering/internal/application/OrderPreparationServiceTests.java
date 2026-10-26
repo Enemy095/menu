@@ -68,6 +68,24 @@ class OrderPreparationServiceTests {
     }
 
     private static OrderPreparationService service(PublishedMenuSnapshot menu) {
+        return service(menu, false);
+    }
+
+    @Test void rejectsNewOrdersOnClosedBusinessDates() {
+        assertCode(() -> service(menu(true), true).prepare(command(7, List.of(
+                new CreateOrderCommand.Modifier("size", "large", 1)))), OrderApiException.Code.RESTAURANT_CLOSED);
+    }
+
+    @Test void rejectsAWeeklyScheduleClosureEvenWithoutCalendarOverrides() {
+        assertCode(() -> service(menu(true), false, true).prepare(command(7, List.of(
+                new CreateOrderCommand.Modifier("size", "large", 1)))), OrderApiException.Code.RESTAURANT_CLOSED);
+    }
+
+    private static OrderPreparationService service(PublishedMenuSnapshot menu, boolean closed) {
+        return service(menu, closed, false);
+    }
+
+    private static OrderPreparationService service(PublishedMenuSnapshot menu, boolean closed, boolean scheduleClosed) {
         SiteConfigurationQuery siteQuery = mock(SiteConfigurationQuery.class);
         PublishedMenuQuery menuQuery = mock(PublishedMenuQuery.class);
         SiteConfigurationSnapshot site = mock(SiteConfigurationSnapshot.class);
@@ -75,13 +93,22 @@ class OrderPreparationServiceTests {
         when(menuQuery.current()).thenReturn(menu);
         when(site.restaurantId()).thenReturn(RESTAURANT);
         when(site.currency()).thenReturn("RUB");
+        when(site.timezone()).thenReturn("Europe/Moscow");
+        var calendar = mock(com.salamu.menu.restaurant.api.BusinessCalendar.class);
+        when(calendar.current(java.time.ZoneId.of("Europe/Moscow"))).thenReturn(
+                new com.salamu.menu.restaurant.api.BusinessCalendar.CalendarSnapshot(
+                        java.time.LocalDate.of(2026, 10, 28), closed ? List.of(3) : List.of(), List.of()));
+        var schedule = mock(com.salamu.menu.site.api.WeeklySchedule.class);
+        when(schedule.days()).thenReturn(scheduleClosed ? List.of(new com.salamu.menu.site.api.WeeklyScheduleDay(
+                java.time.DayOfWeek.WEDNESDAY, List.of())) : List.of());
+        when(site.schedule()).thenReturn(schedule);
         when(site.features()).thenReturn(new SiteFeatures(
                 true, true, true, true, true, true, true, true,
                 false, false, false, false, false));
         when(site.orderTypes()).thenReturn(List.of(
                 new AvailableOrderType(com.salamu.menu.site.api.OrderType.PICKUP, "Pickup", true)));
         when(site.limits()).thenReturn(new OrderLimits(10, 20, 80, 32, 240, 500, 0));
-        return new OrderPreparationService(siteQuery, menuQuery);
+        return new OrderPreparationService(siteQuery, menuQuery, calendar);
     }
 
     private static PublishedMenuSnapshot menu(boolean itemAvailable) {

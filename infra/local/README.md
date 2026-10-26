@@ -253,9 +253,14 @@ The configured owner receives these controls:
 The website displays a framed “Сегодня выходной” notice only when today is closed.
 Future dates and recurring rules remain visible in the owner's bot controls, without
 a public announcement on open days. The date uses the configured business timezone. An open
-page refreshes the information every 30 seconds and when it regains focus. These
-controls publish availability notices; they do not change checkout rules or cancel
-orders. Calendar choices persist in PostgreSQL across updates and restarts.
+page refreshes the information every 30 seconds and when it regains focus.
+On a closed day, menu browsing remains available but adding items and checkout are
+disabled. Direct order requests are also rejected by the API with HTTP 409 and
+`RESTAURANT_CLOSED`; existing identical order replays still return their original
+result. Existing cart contents and already accepted orders are preserved.
+The notice, dish detail and cart show the next working date after consecutive
+date-specific or weekly closures. If no opening is known within a year, no date is
+invented. Calendar choices persist in PostgreSQL across updates and restarts.
 
 Only configured user IDs in their own private chat can change the calendar; a group
 notification destination does not grant access. The public HTTP endpoint is read-only.

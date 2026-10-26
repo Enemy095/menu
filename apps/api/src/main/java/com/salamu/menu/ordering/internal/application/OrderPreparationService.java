@@ -22,15 +22,24 @@ class OrderPreparationService {
 
     private final SiteConfigurationQuery siteQuery;
     private final PublishedMenuQuery menuQuery;
+    private final com.salamu.menu.restaurant.api.BusinessCalendar calendar;
 
-    OrderPreparationService(SiteConfigurationQuery siteQuery, PublishedMenuQuery menuQuery) {
+    OrderPreparationService(SiteConfigurationQuery siteQuery, PublishedMenuQuery menuQuery,
+            com.salamu.menu.restaurant.api.BusinessCalendar calendar) {
         this.siteQuery = siteQuery;
         this.menuQuery = menuQuery;
+        this.calendar = calendar;
     }
 
     PreparedOrder prepare(CreateOrderCommand command) {
         try {
             var site = siteQuery.current();
+            var availability = calendar.current(java.time.ZoneId.of(site.timezone()));
+            boolean weeklyClosed = site.schedule().days().stream().anyMatch(day ->
+                    day.dayOfWeek() == availability.businessDate().getDayOfWeek() && day.intervals().isEmpty());
+            if (availability.closedToday() || weeklyClosed) {
+                throw OrderApiException.restaurantClosed();
+            }
             var menu = menuQuery.current();
             if (!site.currency().equals(menu.currency())) {
                 throw OrderApiException.dependencyUnavailable();

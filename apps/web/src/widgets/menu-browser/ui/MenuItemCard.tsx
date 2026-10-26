@@ -9,6 +9,7 @@ import {
   type CartModifierSelection,
 } from "@/entities/cart/model/cart";
 import { useCartStore } from "@/entities/cart/model/cart-store";
+import { useBusinessAvailability } from "@/entities/restaurant/model/business-availability";
 import { useOptionalCartContext } from "@/features/cart/model/cart-context";
 import { formatMoney } from "@/shared/lib/format-money";
 import { useOverlayScrollLock } from "@/shared/lib/overlay-scroll-lock";
@@ -37,6 +38,7 @@ export function MenuItemCard({
   orderingEnabled,
 }: MenuItemCardProps) {
   const cartContext = useOptionalCartContext();
+  const availability = useBusinessAvailability();
   const add = useCartStore((state) => state.add);
   const locked = useCartStore((state) => state.locked);
   const [open, setOpen] = useState(false);
@@ -101,6 +103,7 @@ export function MenuItemCard({
   }
 
   function addSelection() {
+    if (availability.blocked) { setMessage(availability.message); return; }
     if (!modifiersAreValid(item, modifiers)) {
       setMessage("Проверьте обязательные добавки и их количество.");
       return;
@@ -173,7 +176,7 @@ export function MenuItemCard({
                     <input
                       type="checkbox"
                       checked={selectedQuantity > 0}
-                      disabled={!option.available || locked}
+                      disabled={!option.available || locked || availability.blocked}
                       onChange={(event) =>
                         setOptionQuantities((current) => ({
                           ...current,
@@ -190,14 +193,15 @@ export function MenuItemCard({
               })}
             </fieldset>
           ))}
-          {message ? <p className="dish-dialog__message" role="alert">{message}</p> : null}
+          {availability.blocked || message ? <p className="dish-dialog__message" role="status">{availability.blocked ? availability.message : message}</p> : null}
+          {availability.closedToday && availability.reopening ? <p className="dish-dialog__message">{availability.reopening}</p> : null}
         </div>
         <footer className="dish-dialog__footer">
           <div className="dish-dialog__quantity" role="group" aria-label={`Количество: ${item.name}`}>
             <button
               type="button"
               aria-label="Уменьшить количество"
-              disabled={quantity <= 1 || locked}
+              disabled={quantity <= 1 || locked || availability.blocked}
               onClick={() => setQuantity((current) => Math.max(1, current - 1))}
             >
               −
@@ -206,7 +210,7 @@ export function MenuItemCard({
             <button
               type="button"
               aria-label="Увеличить количество"
-              disabled={quantity >= (cartContext?.limits.maxItemQuantity ?? 99) || locked}
+              disabled={quantity >= (cartContext?.limits.maxItemQuantity ?? 99) || locked || availability.blocked}
               onClick={() =>
                 setQuantity((current) =>
                   Math.min(cartContext?.limits.maxItemQuantity ?? 99, current + 1),
@@ -219,7 +223,7 @@ export function MenuItemCard({
           <button
             className="button dish-dialog__add"
             type="button"
-            disabled={locked}
+            disabled={locked || availability.blocked}
             aria-busy={locked || undefined}
             onClick={addSelection}
           >
@@ -251,7 +255,7 @@ export function MenuItemCard({
           <strong>{formatMoney(item.priceMinor, currency, locale)}</strong>
           {orderingEnabled && item.available ? (
             <div className="menu-card__order">
-              <button className="button button--compact" type="button" onClick={openDialog} disabled={locked}>
+              <button className="button button--compact" type="button" onClick={openDialog} disabled={locked || availability.blocked} title={availability.message || undefined}>
                 <span aria-hidden="true">+</span>
                 <span className="sr-only">Выбрать количество: {item.name}</span>
               </button>

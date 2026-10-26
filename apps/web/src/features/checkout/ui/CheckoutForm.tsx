@@ -23,6 +23,7 @@ import {
 } from "@/shared/api/orders-api";
 import { formatMoney } from "@/shared/lib/format-money";
 import { createClientId } from "@/shared/lib/client-id";
+import { CLOSED_MESSAGE, useBusinessAvailability } from "@/entities/restaurant/model/business-availability";
 
 type CheckoutFormProps = {
   items: CartLine[];
@@ -67,6 +68,7 @@ function messageFor(error: OrderSubmissionError): {
   if (error.code === "VALIDATION_ERROR") {
     return { state: "error", message: "Проверьте заполненные поля.", retryable: false };
   }
+  if (error.code === "RESTAURANT_CLOSED") return { state: "error", message: CLOSED_MESSAGE, retryable: false };
   if (error.code === "RATE_LIMITED") {
     return { state: "error", message: "Слишком много попыток. Попробуйте позже.", retryable: true };
   }
@@ -88,6 +90,7 @@ export function CheckoutForm({
   onReceiptChange,
 }: CheckoutFormProps) {
   const beginSubmission = useCartStore((state) => state.beginSubmission);
+  const availability = useBusinessAvailability();
   const failSubmission = useCartStore((state) => state.failSubmission);
   const completeSubmission = useCartStore((state) => state.completeSubmission);
   const storedOrderType = useCartStore((state) => state.orderType);
@@ -122,6 +125,7 @@ export function CheckoutForm({
   const cutleryCount = useWatch({ control: form.control, name: "guestCount" }) ?? 1;
 
   async function submit(fields: CheckoutFields) {
+    if (availability.blocked) { setSubmission({ status: "error", message: availability.message, retryable: false }); return; }
     const snapshot = beginSubmission();
     if (!snapshot) return;
     let request: CreateOrderRequest;
@@ -218,7 +222,8 @@ export function CheckoutForm({
       onSubmit={form.handleSubmit(submit, handleInvalid)}
       noValidate
     >
-      <fieldset disabled={submission.status === "submitting"}>
+      {availability.blocked ? <p className="form-message" role="status">{availability.message}</p> : null}
+      <fieldset disabled={submission.status === "submitting" || availability.blocked}>
         <legend>Способ получения</legend>
         <div className="order-types">
           {orderTypes.map((available) => (
@@ -316,7 +321,7 @@ export function CheckoutForm({
       <button
         className="button checkout-form__submit"
         type="submit"
-        disabled={!items.length || submission.status === "submitting" || submission.status === "menu-changed"}
+        disabled={availability.blocked || !items.length || submission.status === "submitting" || submission.status === "menu-changed"}
       >
         {submission.status === "submitting" ? "Отправляем…" : "Оформить заказ"}
       </button>

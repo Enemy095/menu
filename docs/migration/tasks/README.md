@@ -64,6 +64,8 @@ Follow-up: [APP-LOCAL-003](APP-LOCAL-003.md) provisions the Telegram destination
 starting an installation with a copied credentials file.
 Presentation correction: [APP-LOCAL-004](APP-LOCAL-004.md) restores the food hero and
 limits the public closure notice to today.
+Ordering follow-up: [APP-LOCAL-005](APP-LOCAL-005.md) blocks closed-day orders,
+shows reopening dates and isolates bot command checkpoints.
 
 Каждый task-файл обязан содержать:
 

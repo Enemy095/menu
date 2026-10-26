@@ -1059,6 +1059,23 @@ h2 {
   font: 14px/1.6 Arial, sans-serif;
 }
 
+.cart-closure-notice {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #a98539;
+  border-radius: 8px;
+  background: #302718;
+  color: #fff2d6;
+  font: 14px/1.6 Arial, sans-serif;
+}
+.cart-closure-notice p { margin: 0; }
+.cart-closure-notice p + p { margin-top: 8px; }
+.menu-card__order button:disabled, .dish-dialog__add:disabled, .checkout-form__submit:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 @media (max-width: 559px) {
   .business-calendar { margin-inline: 16px; }
 }

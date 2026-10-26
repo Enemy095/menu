@@ -9,6 +9,7 @@ Name | Type
 `businessDate` | Date
 `timezone` | string
 `closedToday` | boolean
+`nextOpenDate` | Date
 `weeklyClosedDays` | Set&lt;number&gt;
 `closedDates` | Set&lt;Date&gt;
 
@@ -22,6 +23,7 @@ const example = {
   "businessDate": null,
   "timezone": null,
   "closedToday": null,
+  "nextOpenDate": null,
   "weeklyClosedDays": null,
   "closedDates": null,
 } satisfies PublicAvailability

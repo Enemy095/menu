@@ -38,6 +38,12 @@ export interface PublicAvailability {
      */
     closedToday: boolean;
     /**
+     * Next open business date within the configured one-year horizon, or null if none is known.
+     * @type {Date}
+     * @memberof PublicAvailability
+     */
+    nextOpenDate?: Date | null;
+    /**
      * ISO weekdays, Monday equals 1 and Sunday equals 7.
      * @type {Set<number>}
      * @memberof PublicAvailability
@@ -76,6 +82,7 @@ export function PublicAvailabilityFromJSONTyped(json: any, ignoreDiscriminator: 
         'businessDate': (new Date(json['businessDate'])),
         'timezone': json['timezone'],
         'closedToday': json['closedToday'],
+        'nextOpenDate': json['nextOpenDate'] == null ? undefined : (new Date(json['nextOpenDate'])),
         'weeklyClosedDays': new Set(json['weeklyClosedDays']),
         'closedDates': new Set(json['closedDates']),
     };
@@ -95,6 +102,7 @@ export function PublicAvailabilityToJSONTyped(value?: PublicAvailability | null,
         'businessDate': value['businessDate'].toISOString().substring(0,10),
         'timezone': value['timezone'],
         'closedToday': value['closedToday'],
+        'nextOpenDate': value['nextOpenDate'] == null ? value['nextOpenDate'] : value['nextOpenDate'].toISOString().substring(0,10),
         'weeklyClosedDays': Array.from(value['weeklyClosedDays'] as Set<any>),
         'closedDates': Array.from(value['closedDates'] as Set<any>),
     };

@@ -18,5 +18,14 @@ public interface BusinessCalendar {
         public boolean closedToday() {
             return weeklyClosedDays.contains(businessDate.getDayOfWeek().getValue()) || closedDates.contains(businessDate);
         }
+        public LocalDate nextOpenDate(java.util.Set<Integer> effectiveWeeklyDays) {
+            var closed = java.util.Set.copyOf(closedDates);
+            for (int offset = 1; offset <= 365; offset++) {
+                var candidate = businessDate.plusDays(offset);
+                if (!effectiveWeeklyDays.contains(candidate.getDayOfWeek().getValue()) && !closed.contains(candidate))
+                    return candidate;
+            }
+            return null;
+        }
     }
 }

@@ -93,6 +93,16 @@ class PublicOrderControllerTests {
                 .andExpect(jsonPath("$.details[0].reason").value("INVALID_FIELDS"));
     }
 
+    @Test void closedBusinessDateReturnsSafeConflict() throws Exception {
+        when(service.create(any(), any())).thenThrow(com.salamu.menu.ordering.api.OrderApiException.restaurantClosed());
+        mvc.perform(post("/api/v1/public/orders").header("Idempotency-Key", KEY)
+                .contentType(MediaType.APPLICATION_JSON).content(validRequest()))
+                .andExpect(status().isConflict())
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+                .andExpect(jsonPath("$.code").value("RESTAURANT_CLOSED"))
+                .andExpect(jsonPath("$.message").value("Сегодня выходной. К сожалению, оформить заказ нельзя."));
+    }
+
     private static String validRequest() {
         return """
                 {

@@ -122,6 +122,8 @@ paths:
         Creates one order per idempotency key. The backend validates the current menu,
         selected modifiers, item availability, quantities and fulfillment rules. It
         calculates all prices and resolves external destinations from server-side config.
+        New orders are rejected with RESTAURANT_CLOSED (409) on a closed business date,
+        including weekly closures. Identical replays still return the original order.
       operationId: createPublicOrder
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -266,7 +268,7 @@ components:
             menuNotFound:
               $ref: '#/components/examples/MenuNotFoundError'
     OrderConflict:
-      description: Current menu or idempotency state conflicts with the submitted order.
+      description: Current menu, closed business date or idempotency state conflicts with the submitted order.
       headers:
         Cache-Control:
           $ref: '#/components/headers/NoStore'
@@ -277,6 +279,8 @@ components:
           examples:
             menuChanged:
               $ref: '#/components/examples/MenuChangedError'
+            restaurantClosed:
+              $ref: '#/components/examples/RestaurantClosedError'
             itemUnavailable:
               $ref: '#/components/examples/ItemUnavailableError'
             modifierUnavailable:
@@ -628,6 +632,11 @@ components:
           minLength: 1
         closedToday:
           type: boolean
+        nextOpenDate:
+          type: string
+          format: date
+          nullable: true
+          description: Next open business date within the configured one-year horizon, or null if none is known.
         weeklyClosedDays:
           type: array
           maxItems: 7
@@ -1263,6 +1272,7 @@ components:
         - VALIDATION_ERROR
         - MENU_NOT_FOUND
         - MENU_CHANGED
+        - RESTAURANT_CLOSED
         - ITEM_UNAVAILABLE
         - MODIFIER_UNAVAILABLE
         - IDEMPOTENCY_CONFLICT
@@ -1556,6 +1566,12 @@ components:
         details: []
         traceId: 4bf92f3577b34da6a3ce929d0e0e4736
 
+    RestaurantClosedError:
+      value:
+        code: RESTAURANT_CLOSED
+        message: Сегодня выходной. К сожалению, оформить заказ нельзя.
+        details: []
+        traceId: example-trace-closed
     MenuChangedError:
       summary: Client used an obsolete menu version
       value:

@@ -16,6 +16,6 @@ class OrderingModuleTests {
         assertThat(module).isNotNull();
         assertThat(module.type()).isEqualTo(ApplicationModule.Type.CLOSED);
         assertThat(module.allowedDependencies())
-                .containsExactly("menu::api", "site::api");
+                .containsExactly("menu::api", "site::api", "restaurant::api");
     }
 }

@@ -7,6 +7,7 @@ import {
   type CartModifierSelection,
 } from "@/entities/cart/model/cart";
 import { useCartStore } from "@/entities/cart/model/cart-store";
+import { useBusinessAvailability } from "@/entities/restaurant/model/business-availability";
 import { useCartContext } from "@/features/cart/model/cart-context";
 import { formatMoney } from "@/shared/lib/format-money";
 
@@ -18,6 +19,7 @@ type AddToCartControlProps = {
 
 export function AddToCartControl({ menuItemId, locale, currency }: AddToCartControlProps) {
   const { catalog, limits } = useCartContext();
+  const availability = useBusinessAvailability();
   const add = useCartStore((state) => state.add);
   const locked = useCartStore((state) => state.locked);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -35,8 +37,10 @@ export function AddToCartControl({ menuItemId, locale, currency }: AddToCartCont
   );
 
   if (!item?.available) return null;
+  if (availability.blocked) return <p className="form-message" role="status">{availability.message}</p>;
 
   function addSelection() {
+    if (availability.blocked) { setMessage(availability.message); return; }
     if (!item || !modifiersAreValid(item, modifiers)) {
       setMessage("Проверьте обязательные добавки и их количество.");
       return;

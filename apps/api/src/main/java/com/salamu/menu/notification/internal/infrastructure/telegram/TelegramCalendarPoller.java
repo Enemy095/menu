@@ -43,6 +43,9 @@ class TelegramCalendarPoller {
                     handler.handle(update);
                     cursor = updateId;
                     jdbc.update("UPDATE telegram_calendar_poll_state SET last_update_id = ? WHERE singleton_id = 1", cursor);
+                    // Commit each handled update separately: a later command failure must
+                    // not roll back the cursor for replies already sent to Telegram.
+                    break;
                 }
             });
         } catch (RuntimeException failure) {

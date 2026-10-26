@@ -73,13 +73,14 @@ public class ApiErrorHandler {
             HttpServletRequest request) {
         var status = switch (exception.code()) {
             case VALIDATION_ERROR -> HttpStatus.BAD_REQUEST;
-            case MENU_CHANGED, ITEM_UNAVAILABLE, MODIFIER_UNAVAILABLE, IDEMPOTENCY_CONFLICT ->
+            case MENU_CHANGED, ITEM_UNAVAILABLE, MODIFIER_UNAVAILABLE, IDEMPOTENCY_CONFLICT, RESTAURANT_CLOSED ->
                     HttpStatus.CONFLICT;
             case DEPENDENCY_UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };
         var message = switch (exception.code()) {
             case VALIDATION_ERROR -> VALIDATION_ERROR_MESSAGE;
             case MENU_CHANGED -> "Меню изменилось, обновите страницу";
+            case RESTAURANT_CLOSED -> "Сегодня выходной. К сожалению, оформить заказ нельзя.";
             case ITEM_UNAVAILABLE -> "Одна из позиций недоступна";
             case MODIFIER_UNAVAILABLE -> "Один из модификаторов недоступен";
             case IDEMPOTENCY_CONFLICT -> "Ключ повторного запроса уже использован";

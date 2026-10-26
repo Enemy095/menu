@@ -1,14 +1,16 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetCartStoreForTests, useCartStore } from "@/entities/cart/model/cart-store";
 import { CartProvider } from "@/features/cart/model/cart-context";
+import { BusinessAvailabilityProvider } from "@/entities/restaurant/model/business-availability";
 import { menuFixture } from "@/test/fixtures";
 
 import { MenuBrowser } from "./MenuBrowser";
 
 describe("MenuBrowser", () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
     window.localStorage.clear();
     resetCartStoreForTests();
@@ -100,5 +102,25 @@ describe("MenuBrowser", () => {
     expect(useCartStore.getState().items).toEqual([
       expect.objectContaining({ menuItemId: "seasonal-salad", quantity: 2 }),
     ]);
+  });
+  it("allows dish browsing on a closed day but disables adding and quantity changes", async () => {
+    const user = userEvent.setup();
+    const menu = menuFixture();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({
+      businessDate: "2026-10-28", timezone: "Europe/Moscow", closedToday: true,
+      weeklyClosedDays: [3], closedDates: ["2026-10-29"], nextOpenDate: "2026-10-30",
+    })));
+    render(<BusinessAvailabilityProvider>
+      <CartProvider catalog={{ restaurantId: menu.restaurantId, menuVersion: menu.version, items: menu.items }} limits={{ maxItemQuantity: 10, maxTotalItems: 50 }}>
+        <MenuBrowser title="Меню" categories={menu.categories} items={menu.items} locale="ru-RU" currency="RUB" orderingEnabled />
+      </CartProvider>
+    </BusinessAvailabilityProvider>);
+    await user.click(screen.getByRole("button", { name: "Открыть: Сезонный салат" }));
+    const dialog = screen.getByRole("dialog", { name: "Сезонный салат" });
+    expect(await within(dialog).findByText(/Сегодня выходной/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/в пятницу, 30 октября/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Добавить/u })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Увеличить количество" })).toBeDisabled();
+    expect(useCartStore.getState().items).toEqual([]);
   });
 });

@@ -357,6 +357,7 @@ test("all stable public error codes have examples", () => {
     "VALIDATION_ERROR",
     "MENU_NOT_FOUND",
     "MENU_CHANGED",
+    "RESTAURANT_CLOSED",
     "ITEM_UNAVAILABLE",
     "MODIFIER_UNAVAILABLE",
     "IDEMPOTENCY_CONFLICT",
@@ -400,7 +401,7 @@ test("all order business conflicts use HTTP 409", () => {
   const conflict = resolve(responses["409"]);
   assert.deepEqual(
     new Set(Object.keys(conflict.content["application/json"].examples)),
-    new Set(["menuChanged", "itemUnavailable", "modifierUnavailable", "idempotencyConflict"]),
+    new Set(["menuChanged", "restaurantClosed", "itemUnavailable", "modifierUnavailable", "idempotencyConflict"]),
   );
 });
 

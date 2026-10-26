@@ -1,6 +1,7 @@
 import type { MenuResponse, PublicConfigurationResponse } from "@e-menu/api-contract/generated";
 
 import { selectLocalizedText } from "@/entities/site/model/select-localized-text";
+import { BusinessAvailabilityProvider } from "@/entities/restaurant/model/business-availability";
 import { themeStyle } from "@/shared/lib/theme-style";
 import { Contacts } from "@/widgets/contacts/ui/Contacts";
 import { Hero } from "@/widgets/hero/ui/Hero";
@@ -45,6 +46,7 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
 
   return (
     <div className="site" style={themeStyle(configuration.branding.designTokens)}>
+      <BusinessAvailabilityProvider>
       {orderingEnabled && menu ? (
         <CartExperience
           header={(
@@ -83,6 +85,7 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
       <footer className="site-footer">
         <div className="shell">{text.displayName}</div>
       </footer>
+      </BusinessAvailabilityProvider>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   type CartCatalog,
 } from "@/entities/cart/model/cart";
 import { useCartStore } from "@/entities/cart/model/cart-store";
+import { useBusinessAvailability } from "@/entities/restaurant/model/business-availability";
 import { CartProvider } from "@/features/cart/model/cart-context";
 import { CartOverlayProvider, useCartOverlay } from "@/features/cart/model/cart-overlay-context";
 import { CheckoutForm } from "@/features/checkout/ui/CheckoutForm";
@@ -76,6 +77,7 @@ export function CartExperience(props: CartExperienceProps) {
 }
 
 function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: CartExperienceProps) {
+  const availability = useBusinessAvailability();
   const { open, openCart, closeCart } = useCartOverlay();
   const [receiptVisible, setReceiptVisible] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
@@ -195,6 +197,7 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
             </svg>
           </button>
         </header>
+        {availability.blocked ? <div className="cart-closure-notice" role="status"><p>{availability.message}</p>{availability.reopening ? <p>{availability.reopening}</p> : null}</div> : null}
         {notice ? (
           <div className="cart-notice" role="status">
             <span>
@@ -231,7 +234,7 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
                       <div className="cart-line__quantity">
                         <button disabled={locked} type="button" aria-label={`Уменьшить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity - 1, limits)}>−</button>
                         <output aria-label={`Количество: ${item.name}`}>{line.quantity}</output>
-                        <button disabled={locked} type="button" aria-label={`Увеличить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity + 1, limits)}>+</button>
+                        <button disabled={locked || availability.blocked} type="button" aria-label={`Увеличить: ${item.name}`} onClick={() => setQuantity(line.lineId, line.quantity + 1, limits)}>+</button>
                       </div>
                       <button
                         disabled={locked}

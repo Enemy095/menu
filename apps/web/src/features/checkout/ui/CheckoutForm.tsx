@@ -179,7 +179,7 @@ export function CheckoutForm({
   if (submission.status === "success") {
     return (
       <section className="order-success" aria-labelledby="order-success-title" role="status">
-        <p className="eyebrow">Заказ принят</p>
+        <p className="eyebrow">Заказ в разработке</p>
         <h3 id="order-success-title">Заказ № {submission.order.orderNumber}</h3>
         <p>
           Итоговая сумма:{" "}
@@ -194,7 +194,7 @@ export function CheckoutForm({
         <p>
           {submission.order.needsConfirmation
             ? "Заведение подтвердит заказ отдельно."
-            : "Заказ принят в работу."}
+            : "Заказ сохранён."}
         </p>
         {submission.replayed ? <p>Показан результат уже принятой попытки.</p> : null}
         <button

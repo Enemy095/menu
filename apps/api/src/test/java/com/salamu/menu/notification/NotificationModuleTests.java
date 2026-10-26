@@ -18,7 +18,7 @@ class NotificationModuleTests {
 
         assertThat(module).isNotNull();
         assertThat(module.type()).isEqualTo(ApplicationModule.Type.CLOSED);
-        assertThat(module.allowedDependencies()).containsExactly("ordering::api");
+        assertThat(module.allowedDependencies()).containsExactly("ordering::api", "restaurant::api", "site::api");
         assertThat(NotificationDestinationQuery.class.getPackage().getAnnotation(NamedInterface.class).value())
                 .containsExactly("api");
     }

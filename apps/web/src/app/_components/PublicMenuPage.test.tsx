@@ -11,7 +11,7 @@ describe("PublicMenuPage", () => {
     render(<PublicMenuPage configuration={configurationFixture()} menu={menuFixture()} />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Вкусная едаБыстрая доставка" }),
+      screen.getByRole("heading", { level: 1, name: /— меню$/u }),
     ).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Популярное" })).toBeInTheDocument();
     expect(screen.getByText("Ежедневно 10:00–22:00")).toBeInTheDocument();

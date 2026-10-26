@@ -208,6 +208,53 @@ existing `.env` values `MINIO_BUCKET`, `ASSET_STORAGE_BUCKET` and `ASSET_BASE_UR
 `menu-assets-local`, restart the API, and keep the source bucket through the rollback
 window. The procedure never deletes the source bucket automatically.
 
+## Updating another Windows installation
+
+In an existing checkout of the shared branch:
+
+```powershell
+git pull origin feature/adamas-redesign
+.\start-docker.cmd
+```
+
+For a fork, fetch/merge this branch from the original repository first, or use
+GitHub's Sync fork before pulling the fork. Downloading a new ZIP also works, but
+keep the existing local environment files and Compose project name to retain data.
+The launcher builds changed sources and applies migrations and the one-time v2
+branding update. The 23 dish photos are included in Git. Keep PostgreSQL/MinIO
+volumes; deleting them is unnecessary for this update.
+
+## Owner calendar in Telegram
+
+Configure the existing bot token in ignored `.env.telegram.local`, together with:
+
+```dotenv
+TELEGRAM_CALENDAR_ENABLED=true
+TELEGRAM_ADMIN_USER_IDS=<numeric Telegram user ID>
+```
+
+For several owners, use comma-separated numeric IDs. A username is not an owner ID.
+Restart with `start-docker.cmd`, then send `/start` to the bot in a **private chat**.
+The configured owner receives these controls:
+
+- **Добавить выходной** opens a month calendar. Select today or future dates up
+  to one year ahead; press a marked date again to remove it.
+- **Дни недели** toggles recurring days, such as every Wednesday.
+- **Предстоящие выходные** lists the saved selection.
+
+The website displays “Сегодня выходной” on closed days and lists planned dates and
+recurring days. The date is calculated in the configured business timezone. An open
+page refreshes the information every 30 seconds and when it regains focus. These
+controls publish availability notices; they do not change checkout rules or cancel
+orders. Calendar choices persist in PostgreSQL across updates and restarts.
+
+Only configured user IDs in their own private chat can change the calendar; a group
+notification destination does not grant access. The public HTTP endpoint is read-only.
+On its first activation, the calendar worker discards old Telegram updates. Send
+`/start` after startup. Run only one independent deployment polling a given bot token:
+another computer should disable its calendar or use a separate bot. Secrets and the
+owner allowlist are local settings and are never distributed through Git.
+
 ## Optional observability
 
 Start the collector and Prometheus:

@@ -76,6 +76,7 @@ public class SecurityConfiguration {
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(
                                 SecurityRequestMatchers.PUBLIC_CONFIG,
+                                SecurityRequestMatchers.PUBLIC_AVAILABILITY,
                                 SecurityRequestMatchers.PUBLIC_MENU,
                                 SecurityRequestMatchers.PUBLIC_ORDER,
                                 SecurityRequestMatchers.LIVENESS,
@@ -96,6 +97,9 @@ public class SecurityConfiguration {
     UrlBasedCorsConfigurationSource corsConfigurationSource(SecurityProperties properties) {
         var source = new UrlBasedCorsConfigurationSource();
         var allowedOrigins = new ArrayList<>(properties.cors().allowedOrigins());
+        source.registerCorsConfiguration(
+                SecurityRequestMatchers.PUBLIC_AVAILABILITY_PATH,
+                corsConfiguration(allowedOrigins, List.of("GET"), READ_REQUEST_HEADERS));
         source.registerCorsConfiguration(
                 SecurityRequestMatchers.PUBLIC_CONFIG_PATH,
                 corsConfiguration(allowedOrigins, List.of("GET"), READ_REQUEST_HEADERS));

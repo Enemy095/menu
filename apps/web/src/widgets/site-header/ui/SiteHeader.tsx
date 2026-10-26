@@ -29,7 +29,6 @@ export function SiteHeader({ branding, text, profile, features, showCartButton =
         </div>
         <nav className="site-header__nav" aria-label="Основная навигация">
           <a href="#menu">Меню</a>
-          <a href="#contacts">Доставка и оплата</a>
           <a href="#contacts">Контакты</a>
         </nav>
         {features.contacts ? (

@@ -115,6 +115,7 @@ describe("CartExperience", () => {
     await user.click(screen.getByRole("button", { name: "Оформить заказ" }));
 
     await screen.findByRole("heading", { name: "Заказ № A-42" });
+    expect(screen.getAllByText("Заказ в разработке").length).toBeGreaterThan(0);
     expect(useCartStore.getState().items).toEqual([]);
     expect(JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) ?? "{}").state.items).toEqual([]);
     expect(submitMock).toHaveBeenCalledTimes(2);

@@ -22,6 +22,34 @@ tags:
 security: []
 
 paths:
+  /api/v1/public/availability:
+    get:
+      tags: [Config]
+      summary: Get current business day and planned days off
+      operationId: getPublicAvailability
+      description: Fresh operational information in the configured business timezone. Never cached.
+      responses:
+        '200':
+          description: Current calendar availability.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicAvailability'
+              example:
+                businessDate: '2026-10-28'
+                timezone: Europe/Moscow
+                closedToday: true
+                weeklyClosedDays: [3]
+                closedDates: ['2026-11-04']
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/SiteNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/public/config:
     get:
       tags: [Config]
@@ -587,6 +615,35 @@ components:
           items:
             $ref: '#/components/schemas/SocialLink'
 
+    PublicAvailability:
+      type: object
+      additionalProperties: false
+      required: [businessDate, timezone, closedToday, weeklyClosedDays, closedDates]
+      properties:
+        businessDate:
+          type: string
+          format: date
+        timezone:
+          type: string
+          minLength: 1
+        closedToday:
+          type: boolean
+        weeklyClosedDays:
+          type: array
+          maxItems: 7
+          uniqueItems: true
+          description: ISO weekdays, Monday equals 1 and Sunday equals 7.
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+        closedDates:
+          type: array
+          maxItems: 366
+          uniqueItems: true
+          items:
+            type: string
+            format: date
     WeeklySchedule:
       type: object
       additionalProperties: false

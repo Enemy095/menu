@@ -43,7 +43,7 @@ describe("public route", () => {
     render(await Page({ params: rootParams }));
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Вкусная едаБыстрая доставка" }),
+      screen.getByRole("heading", { level: 1, name: /— меню$/u }),
     ).toBeInTheDocument();
   });
 

@@ -61,6 +61,8 @@ services:
     environment:
       APP_WORKER_ENABLED: "false"
       TELEGRAM_NOTIFICATIONS_ENABLED: "false"
+      TELEGRAM_CALENDAR_ENABLED: "false"
+      TELEGRAM_ADMIN_USER_IDS: ""
       TELEGRAM_BOT_TOKEN: ""
       TELEGRAM_CHAT_ID: ""
   web:
@@ -94,7 +96,7 @@ volumes:
     }
     if ($model.name -ne $project) { throw "Unsafe test project name." }
     $cleanupAllowed = $true
-    $manifest = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v1/manifest.json") -Raw | ConvertFrom-Json
+    $manifest = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v2/manifest.json") -Raw | ConvertFrom-Json
     $queryPrefix = @("exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", $model.services.postgres.environment.POSTGRES_USER,
         "-d", $model.services.postgres.environment.POSTGRES_DB, "-At", "-c")
     Invoke-TestCompose -Arguments @("up", "--no-build", "--detach", "--wait", "--wait-timeout", "180", "api")
@@ -112,11 +114,11 @@ volumes:
     Invoke-TestObjectScript -Body ('mc rm --force "destination/$MINIO_BUCKET/' + $objectKey + '"')
 
     # A schema mismatch may upload the immutable file, but must publish no DB rows.
-    Invoke-TestCompose -Arguments ($queryPrefix + @("UPDATE flyway_schema_history SET version = '99' WHERE version = '9'"))
+    Invoke-TestCompose -Arguments ($queryPrefix + @("UPDATE flyway_schema_history SET version = '99' WHERE version = '10'"))
     Assert-BootstrapFailure -ExpectedMessage "LOCAL_BOOTSTRAP_SCHEMA_MISMATCH"
     $rows = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT count(*) FROM assets"))
     if ([int] "$rows" -ne 0) { throw "Schema mismatch wrote database content." }
-    Invoke-TestCompose -Arguments ($queryPrefix + @("UPDATE flyway_schema_history SET version = '9' WHERE version = '99'"))
+    Invoke-TestCompose -Arguments ($queryPrefix + @("UPDATE flyway_schema_history SET version = '10' WHERE version = '99'"))
 
     Invoke-TestCompose -Arguments @("up", "--no-build", "--detach", "--wait", "--wait-timeout", "180")
 
@@ -129,7 +131,7 @@ volumes:
     foreach ($resource in @("config", "menu")) {
         $response = Invoke-WebRequest -Uri "http://localhost:$apiPort/api/v1/public/$resource" -UseBasicParsing
         $actual = [Text.Encoding]::UTF8.GetString($response.RawContentStream.ToArray()).Replace("http://localhost:$assetPort/menu-assets-local", "{{ASSET_BASE_URL}}")
-        $expected = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v1/public-$resource.json") -Raw -Encoding UTF8
+        $expected = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v2/public-$resource.json") -Raw -Encoding UTF8
         if ($actual.Trim() -ne $expected.Trim()) { throw "Fresh public $resource differs from the exported source response." }
     }
 
@@ -157,10 +159,17 @@ volumes:
     # A local edit must survive subsequent startup. This touches only the disposable database.
     Invoke-TestCompose -Arguments ($queryPrefix + @("UPDATE menu_items SET price_minor = price_minor + 1"))
     $totalBefore = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT sum(price_minor) FROM menu_items"))
+    # Simulate a developer updating the old branded installation with existing edits.
+    Invoke-TestCompose -Arguments ($queryPrefix + @("DELETE FROM site_content_releases WHERE release_id = 'vam-pizza-v2'; UPDATE site_branding SET display_name = 'Old local name'; INSERT INTO restaurant_closed_dates(closed_date) VALUES (CURRENT_DATE + 1) ON CONFLICT DO NOTHING"))
     $replay = Invoke-TestCompose -Arguments @("run", "--rm", "--no-deps", "bootstrap")
     if (($replay -join "`n") -notmatch "LOCAL_BOOTSTRAP_SKIPPED") { throw "Existing data was not skipped." }
     $totalAfter = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT sum(price_minor) FROM menu_items"))
     if ("$totalBefore" -ne "$totalAfter") { throw "Bootstrap overwrote a local content edit." }
+    $upgradedName = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT display_name FROM site_branding"))
+    $expectedConfiguration = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v2/public-config.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ("$upgradedName" -ne $expectedConfiguration.branding.localizedTexts[0].shortName) { throw "Existing branding was not upgraded." }
+    $calendarRows = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT count(*) FROM restaurant_closed_dates"))
+    if ([int] "$calendarRows" -ne 1) { throw "Content upgrade overwrote operational calendar settings." }
     Write-Host "Bootstrap acceptance passed: fresh Flyway schema, complete content graph, matching images/fonts, no operational data, safe replay."
 } catch {
     if ($cleanupAllowed) { & docker @script:testCompose logs --tail 40 bootstrap }

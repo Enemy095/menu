@@ -31,9 +31,10 @@ class FlywaySchemaIntegrationTests {
                 6, "sc_site_configuration",
                 7, "site_configuration",
                 8, "orders",
-                9, "site_branding");
+                9, "site_branding",
+                10, "restaurant_closed_dates");
 
-        for (int version = 1; version <= 9; version++) {
+        for (int version = 1; version <= 10; version++) {
             var flyway = flyway(MIGRATION_SCHEMA, MigrationVersion.fromVersion(Integer.toString(version)));
             flyway.migrate();
 
@@ -67,7 +68,7 @@ class FlywaySchemaIntegrationTests {
         }
 
         assertThat(flyway(BRANDING_ALT_UPGRADE_SCHEMA, null).migrate().success).isTrue();
-        assertThat(currentVersion(BRANDING_ALT_UPGRADE_SCHEMA)).isEqualTo("9");
+        assertThat(currentVersion(BRANDING_ALT_UPGRADE_SCHEMA)).isEqualTo("10");
         assertThat(queryString(BRANDING_ALT_UPGRADE_SCHEMA, "SELECT logo_alt FROM site_branding"))
                 .isEqualTo("Existing restaurant");
         try (var connection = connection(BRANDING_ALT_UPGRADE_SCHEMA)) {
@@ -234,7 +235,7 @@ class FlywaySchemaIntegrationTests {
         }
 
         assertThat(flyway(ORDER_CONTRACT_UPGRADE_SCHEMA, null).migrate().success).isTrue();
-        assertThat(currentVersion(ORDER_CONTRACT_UPGRADE_SCHEMA)).isEqualTo("9");
+        assertThat(currentVersion(ORDER_CONTRACT_UPGRADE_SCHEMA)).isEqualTo("10");
         assertThat(columnExists(ORDER_CONTRACT_UPGRADE_SCHEMA, "orders", "client_total_minor")).isFalse();
         assertThat(columnExists(ORDER_CONTRACT_UPGRADE_SCHEMA, "orders", "client_created_at")).isFalse();
         try (var connection = connection(ORDER_CONTRACT_UPGRADE_SCHEMA);

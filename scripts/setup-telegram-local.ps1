@@ -90,9 +90,20 @@ if ([string]::IsNullOrWhiteSpace($env:TELEGRAM_CHAT_ID) `
     Write-Host "Private recipient chat discovered and saved (value hidden)."
 }
 
+try {
+    $recipientDetails = Invoke-RestMethod -Method Post -Uri "$apiRoot/getChat" -Body @{ chat_id = $env:TELEGRAM_CHAT_ID } -TimeoutSec 20
+} catch { throw "Cannot verify the calendar owner's private chat. Token hidden." }
+if ($recipientDetails.ok -and $recipientDetails.result.type -eq "private") {
+    if ([string]::IsNullOrWhiteSpace($env:TELEGRAM_ADMIN_USER_IDS)) {
+        Set-TelegramEnvironmentValue -Path $environmentFile -Name "TELEGRAM_ADMIN_USER_IDS" -Value ([string]$recipientDetails.result.id)
+    }
+    Set-TelegramEnvironmentValue -Path $environmentFile -Name "TELEGRAM_CALENDAR_ENABLED" -Value "true"
+    Write-Host "Calendar access configured for the verified private recipient. Send /start after restarting the API."
+}
+
 $testPayload = @{
     chat_id = $env:TELEGRAM_CHAT_ID
-    text = "✅ Бот «У Ризвана» подключён. Новые заказы будут приходить в этот чат."
+    text = "✅ Бот «Вам пицца» подключён. Новые заказы будут приходить в этот чат."
 } | ConvertTo-Json -Compress
 try {
     $testResult = Invoke-RestMethod `

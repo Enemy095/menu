@@ -55,12 +55,14 @@ class SecurityIntegrationTests {
     void exposesOnlyCanonicalPublicPairsAndExplicitProbes() throws Exception {
         assertThat(send("127.0.0.1", "GET", "/api/v1/public/config", Map.of()).statusCode()).isEqualTo(200);
         assertThat(send("127.0.0.1", "GET", "/api/v1/public/menu", Map.of()).statusCode()).isEqualTo(200);
+        assertThat(send("127.0.0.1", "GET", "/api/v1/public/availability", Map.of()).statusCode()).isEqualTo(200);
         assertThat(send("127.0.0.1", "POST", "/api/v1/public/orders", Map.of()).statusCode()).isEqualTo(200);
         assertThat(send("127.0.0.1", "GET", "/livez", Map.of()).statusCode()).isEqualTo(200);
         assertThat(send("127.0.0.1", "GET", "/readyz", Map.of()).statusCode()).isEqualTo(200);
 
         for (var denied : new String[] {
                 "POST /api/v1/public/config",
+                "POST /api/v1/public/availability",
                 "GET /api/v1/public/orders",
                 "GET /api/v1/public/example/menu",
                 "POST /api/public/orders",
@@ -204,6 +206,11 @@ class SecurityIntegrationTests {
         @GetMapping("/api/v1/public/config")
         ResponseEntity<String> config() {
             return ResponseEntity.ok().eTag("config-v1").body("config-marker");
+        }
+
+        @GetMapping("/api/v1/public/availability")
+        ResponseEntity<String> availability() {
+            return ResponseEntity.ok().header("Cache-Control", "no-store").body("availability-marker");
         }
 
         @GetMapping("/api/v1/public/menu")

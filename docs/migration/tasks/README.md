@@ -58,6 +58,9 @@ acceptance остаётся заблокирована до завершения
 
 ## Agent contract
 
+Local application release: [APP-LOCAL-002](APP-LOCAL-002.md) records approved dish
+photography, “Вам пицца” branding, Telegram owner calendar and the v2 content upgrade.
+
 Каждый task-файл обязан содержать:
 
 - objective и non-goals;

@@ -10,6 +10,7 @@ const source = await readFile(path.join(packageRoot, "openapi/openapi.yaml"), "u
 const spec = YAML.parse(source);
 
 const expectedOperations = new Map([
+  ["GET /api/v1/public/availability", "getPublicAvailability"],
   ["GET /api/v1/public/config", "getPublicConfiguration"],
   ["GET /api/v1/public/menu", "getPublicMenu"],
   ["POST /api/v1/public/orders", "createPublicOrder"],
@@ -103,7 +104,7 @@ function exampleValue(name) {
   return resolve(spec.components.examples[name]).value;
 }
 
-test("contract exposes exactly the three canonical operations", () => {
+test("contract exposes canonical reads, fresh availability and order creation", () => {
   const actual = new Map();
   for (const [route, pathItem] of Object.entries(spec.paths)) {
     assert.equal(route.includes("{"), false, `${route} must not contain a selector`);

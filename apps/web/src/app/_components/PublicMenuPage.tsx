@@ -3,7 +3,7 @@ import type { MenuResponse, PublicConfigurationResponse } from "@e-menu/api-cont
 import { selectLocalizedText } from "@/entities/site/model/select-localized-text";
 import { themeStyle } from "@/shared/lib/theme-style";
 import { Contacts } from "@/widgets/contacts/ui/Contacts";
-import { Hero } from "@/widgets/hero/ui/Hero";
+import { BusinessCalendarBanner } from "@/widgets/business-calendar/ui/BusinessCalendarBanner";
 import { MenuBrowser } from "@/widgets/menu-browser/ui/MenuBrowser";
 import { SiteHeader } from "@/widgets/site-header/ui/SiteHeader";
 import { CartExperience } from "@/widgets/cart/ui/CartExperience";
@@ -31,7 +31,8 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
 
   const content = (
     <div className="content-column">
-      <Hero hero={configuration.branding.hero} text={text} />
+      <h1 className="sr-only">{text.displayName} — меню</h1>
+      <BusinessCalendarBanner />
       {menuBrowser}
       <Contacts
         profile={configuration.profile}

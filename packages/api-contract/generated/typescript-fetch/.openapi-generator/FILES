@@ -35,6 +35,7 @@ docs/OrderType.md
 docs/OrdersApi.md
 docs/PickupOrderRequest.md
 docs/PreorderOrderRequest.md
+docs/PublicAvailability.md
 docs/PublicConfigurationResponse.md
 docs/PublicProfile.md
 docs/SeoMetadata.md
@@ -78,6 +79,7 @@ src/models/OrderLimits.ts
 src/models/OrderType.ts
 src/models/PickupOrderRequest.ts
 src/models/PreorderOrderRequest.ts
+src/models/PublicAvailability.ts
 src/models/PublicConfigurationResponse.ts
 src/models/PublicProfile.ts
 src/models/SeoMetadata.ts

@@ -69,7 +69,7 @@ class SingleClientActivationFlywayIntegrationTests {
         assertThat(flyway.migrate().success).isTrue();
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
 
-        assertThat(currentVersion(schema)).isEqualTo("9");
+        assertThat(currentVersion(schema)).isEqualTo("10");
         assertThat(tableExists(schema, "site_configuration")).isTrue();
         assertThat(tableExists(schema, "menu_modifier_groups")).isTrue();
         assertThat(tableExists(schema, "menu_modifier_options")).isTrue();
@@ -99,7 +99,7 @@ class SingleClientActivationFlywayIntegrationTests {
 
         assertThat(approvedFlyway(schema, approvedFingerprint, RUNTIME_ROLE).migrate().success).isTrue();
 
-        assertThat(currentVersion(schema)).isEqualTo("9");
+        assertThat(currentVersion(schema)).isEqualTo("10");
         assertThat(count(schema, "restaurants")).isOne();
         assertThat(count(schema, "menu_versions")).isEqualTo(2);
         assertThat(count(schema, "orders")).isOne();

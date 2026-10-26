@@ -1,7 +1,9 @@
 # Versioned local application content
 
 This is the Git-distributed starting content for the single-client local Docker
-deployment. `start-docker.cmd` loads **v1** into a fresh database automatically.
+deployment. `start-docker.cmd` loads the frozen **v1** snapshot into a fresh database,
+then applies the **v2** content update automatically. Existing databases receive
+only the v2 update, once.
 No separate import command is needed on a new Windows machine.
 
 ## Files
@@ -13,6 +15,9 @@ No separate import command is needed on a new Windows machine.
 | `v1/manifest.json` | Table counts, image sizes/hashes and frontend asset inventory |
 | `v1/checksums.sha256` | Integrity checks for the versioned snapshot and object files |
 | `v1/public-config.json`, `v1/public-menu.json` | Expected public API responses; local asset origin is a placeholder |
+| `v2/update.sql` | Idempotent branding update, tracked in `site_content_releases` |
+| `v2/manifest.json`, `v2/checksums.sha256` | Current inventory (40 frontend assets) and integrity checks |
+| `v2/public-config.json`, `v2/public-menu.json` | Current expected public API responses |
 | `bootstrap.sh`, `is-empty.sql`, `apply.sql` | Local initialization, empty-database guard and transaction |
 
 The snapshot was exported from the existing application on 2026-10-26. It preserves
@@ -21,7 +26,7 @@ restaurant contacts/hours, theme, features and logo. Public display text is pres
 exactly as it existed, including spelling and spacing.
 
 Menu pictures, illustrations and fonts are already in `apps/web/public`. They remain
-there without duplicate copies. The manifest records all 17 frontend files so tests
+there without duplicate copies. The v1 manifest records the original 17 frontend files so tests
 can verify their downloaded bytes on a clean installation.
 
 Only these PostgreSQL tables are exported:
@@ -41,17 +46,23 @@ notification setup must be configured separately on another machine.
 
 1. Flyway migrates PostgreSQL through the normal API startup.
 2. The bootstrap service verifies snapshot checksums.
-3. Any existing application rows cause a safe `LOCAL_BOOTSTRAP_SKIPPED` result.
+3. Existing application rows cause the original snapshot to be skipped safely.
 4. For an empty application database, object images are copied into the local bucket.
    Existing hash keys are verified; different bytes cause a failure.
 5. A database transaction acquires an advisory lock, rechecks emptiness and verifies
-   Flyway V9 before applying the data-only snapshot.
-6. The frontend starts after successful bootstrap completion.
+   Flyway V10 before applying the data-only snapshot.
+6. The same transaction applies `vam-pizza-v2` once: display name, localized short
+   names, logo alt text and SEO become “Вам пицца”. Prices, orders, menu IDs, contacts
+   and calendar choices are preserved. Unknown restaurant datasets are not changed.
+7. The frontend starts after successful bootstrap completion. Its 23 approved dish
+   photographs are versioned files in `apps/web/public/assets/menu/photography-v1`.
 
 An interrupted upload can be retried. A failed SQL apply rolls back all rows. A
 concurrent second initializer skips after the first transaction commits. Re-running
-the launcher does not overwrite local edits or duplicate menu rows. Existing
-installations do not automatically adopt future snapshot versions.
+the launcher does not overwrite menu edits or duplicate rows. Explicit content
+releases can update selected fields in existing installations; a new snapshot alone
+does not replace an existing database. Once v2 is marked applied, later local edits
+to branding are preserved on subsequent starts.
 
 Set `LOCAL_BOOTSTRAP_ENABLED=false` in `.env` to skip initialization deliberately.
 The app may be unavailable until content is provisioned when this is disabled.
@@ -64,13 +75,13 @@ With the local application and MinIO running, export a **new** version from the
 repository root:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/export-local-bootstrap.ps1 -Version v2
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/export-local-bootstrap.ps1 -Version v3
 ```
 
 The exporter refuses to overwrite an existing version. It uses the explicit table
 allowlist, exports assets referenced by the asset catalog, verifies SHA-256/size,
 captures public API expectations and inventories frontend files. It currently
-supports schema V9. Review the SQL, public contact/configuration fields and images
+supports schema V10. Review the SQL, public contact/configuration fields and images
 before adding the new version to Git. Public content must be stable during export.
 If export fails, inspect the incomplete new directory before removing it or retrying.
 
@@ -96,5 +107,6 @@ verifies exact config/menu responses, every content table's row count, HTTP 200,
 object-storage image bytes, all frontend image/font hashes and absence of operational
 data. It rejects tampered files, conflicting object bytes and an incompatible schema
 before publishing database content. It changes menu prices only in the disposable database, reruns initialization
-and proves those edits survive. Its `finally` block removes only its verified test
+and proves those edits and calendar dates survive while the branding release applies.
+Its `finally` block removes only its verified test
 containers and volumes; the normal `emenu-local` data stays intact.

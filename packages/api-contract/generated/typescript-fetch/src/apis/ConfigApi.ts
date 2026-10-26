@@ -19,6 +19,11 @@ import {
     ErrorResponseToJSON,
 } from '../models/ErrorResponse';
 import {
+    type PublicAvailability,
+    PublicAvailabilityFromJSON,
+    PublicAvailabilityToJSON,
+} from '../models/PublicAvailability';
+import {
     type PublicConfigurationResponse,
     PublicConfigurationResponseFromJSON,
     PublicConfigurationResponseToJSON,
@@ -31,6 +36,28 @@ import {
  * @interface ConfigApiInterface
  */
 export interface ConfigApiInterface {
+    /**
+     * Creates request options for getPublicAvailability without sending the request
+     * @throws {RequiredError}
+     * @memberof ConfigApiInterface
+     */
+    getPublicAvailabilityRequestOpts(): Promise<runtime.RequestOpts>;
+
+    /**
+     * Fresh operational information in the configured business timezone. Never cached.
+     * @summary Get current business day and planned days off
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ConfigApiInterface
+     */
+    getPublicAvailabilityRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PublicAvailability>>;
+
+    /**
+     * Fresh operational information in the configured business timezone. Never cached.
+     * Get current business day and planned days off
+     */
+    getPublicAvailability(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PublicAvailability>;
+
     /**
      * Creates request options for getPublicConfiguration without sending the request
      * @throws {RequiredError}
@@ -59,6 +86,45 @@ export interface ConfigApiInterface {
  *
  */
 export class ConfigApi extends runtime.BaseAPI implements ConfigApiInterface {
+
+    /**
+     * Creates request options for getPublicAvailability without sending the request
+     */
+    async getPublicAvailabilityRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/public/availability`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Fresh operational information in the configured business timezone. Never cached.
+     * Get current business day and planned days off
+     */
+    async getPublicAvailabilityRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PublicAvailability>> {
+        const requestOptions = await this.getPublicAvailabilityRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PublicAvailabilityFromJSON(jsonValue));
+    }
+
+    /**
+     * Fresh operational information in the configured business timezone. Never cached.
+     * Get current business day and planned days off
+     */
+    async getPublicAvailability(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PublicAvailability> {
+        const response = await this.getPublicAvailabilityRaw(initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for getPublicConfiguration without sending the request

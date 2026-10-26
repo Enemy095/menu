@@ -145,7 +145,7 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
           !hydrated
             ? "Загрузка корзины"
             : receiptVisible && !count
-              ? "Заказ принят"
+              ? "Заказ в разработке"
               : `${title}: ${count}`
         }
       >
@@ -160,7 +160,7 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
           {!hydrated
             ? "Загрузка корзины…"
             : receiptVisible && !count
-              ? "Заказ принят"
+              ? "Заказ в разработке"
               : "Ваш заказ"}
         </span>
         {hydrated ? (

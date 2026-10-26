@@ -18,14 +18,14 @@ import {
   Configuration,
   ConfigApi,
 } from '@e-menu/public-api-client';
-import type { GetPublicConfigurationRequest } from '@e-menu/public-api-client';
+import type { GetPublicAvailabilityRequest } from '@e-menu/public-api-client';
 
 async function example() {
   console.log("🚀 Testing @e-menu/public-api-client SDK...");
   const api = new ConfigApi();
 
   try {
-    const data = await api.getPublicConfiguration();
+    const data = await api.getPublicAvailability();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -45,6 +45,7 @@ All URIs are relative to *https://menu.example.com*
 
 | Class | Method | HTTP request | Description
 | ----- | ------ | ------------ | -------------
+*ConfigApi* | [**getPublicAvailability**](docs/ConfigApi.md#getpublicavailability) | **GET** /api/v1/public/availability | Get current business day and planned days off
 *ConfigApi* | [**getPublicConfiguration**](docs/ConfigApi.md#getpublicconfiguration) | **GET** /api/v1/public/config | Get public configuration
 *MenuApi* | [**getPublicMenu**](docs/MenuApi.md#getpublicmenu) | **GET** /api/v1/public/menu | Get published menu
 *OrdersApi* | [**createPublicOrder**](docs/OrdersApi.md#createpublicorder) | **POST** /api/v1/public/orders | Create an order
@@ -82,6 +83,7 @@ All URIs are relative to *https://menu.example.com*
 - [OrderType](docs/OrderType.md)
 - [PickupOrderRequest](docs/PickupOrderRequest.md)
 - [PreorderOrderRequest](docs/PreorderOrderRequest.md)
+- [PublicAvailability](docs/PublicAvailability.md)
 - [PublicConfigurationResponse](docs/PublicConfigurationResponse.md)
 - [PublicProfile](docs/PublicProfile.md)
 - [SeoMetadata](docs/SeoMetadata.md)

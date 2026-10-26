@@ -37,7 +37,7 @@ try {
     $databaseName = $model.services.postgres.environment.POSTGRES_DB
     $queryPrefix = @("exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", $databaseUser, "-d", $databaseName, "-At", "-c")
     $schemaVersion = Invoke-Compose -Arguments ($queryPrefix + @("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1"))
-    if ("$schemaVersion".Trim() -ne "9") { throw "This bootstrap exporter currently supports Flyway V9 only." }
+    if ("$schemaVersion".Trim() -ne "10") { throw "This bootstrap exporter currently supports Flyway V10 only." }
     $assetJson = Invoke-Compose -Arguments ($queryPrefix + @("SELECT COALESCE(json_agg(a ORDER BY object_key), '[]') FROM (SELECT object_key, sha256, size_bytes, content_type FROM assets) a"))
     $assets = ($assetJson -join "`n") | ConvertFrom-Json
     foreach ($asset in $assets) {
@@ -99,7 +99,7 @@ try {
     $manifest = [ordered]@{
         schemaVersion = 1
         version = $Version
-        requiredFlywayVersion = "9"
+        requiredFlywayVersion = "10"
         purpose = "Public restaurant configuration and menu for fresh local Docker installations"
         tables = $rowCounts
         assets = @($assets)

@@ -30,6 +30,7 @@ export * from './OrderLimits';
 export * from './OrderType';
 export * from './PickupOrderRequest';
 export * from './PreorderOrderRequest';
+export * from './PublicAvailability';
 export * from './PublicConfigurationResponse';
 export * from './PublicProfile';
 export * from './SeoMetadata';

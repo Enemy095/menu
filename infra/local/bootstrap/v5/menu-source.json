@@ -1,0 +1,31 @@
+{
+  "source": "Owner-provided В.А.М. ПИЦЦА menu photograph, 2026-10-26",
+  "currency": "RUB",
+  "categories": [
+    {"id":"rolls","name":"Роллы"},
+    {"id":"pizza","name":"Пицца"},
+    {"id":"sides","name":"Гарнир/закуски"},
+    {"id":"burgers","name":"Бургеры"}
+  ],
+  "items": [
+    {"id":"cezar-roll-chicken","category":"rolls","name":"Цезарь с курицей","priceMinor":25000},
+    {"id":"cezar-roll-shrimp","category":"rolls","name":"Цезарь с креветкой","priceMinor":30000},
+    {"id":"sake-maki","category":"rolls","name":"Горячий шик","priceMinor":30000},
+    {"id":"cheese-baked-roll","category":"rolls","name":"Сырные запечённые","priceMinor":30000},
+    {"id":"pizza-caesar","category":"pizza","name":"Цезарь","priceMinor":40000},
+    {"id":"pizza-pepperoni","category":"pizza","name":"Пепперони","priceMinor":35000},
+    {"id":"pizza-mushroom","category":"pizza","name":"Грибная","priceMinor":35000},
+    {"id":"pizza-cheese","category":"pizza","name":"Сырная","priceMinor":35000},
+    {"id":"pizza-julienne","category":"pizza","name":"Жульен","priceMinor":40000},
+    {"id":"pizza-assorti","category":"pizza","name":"Ассорти","priceMinor":35000},
+    {"id":"pizza-meat","category":"pizza","name":"Мясная","priceMinor":35000,"description":"Пицца с ветчиной, копчёной колбасой, беконом, моцареллой и томатным соусом"},
+    {"id":"pizza-chicken","category":"pizza","name":"Куриная","priceMinor":35000},
+    {"id":"pizza-four-cheese","category":"pizza","name":"4 сыра","priceMinor":35000},
+    {"id":"pizza-sicilian","category":"pizza","name":"Сицилийская","priceMinor":35000,"description":"Пицца с корейкой, сервелатом, ветчиной, томатами, сладким перцем и моцареллой"},
+    {"id":"french-fries","category":"sides","name":"Картофель фри","priceMinor":12000},
+    {"id":"village-potato","category":"sides","name":"Картофель по-деревенски","priceMinor":12000},
+    {"id":"nuggets","category":"sides","name":"Наггетсы","priceMinor":20000},
+    {"id":"burger-beef","category":"burgers","name":"Бургер говяжий","priceMinor":27000},
+    {"id":"burger-chicken","category":"burgers","name":"Бургер куриный","priceMinor":27000}
+  ]
+}

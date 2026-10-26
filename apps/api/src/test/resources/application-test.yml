@@ -1,0 +1,67 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+app:
+  security:
+    cors:
+      allowed-origins:
+        - https://frontend.example.test
+    request-authority:
+      allowed-hosts:
+        - localhost
+        - 127.0.0.1
+        - '[::1]'
+        - allowed.example.test
+        - alias.example.test
+    trusted-proxies:
+      enabled: false
+      cidrs:
+        - 10.0.0.0/8
+  assets:
+    storage:
+      endpoint: http://127.0.0.1:1
+      region: us-east-1
+      bucket: menu-assets-test
+      access-key: test-access-key
+      secret-key: test-secret-key
+      path-style-access: true
+    cdn-base-url: https://assets.example.test
+  worker:
+    enabled: false
+    worker-id: test-worker
+    poll-interval: 1s
+    batch-size: 4
+    concurrency: 2
+    max-destinations: 2
+    lease-duration: 30s
+    provider-timeout: 5s
+    max-attempts: 4
+    initial-backoff: 1s
+    max-backoff: 1m
+    jitter-ratio: 0
+    shutdown-timeout: 5s
+  external:
+    public-base-url: https://example.test
+    asset-base-url: https://assets.example.test
+
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: readinessState
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  tracing:
+    export:
+      enabled: false
+      otlp:
+        enabled: false
+  logging:
+    export:
+      otlp:
+        enabled: false

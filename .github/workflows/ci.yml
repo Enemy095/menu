@@ -1,0 +1,263 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  legacy-import-preflight:
+    name: Architecture and legacy preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      - name: Verify immutable legacy sources and sanitized import fixture
+        run: node docs/migration/import/verify-preflight.mjs
+
+      - name: Reject compatibility tenant scope in runtime sources
+        run: node scripts/check-forbidden-runtime-scope.mjs
+
+  api-contract:
+    name: API contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: packages/api-contract
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install root workspace dependencies
+        working-directory: ${{ github.workspace }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint OpenAPI
+        run: pnpm run lint
+
+      - name: Test contract semantics
+        run: pnpm run test
+
+      - name: Check backward compatibility when a released baseline exists
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          baseline=.github/openapi-baseline/openapi.yaml
+          revision=packages/api-contract/openapi/openapi.yaml
+          if [[ ! -f "$baseline" ]]; then
+            echo "::notice title=OpenAPI compatibility baseline pending::No released OpenAPI baseline exists yet; lint, semantic tests, and generated drift are enforced, but backward compatibility cannot be compared until the first release baseline is committed."
+            {
+              echo "### OpenAPI compatibility"
+              echo "No released baseline exists yet. The compatibility gate will activate when \`$baseline\` is added at the first API release."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          docker run --rm \
+            --volume "$PWD:/work:ro" \
+            --workdir /work \
+            tufin/oasdiff:v1.17.0@sha256:440ea5929aafc385d040af1165b49c6264549aa0a207c8dc98edd71a7422c6ad \
+            breaking --fail-on ERR "$baseline" "$revision"
+
+      - name: Check generated client drift
+        run: pnpm run check-generated
+
+      - name: Type-check generated client
+        run: pnpm run typecheck
+
+      - name: Build contract package
+        run: pnpm run build
+
+      - name: Upload contract artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: api-contract-${{ github.sha }}
+          path: |
+            packages/api-contract/dist
+            packages/api-contract/openapi/openapi.yaml
+          if-no-files-found: error
+          retention-days: 7
+
+  frontend:
+    name: Frontend
+    needs: api-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install root workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint frontend
+        run: pnpm --filter web lint
+
+      - name: Type-check frontend
+        run: pnpm --filter web typecheck
+
+      - name: Run frontend unit and accessibility tests
+        run: pnpm --filter web test
+
+      - name: Build on-demand ISR frontend
+        run: pnpm --filter web build
+
+      - name: Verify production HTTP 503 outage response
+        run: pnpm --filter web test:integration
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Node.js for executable smoke harness
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Run backend checks and build executable jar
+        run: ./gradlew --no-daemon :apps:api:check :apps:api:bootJar --stacktrace
+
+      - name: Smoke executable jar against disposable PostgreSQL
+        run: node scripts/smoke-disposable-postgres.mjs
+
+      - name: Generate backend SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          file: apps/api/build/libs/menu-platform-api.jar
+          format: spdx-json
+          output-file: apps/api/build/menu-platform-api.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Upload backend distribution
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-distribution-${{ github.sha }}
+          path: |
+            apps/api/build/libs/menu-platform-api.jar
+            apps/api/build/menu-platform-api.spdx.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-test-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/api/build/reports/tests
+            apps/api/build/test-results
+          if-no-files-found: warn
+          retention-days: 7
+
+  local-infrastructure:
+    name: Local infrastructure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Validate default Compose model
+        run: docker compose config --quiet
+
+      - name: Validate all Compose profiles
+        run: docker compose --profile assets --profile observability config --quiet
+
+      - name: Reject unpinned or latest Compose images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t images < <(docker compose --profile assets --profile observability config --images)
+          for image in "${images[@]}"; do
+            if [[ "$image" == *:latest ]] || [[ "$image" != *@sha256:* && "$image" != *:* ]]; then
+              echo "Compose image is not version-pinned: $image" >&2
+              exit 1
+            fi
+          done
+
+      - name: Start ephemeral PostgreSQL
+        run: docker compose up --detach --wait postgres
+
+      - name: Check PostgreSQL readiness
+        run: docker compose exec --no-TTY postgres pg_isready --username emenu --dbname emenu
+
+      - name: Capture PostgreSQL logs on failure
+        if: failure()
+        shell: bash
+        run: docker compose logs --no-color postgres > postgres-compose.log 2>&1 || true
+
+      - name: Upload PostgreSQL failure logs
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: postgres-compose-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: postgres-compose.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop local infrastructure
+        if: always()
+        run: docker compose down --volumes --remove-orphans

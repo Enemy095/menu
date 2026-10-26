@@ -1,0 +1,240 @@
+name: ${COMPOSE_PROJECT_NAME:-emenu-local}
+
+services:
+  api:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-emenu}
+      DATABASE_USERNAME: ${POSTGRES_USER:-emenu}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-emenu_local_password}
+      APP_SECURITY_ALLOWED_HOSTS: localhost,127.0.0.1,[::1],api
+      APP_SECURITY_TRUSTED_PROXIES_ENABLED: "false"
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      ASSET_BASE_URL: ${ASSET_BASE_URL:-http://localhost:9000/menu-assets-local}
+      ASSET_STORAGE_ENDPOINT: http://minio:9000
+      ASSET_STORAGE_REGION: ${ASSET_STORAGE_REGION:-us-east-1}
+      ASSET_STORAGE_BUCKET: ${MINIO_BUCKET:-menu-assets-local}
+      ASSET_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER:-emenu-local}
+      ASSET_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
+      ASSET_STORAGE_PATH_STYLE_ACCESS: "true"
+      APP_WORKER_ENABLED: ${APP_WORKER_ENABLED:-false}
+      TELEGRAM_NOTIFICATIONS_ENABLED: ${TELEGRAM_NOTIFICATIONS_ENABLED:-false}
+      TELEGRAM_CALENDAR_ENABLED: ${TELEGRAM_CALENDAR_ENABLED:-false}
+      TELEGRAM_ADMIN_USER_IDS: ${TELEGRAM_ADMIN_USER_IDS:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_MESSAGE_THREAD_ID: ${TELEGRAM_MESSAGE_THREAD_ID:-}
+      TELEGRAM_DESTINATION_SECRET_REFERENCE: ${TELEGRAM_DESTINATION_SECRET_REFERENCE:-secret://application/telegram/orders}
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - backend
+      - assets
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  web:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    environment:
+      MENU_API_BASE_URL: http://api:8080
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+      ASSET_PROXY_BASE_URL: http://minio:9000/${MINIO_BUCKET:-menu-assets-local}
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    networks:
+      - backend
+      - assets
+    healthcheck:
+      # The app intentionally returns 404 before site configuration is published.
+      # Liveness must not mistake an unprovisioned database for a crashed server.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status===200||r.status===404?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  bootstrap:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: infra/docker/object-storage.Dockerfile
+      target: bootstrap
+    environment:
+      LOCAL_BOOTSTRAP_ENABLED: ${LOCAL_BOOTSTRAP_ENABLED:-true}
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-emenu}
+      PGUSER: ${POSTGRES_USER:-emenu}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-emenu_local_password}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-emenu-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-menu-assets-local}
+    depends_on:
+      api:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks:
+      - backend
+      - assets
+    restart: "no"
+
+  postgres:
+    image: postgres:17.5-alpine3.21
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-emenu}
+      POSTGRES_USER: ${POSTGRES_USER:-emenu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-emenu_local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  minio:
+    image: emenu/minio-server:RELEASE.2025-04-22T22-12-26Z-local
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: infra/docker/object-storage.Dockerfile
+      target: server
+    profiles: ["assets"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-emenu-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - assets
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  minio-init:
+    image: emenu/minio-client:RELEASE.2025-04-16T18-13-26Z-local
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: infra/docker/object-storage.Dockerfile
+      target: client
+    profiles: ["assets"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-emenu-local}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-emenu-local-password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-menu-assets-local}
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}"
+        # Local development has no CDN in front of the private origin. Expose only
+        # object downloads so browser-rendered content-addressed assets work locally.
+        mc anonymous set download "local/$${MINIO_BUCKET}"
+    networks:
+      - assets
+    restart: "no"
+
+  otel-collector:
+    image: emenu/otel-collector-contrib:0.130.0-local
+    build:
+      context: ./infra/observability/otel-collector
+      dockerfile: Dockerfile
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "${OTEL_GRPC_PORT:-4317}:4317"
+      - "${OTEL_HTTP_PORT:-4318}:4318"
+      - "${OTEL_HEALTH_PORT:-13133}:13133"
+    volumes:
+      - ./infra/observability/otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - observability
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:13133/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    profiles: ["observability"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus-data:/prometheus
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - observability
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  backend:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-backend
+  assets:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-assets
+  observability:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-observability
+
+volumes:
+  postgres-data:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-postgres-data
+  minio-data:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-minio-data
+  prometheus-data:
+    name: ${COMPOSE_PROJECT_NAME:-emenu-local}-prometheus-data

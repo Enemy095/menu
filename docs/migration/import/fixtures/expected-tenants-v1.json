@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "purpose": "sanitized MIG-001 Phase A mapping fixture; not production runtime configuration",
+  "tenants": [
+    {
+      "slug": "stambul",
+      "status": "active",
+      "locale": "ru-RU",
+      "currency": "RUB",
+      "timezone": {
+        "value": "Europe/Moscow",
+        "confirmed": false
+      },
+      "defaultRestaurant": {
+        "slug": "stambul",
+        "displayName": "Ресторан-кафе у Ризвана",
+        "status": "active",
+        "isDefault": true
+      },
+      "branding": {
+        "displayName": "Ресторан-кафе у Ризвана",
+        "businessType": "Ресторан-кафе",
+        "logoAssetRole": "LOGO",
+        "faviconAssetRole": null,
+        "designTokens": {
+          "primaryColor": "#721F2A",
+          "secondaryColor": "#4B1018",
+          "accentColor": "#C8A467",
+          "backgroundColor": "#F7F0E3",
+          "surfaceColor": "#FFFDF8",
+          "textColor": "#2E2020",
+          "mutedTextColor": "#7E6C66",
+          "borderRadius": "21px",
+          "fontFamily": "Georgia, \"Times New Roman\", serif"
+        },
+        "localizedTexts": [
+          {
+            "locale": "ru-RU",
+            "displayName": "Ресторан-кафе у Ризвана",
+            "shortName": "у Ризвана",
+            "businessTypeLabel": "Ресторан-кафе",
+            "cuisineText": "Турецкая кухня",
+            "slogan": "Вкус Стамбула рядом с вами",
+            "introText": "Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.",
+            "menuSectionTitle": "Выберите блюда",
+            "cartTitle": "Ваш заказ",
+            "orderTypeLegend": "Как хотите получить заказ?"
+          }
+        ],
+        "hero": {
+          "imageAssetRole": null,
+          "imageAlt": null,
+          "eyebrow": "Наше меню",
+          "title": "Вкус Стамбула рядом с вами",
+          "subtitle": "Турецкая кухня",
+          "ctaLabel": "Смотреть меню",
+          "benefits": []
+        },
+        "seoMetadata": {
+          "title": "У ризвана — электронное меню",
+          "description": "Электронное меню ресторан-кафе «У Ризвана»",
+          "canonicalUrl": "required-config:STAMBUL_CANONICAL_URL",
+          "openGraphAssetRole": null
+        }
+      },
+      "profile": {
+        "publicPhone": "+7 (989) 442-81-81",
+        "publicPhoneSource": "Электронное меню/restaurants/stambul/config.js#profile.phone (explicitly public)",
+        "publicPhoneLabel": "Позвонить ресторану",
+        "address": null,
+        "workingHoursText": "Ежедневно с 10:00 до 23:00",
+        "location": null,
+        "socialLinks": []
+      },
+      "featureRows": [
+        {
+          "featureKey": "orders",
+          "enabled": true,
+          "config": {
+            "limits": {
+              "maxItemQuantity": 99,
+              "maxTotalItems": 200,
+              "maxNameLength": 80,
+              "maxPhoneLength": 32,
+              "maxAddressLength": 240,
+              "maxCommentLength": 500,
+              "delayedOrderConfirmationMinutes": 15
+            }
+          }
+        },
+        { "featureKey": "contacts", "enabled": true, "config": {} },
+        { "featureKey": "geo_location", "enabled": true, "config": {} },
+        { "featureKey": "social_links", "enabled": false, "config": {} },
+        { "featureKey": "delivery", "enabled": true, "config": { "label": "Доставка", "default": false } },
+        { "featureKey": "pickup", "enabled": true, "config": { "label": "Самовывоз", "default": false } },
+        { "featureKey": "preorder", "enabled": true, "config": { "label": "Предзаказ", "default": true } },
+        { "featureKey": "custom_theme", "enabled": true, "config": {} },
+        { "featureKey": "whatsapp_fallback", "enabled": true, "config": {} },
+        { "featureKey": "promotions", "enabled": false, "config": {} },
+        { "featureKey": "loyalty", "enabled": false, "config": {} },
+        { "featureKey": "reservations", "enabled": false, "config": {} },
+        { "featureKey": "delivery_blocks", "enabled": false, "config": {} }
+      ],
+      "notificationDestinations": [
+        {
+          "channel": "whatsapp",
+          "displayName": "legacy-public-menu",
+          "secretReference": "required-secret:LEGACY_IMPORT_STAMBUL_WHATSAPP_DESTINATION_REF"
+        }
+      ],
+      "assets": [
+        {
+          "role": "LOGO",
+          "sourcePath": "Электронное меню/restaurants/stambul/branding/logo.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "bytes": 43728,
+          "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b",
+          "width": 197,
+          "height": 179
+        }
+      ],
+      "menu": {
+        "version": 1,
+        "publishedAt": "2026-07-01T00:00:00.000Z",
+        "currency": "RUB",
+        "categories": [
+          { "categoryId": "rolls", "name": "Роллы", "sourceOrder": 0, "sortOrder": 0, "available": true, "imageAssetId": null },
+          { "categoryId": "pizza", "name": "Пицца", "sourceOrder": 1, "sortOrder": 1, "available": true, "imageAssetId": null },
+          { "categoryId": "sides", "name": "Гарниры", "sourceOrder": 2, "sortOrder": 2, "available": true, "imageAssetId": null },
+          { "categoryId": "burgers", "name": "Бургеры", "sourceOrder": 3, "sortOrder": 3, "available": true, "imageAssetId": null }
+        ],
+        "items": [
+          { "menuItemId": "cezar-roll-chicken", "categoryId": "rolls", "name": "Ролл Цезарь с курицей", "description": "Ролл с курицей, свежими овощами и соусом Цезарь", "priceMinor": 25000, "available": true, "sourceOrder": 0, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "cezar-roll-shrimp", "categoryId": "rolls", "name": "Ролл Цезарь с креветкой", "description": "Ролл с креветкой, овощами и фирменным соусом", "priceMinor": 30000, "available": true, "sourceOrder": 1, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "sake-maki", "categoryId": "rolls", "name": "Ролл Горячий шик", "description": "Классический ролл с лососем", "priceMinor": 30000, "available": true, "sourceOrder": 2, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "hot-roll-salmon", "categoryId": "rolls", "name": "Горячий ролл с лососем", "description": "Запечённый ролл с лососем и нежной начинкой", "priceMinor": 35000, "available": true, "sourceOrder": 3, "sortOrder": 3, "imageAssetId": null },
+          { "menuItemId": "cheese-baked-roll", "categoryId": "rolls", "name": "Ролл Сырный запечённые", "description": "Запечённые роллы с сырной начинкой", "priceMinor": 30000, "available": true, "sourceOrder": 4, "sortOrder": 4, "imageAssetId": null },
+          { "menuItemId": "bonito-roll", "categoryId": "rolls", "name": "Ролл Ойси", "description": "Ролл с традиционной японской начинкой и стружкой тунца", "priceMinor": 40000, "available": true, "sourceOrder": 5, "sortOrder": 5, "imageAssetId": null },
+          { "menuItemId": "philadelphia-chicken-roll", "categoryId": "rolls", "name": "Ролл Ойси с курицей", "description": "Ролл с курицей и сливочным сыром", "priceMinor": 35000, "available": true, "sourceOrder": 6, "sortOrder": 6, "imageAssetId": null },
+          { "menuItemId": "philadelphia-roll", "categoryId": "rolls", "name": "Ролл Филадельфия", "description": "Классический ролл с лососем и сливочным сыром", "priceMinor": 40000, "available": true, "sourceOrder": 7, "sortOrder": 7, "imageAssetId": null },
+          { "menuItemId": "pizza-caesar", "categoryId": "pizza", "name": "Пицца Цезарь", "description": "Пицца с курицей, сыром и соусом Цезарь", "priceMinor": 35000, "available": true, "sourceOrder": 8, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "pizza-pepperoni", "categoryId": "pizza", "name": "Пицца Пепперони", "description": "Классическая пицца с колбасками пепперони", "priceMinor": 35000, "available": true, "sourceOrder": 9, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "pizza-mushroom", "categoryId": "pizza", "name": "Пицца Грибная", "description": "Пицца с грибами и сыром", "priceMinor": 35000, "available": true, "sourceOrder": 10, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "pizza-cheese", "categoryId": "pizza", "name": "Пицца Сырная", "description": "Пицца с несколькими видами сыра", "priceMinor": 35000, "available": true, "sourceOrder": 11, "sortOrder": 3, "imageAssetId": null },
+          { "menuItemId": "pizza-julienne", "categoryId": "pizza", "name": "Пицца Жульен", "description": "Пицца с курицей, грибами и сливочным соусом", "priceMinor": 35000, "available": true, "sourceOrder": 12, "sortOrder": 4, "imageAssetId": null },
+          { "menuItemId": "pizza-assorti", "categoryId": "pizza", "name": "Пицца Ассорти", "description": "Пицца с разнообразной начинкой", "priceMinor": 35000, "available": true, "sourceOrder": 13, "sortOrder": 5, "imageAssetId": null },
+          { "menuItemId": "pizza-margherita", "categoryId": "pizza", "name": "Пицца Маргарита", "description": "Классическая пицца с томатами, сыром и соусом", "priceMinor": 35000, "available": true, "sourceOrder": 14, "sortOrder": 6, "imageAssetId": null },
+          { "menuItemId": "pizza-chicken", "categoryId": "pizza", "name": "Пицца Куриная", "description": "Пицца с курицей и сыром", "priceMinor": 35000, "available": true, "sourceOrder": 15, "sortOrder": 7, "imageAssetId": null },
+          { "menuItemId": "pizza-four-cheese", "categoryId": "pizza", "name": "Пицца    4 сыра", "description": "Пицца с четырьмя видами сыра", "priceMinor": 35000, "available": true, "sourceOrder": 16, "sortOrder": 8, "imageAssetId": null },
+          { "menuItemId": "pizza-hunter", "categoryId": "pizza", "name": "Пицца Охотничья", "description": "Пицца с мясными ингредиентами и сыром", "priceMinor": 35000, "available": true, "sourceOrder": 17, "sortOrder": 9, "imageAssetId": null },
+          { "menuItemId": "french-fries", "categoryId": "sides", "name": "Картофель фри", "description": "Хрустящий картофель фри", "priceMinor": 12000, "available": true, "sourceOrder": 18, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "village-potato", "categoryId": "sides", "name": "Картофель по-деревенски", "description": "Картофельные дольки со специями", "priceMinor": 12000, "available": true, "sourceOrder": 19, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "nuggets", "categoryId": "sides", "name": "Наггетсы", "description": "Куриные наггетсы с хрустящей корочкой", "priceMinor": 20000, "available": true, "sourceOrder": 20, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "burger-beef", "categoryId": "burgers", "name": "Бургер говяжий", "description": "Сочный бургер с говяжьей котлетой и фирменным соусом", "priceMinor": 27000, "available": true, "sourceOrder": 21, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "burger-chicken", "categoryId": "burgers", "name": "Бургер куриный", "description": "Бургер с куриной котлетой и свежими овощами", "priceMinor": 27000, "available": true, "sourceOrder": 22, "sortOrder": 1, "imageAssetId": null }
+        ]
+      },
+      "warnings": [
+        "geo_location is enabled but legacy coordinates are zero and therefore mapped to absent",
+        "canonical URL requires environment configuration",
+        "timezone is an unconfirmed migration assumption",
+        "pizza-four-cheese display name preserves repeated whitespace from legacy"
+      ]
+    },
+    {
+      "slug": "adamas",
+      "status": "active",
+      "locale": "ru-RU",
+      "currency": "RUB",
+      "timezone": {
+        "value": "Europe/Moscow",
+        "confirmed": false
+      },
+      "defaultRestaurant": {
+        "slug": "adamas",
+        "displayName": "Адамас",
+        "status": "active",
+        "isDefault": true
+      },
+      "branding": {
+        "displayName": "Адамас",
+        "businessType": "Служба доставки еды",
+        "logoAssetRole": "LOGO",
+        "faviconAssetRole": null,
+        "designTokens": {
+          "primaryColor": "#D4A843",
+          "secondaryColor": "#242424",
+          "accentColor": "#D4A843",
+          "backgroundColor": "#0A0A0A",
+          "surfaceColor": "#1A1A1A",
+          "textColor": "#FFFFFF",
+          "mutedTextColor": "#888888",
+          "borderRadius": "12px",
+          "fontFamily": "\"Segoe UI\", \"Helvetica Neue\", Arial, sans-serif"
+        },
+        "localizedTexts": [
+          {
+            "locale": "ru-RU",
+            "displayName": "Адамас",
+            "shortName": "Адамас",
+            "businessTypeLabel": "Служба доставки еды",
+            "cuisineText": "Пицца • Роллы • Бургеры • Гарниры",
+            "slogan": "ВКУСНАЯ ЕДА БЫСТРАЯ ДОСТАВКА",
+            "introText": "Закажите любимые блюда — мы доставим быстро и горячо.",
+            "menuSectionTitle": "Выберите блюда",
+            "cartTitle": "Ваш заказ",
+            "orderTypeLegend": "Как хотите получить заказ?"
+          }
+        ],
+        "hero": {
+          "imageAssetRole": "HERO",
+          "imageAlt": "Аппетитный бургер с сыром и овощами",
+          "eyebrow": "Доставка еды",
+          "title": "ВКУСНАЯ ЕДА — БЫСТРАЯ ДОСТАВКА",
+          "subtitle": "Пицца • Роллы • Бургеры • Гарниры",
+          "ctaLabel": "Смотреть меню",
+          "benefits": [
+            { "icon": "🔥", "text": "Горячая еда" },
+            { "icon": "⏱", "text": "От 40 минут" },
+            { "icon": "🚗", "text": "Доставка от 1000 ₽ бесплатно" }
+          ]
+        },
+        "seoMetadata": {
+          "title": "Адамас — доставка еды",
+          "description": "Доставка еды Адамас — пицца, роллы, бургеры, гарниры. Быстрая доставка.",
+          "canonicalUrl": "required-config:ADAMAS_CANONICAL_URL",
+          "openGraphAssetRole": null
+        }
+      },
+      "profile": {
+        "publicPhone": "+7 (999) 123-45-67",
+        "publicPhoneSource": "Электронное меню/restaurants/adamas/config.js#profile.phone (explicitly public)",
+        "publicPhoneLabel": "Позвонить ресторану",
+        "address": null,
+        "workingHoursText": "Ежедневно с 10:00 до 23:00",
+        "location": null,
+        "socialLinks": []
+      },
+      "featureRows": [
+        {
+          "featureKey": "orders",
+          "enabled": true,
+          "config": {
+            "limits": {
+              "maxItemQuantity": 99,
+              "maxTotalItems": 200,
+              "maxNameLength": 80,
+              "maxPhoneLength": 32,
+              "maxAddressLength": 240,
+              "maxCommentLength": 500,
+              "delayedOrderConfirmationMinutes": 15
+            }
+          }
+        },
+        { "featureKey": "contacts", "enabled": true, "config": {} },
+        { "featureKey": "geo_location", "enabled": false, "config": {} },
+        { "featureKey": "social_links", "enabled": false, "config": {} },
+        { "featureKey": "delivery", "enabled": true, "config": { "label": "Доставка", "default": false } },
+        { "featureKey": "pickup", "enabled": true, "config": { "label": "Самовывоз", "default": false } },
+        { "featureKey": "preorder", "enabled": true, "config": { "label": "Предзаказ", "default": true } },
+        { "featureKey": "custom_theme", "enabled": true, "config": {} },
+        { "featureKey": "whatsapp_fallback", "enabled": true, "config": {} },
+        { "featureKey": "promotions", "enabled": false, "config": {} },
+        { "featureKey": "loyalty", "enabled": false, "config": {} },
+        { "featureKey": "reservations", "enabled": false, "config": {} },
+        { "featureKey": "delivery_blocks", "enabled": true, "config": {} }
+      ],
+      "notificationDestinations": [
+        {
+          "channel": "whatsapp",
+          "displayName": "legacy-public-menu",
+          "secretReference": "required-secret:LEGACY_IMPORT_ADAMAS_WHATSAPP_DESTINATION_REF"
+        }
+      ],
+      "assets": [
+        {
+          "role": "LOGO",
+          "sourcePath": "Электронное меню/restaurants/adamas/branding/hero-burger.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "bytes": 447184,
+          "sha256": "68eed81f6b021efd58113f4ab6edc8feef68d91336f600729c776a07ab6caaab",
+          "width": 658,
+          "height": 434
+        },
+        {
+          "role": "HERO",
+          "sourcePath": "Электронное меню/restaurants/adamas/branding/hero-burger.png",
+          "contentType": "image/png",
+          "extension": "png",
+          "bytes": 447184,
+          "sha256": "68eed81f6b021efd58113f4ab6edc8feef68d91336f600729c776a07ab6caaab",
+          "width": 658,
+          "height": 434
+        }
+      ],
+      "menu": {
+        "version": 1,
+        "publishedAt": "2026-07-13T00:00:00.000Z",
+        "currency": "RUB",
+        "categories": [
+          { "categoryId": "pizza", "name": "Пицца", "sourceOrder": 0, "sortOrder": 0, "available": true, "imageAssetId": null },
+          { "categoryId": "rolls", "name": "Роллы", "sourceOrder": 1, "sortOrder": 1, "available": true, "imageAssetId": null },
+          { "categoryId": "burgers", "name": "Бургеры", "sourceOrder": 2, "sortOrder": 2, "available": true, "imageAssetId": null },
+          { "categoryId": "sides", "name": "Гарниры", "sourceOrder": 3, "sortOrder": 3, "available": true, "imageAssetId": null }
+        ],
+        "items": [
+          { "menuItemId": "pizza-pepperoni", "categoryId": "pizza", "name": "Пицца Пепперони", "description": "Классическая пицца с пикантной пепперони и моцареллой", "priceMinor": 59000, "available": true, "sourceOrder": 0, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "pizza-margherita", "categoryId": "pizza", "name": "Пицца Маргарита", "description": "Томаты, моцарелла, базилик на тонком тесте", "priceMinor": 49000, "available": true, "sourceOrder": 1, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "pizza-four-cheese", "categoryId": "pizza", "name": "Пицца 4 сыра", "description": "Моцарелла, пармезан, дор-блю, чеддер", "priceMinor": 62000, "available": true, "sourceOrder": 2, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "pizza-chicken", "categoryId": "pizza", "name": "Пицца Куриная", "description": "Курица, грибы, моцарелла, соус альфредо", "priceMinor": 55000, "available": true, "sourceOrder": 3, "sortOrder": 3, "imageAssetId": null },
+          { "menuItemId": "pizza-hawaiian", "categoryId": "pizza", "name": "Пицца Гавайская", "description": "Ветчина, ананас, моцарелла", "priceMinor": 54000, "available": true, "sourceOrder": 4, "sortOrder": 4, "imageAssetId": null },
+          { "menuItemId": "pizza-mushroom", "categoryId": "pizza", "name": "Пицца Грибная", "description": "Шампиньоны, белые грибы, трюфельное масло", "priceMinor": 57000, "available": true, "sourceOrder": 5, "sortOrder": 5, "imageAssetId": null },
+          { "menuItemId": "roll-philadelphia", "categoryId": "rolls", "name": "Сет Филадельфия", "description": "Классический ролл с лососем и сливочным сыром", "priceMinor": 84900, "available": true, "sourceOrder": 6, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "roll-california", "categoryId": "rolls", "name": "Калифорния", "description": "Краб, авокадо, огурец, икра тобико", "priceMinor": 69000, "available": true, "sourceOrder": 7, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "roll-hot-salmon", "categoryId": "rolls", "name": "Горячий ролл с лососем", "description": "Запечённый ролл с лососем и сливочным сыром", "priceMinor": 72000, "available": true, "sourceOrder": 8, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "roll-dragon", "categoryId": "rolls", "name": "Дрэгон ролл", "description": "Угорь, авокадо, огурец, соус унаги", "priceMinor": 79000, "available": true, "sourceOrder": 9, "sortOrder": 3, "imageAssetId": null },
+          { "menuItemId": "roll-spicy-tuna", "categoryId": "rolls", "name": "Спайси тунец", "description": "Тунец, спайси соус, кунжут, авокадо", "priceMinor": 75000, "available": true, "sourceOrder": 10, "sortOrder": 4, "imageAssetId": null },
+          { "menuItemId": "burger-classic", "categoryId": "burgers", "name": "Чизбургер", "description": "Говяжья котлета, сыр чеддер, томаты, соус", "priceMinor": 35000, "available": true, "sourceOrder": 11, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "burger-double", "categoryId": "burgers", "name": "Дабл чизбургер", "description": "Две говяжьи котлеты, двойной сыр, соус", "priceMinor": 49000, "available": true, "sourceOrder": 12, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "burger-chicken", "categoryId": "burgers", "name": "Куриный бургер", "description": "Хрустящая курица, салат, томаты, соус цезарь", "priceMinor": 37000, "available": true, "sourceOrder": 13, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "burger-bbq", "categoryId": "burgers", "name": "Барбекю бургер", "description": "Говяжья котлета, бекон, лук кольцами, BBQ соус", "priceMinor": 42000, "available": true, "sourceOrder": 14, "sortOrder": 3, "imageAssetId": null },
+          { "menuItemId": "fries-standard", "categoryId": "sides", "name": "Картофель фри", "description": "Хрустящий картофель фри", "priceMinor": 14000, "available": true, "sourceOrder": 15, "sortOrder": 0, "imageAssetId": null },
+          { "menuItemId": "fries-wedges", "categoryId": "sides", "name": "Картофель по-деревенски", "description": "Картофельные дольки со специями", "priceMinor": 16000, "available": true, "sourceOrder": 16, "sortOrder": 1, "imageAssetId": null },
+          { "menuItemId": "nuggets-8", "categoryId": "sides", "name": "Наггетсы (8 шт)", "description": "Куриные наггетсы с хрустящей корочкой", "priceMinor": 22000, "available": true, "sourceOrder": 17, "sortOrder": 2, "imageAssetId": null },
+          { "menuItemId": "onion-rings", "categoryId": "sides", "name": "Кольца лука", "description": "Хрустящие кольца лука в панировке", "priceMinor": 18000, "available": true, "sourceOrder": 18, "sortOrder": 3, "imageAssetId": null }
+        ]
+      },
+      "warnings": [
+        "canonical URL requires environment configuration",
+        "timezone is an unconfirmed migration assumption",
+        "free delivery at 1000 RUB is marketing copy and is not imported as an operational threshold without owner confirmation",
+        "OpenAPI example minOrderMinor=50000 has no legacy source and is not imported"
+      ]
+    }
+  ]
+}

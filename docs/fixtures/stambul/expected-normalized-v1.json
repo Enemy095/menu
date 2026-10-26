@@ -1,0 +1,590 @@
+{
+  "schemaVersion": 1,
+  "selection": "STAMBUL_APPROVED",
+  "baselinePurpose": "local-test-acceptance",
+  "approvedImporterBundle": {
+    "path": "docs/migration/data/stambul-approved-v1.json",
+    "sha256": "7b04313f8907b44820d9eccf2490cea118504e68be2ea20ffef6186df6955b40"
+  },
+  "sourceSet": {
+    "digestAlgorithm": "sha256(UTF-8 JSON.stringify(selectedFiles), array order as listed and property order path,sizeBytes,sha256)",
+    "digest": "aec158b37b08ed9c1166d0023c5c22171fd48fdad5770b3c8583d99b8044173a",
+    "selectedFiles": [
+      {
+        "path": "Электронное меню/restaurants/stambul/config.js",
+        "sizeBytes": 4589,
+        "sha256": "99e636d9c8528f27586f5101bb7bfccd65609c89f4d0d2e71aec77e98db04d52"
+      },
+      {
+        "path": "Электронное меню/restaurants/stambul/features.js",
+        "sizeBytes": 684,
+        "sha256": "03ff360aa55e0e4d2b9b8799491ddc2e1832eeb407710095e31cf3ed483f7dfa"
+      },
+      {
+        "path": "Электронное меню/restaurants/stambul/order-types.js",
+        "sizeBytes": 727,
+        "sha256": "be26e63d26d504234e987d760f429b0798d26bf425748c6f471a19c28932dd7a"
+      },
+      {
+        "path": "Электронное меню/restaurants/stambul/menu.js",
+        "sizeBytes": 7085,
+        "sha256": "9fdedb8be5882a04aa824c5b9618a755716447a0dc077b2e6b78726e039eb8ec"
+      },
+      {
+        "path": "Электронное меню/themes/stambul/theme.css",
+        "sizeBytes": 519,
+        "sha256": "07b9cc54fc6ecb669d3daeff97f8c8b5c25804cde1816dee0186a094ecc29b9c"
+      },
+      {
+        "path": "Электронное меню/restaurants/stambul/branding/logo.png",
+        "sizeBytes": 43728,
+        "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b"
+      }
+    ],
+    "unselectedDataset": {
+      "name": "Adamas",
+      "requiredState": "absent",
+      "forbiddenPathSegment": "/restaurants/adamas/",
+      "forbiddenAssetSha256": "68eed81f6b021efd58113f4ab6edc8feef68d91336f600729c776a07ab6caaab"
+    }
+  },
+  "deploymentBaseline": {
+    "locale": "ru-RU",
+    "currency": "RUB",
+    "timezone": "Europe/Moscow",
+    "canonicalUrl": "https://stambul.localhost",
+    "publicContactSource": "selected legacy public contact",
+    "deliveryFeePolicy": "none",
+    "minimumOrderMinor": null,
+    "freeDeliveryThresholdMinor": null,
+    "notificationWorkerEnabled": false,
+    "notificationDestination": null,
+    "productionReplacementRequired": [
+      "timezone",
+      "canonicalUrl",
+      "publicPhone"
+    ]
+  },
+  "deterministicIds": {
+    "algorithm": "UUIDv5",
+    "namespaceUuid": "e9b2ab7a-0a0a-5309-9403-39ed9ec91d4b",
+    "names": {
+      "logoAsset": "asset:logo",
+      "restaurant": "restaurant:stambul",
+      "menuVersion": "menu:stambul:1",
+      "categoryPrefix": "category:",
+      "itemPrefix": "item:"
+    },
+    "anchorIds": {
+      "asset:logo": "41eec9b7-b68e-5c82-ac50-a988df90b415",
+      "restaurant:stambul": "d4579042-8239-57df-b716-c27d3a6c213a",
+      "menu:stambul:1": "db0d6a46-9145-55c7-af56-2795b510fa19"
+    }
+  },
+  "approvedTechnicalNormalizations": [
+    {
+      "field": "siteBranding.designTokens.mutedTextColor",
+      "sourceValue": "#7E6C66",
+      "normalizedValue": "#7C6A64",
+      "reason": "The source-derived value has 4.386:1 contrast against #F7F0E3 and is rejected by the current 4.5:1 frontend policy; the approved value is the nearest uniform two-step RGB darkening at 4.516:1."
+    },
+    {
+      "field": "siteBranding.designTokens.fontFamily",
+      "sourceValue": "Georgia, \"Times New Roman\", serif",
+      "normalizedValue": "Georgia, Times New Roman, serif",
+      "reason": "Quotes are removed because the current OpenAPI and frontend safe-font grammar accepts only comma-separated family names and forbids CSS syntax."
+    },
+    {
+      "field": "features.geoLocation",
+      "sourceValue": true,
+      "normalizedValue": false,
+      "reason": "Legacy coordinates are (0,0) with an empty label and therefore represent absent location, not a usable public location."
+    }
+  ],
+  "normalizedGraph": {
+    "assets": [
+      {
+        "deterministicName": "asset:logo",
+        "assetType": "logo",
+        "sourcePath": "Электронное меню/restaurants/stambul/branding/logo.png",
+        "contentType": "image/png",
+        "sizeBytes": 43728,
+        "width": 197,
+        "height": 179,
+        "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b",
+        "canonicalObjectKey": "assets/logo/90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b.png",
+        "storageState": "canonical_ready",
+        "status": "active"
+      }
+    ],
+    "siteConfiguration": {
+      "singletonId": 1,
+      "status": "active",
+      "locale": "ru-RU",
+      "currency": "RUB",
+      "timezone": "Europe/Moscow"
+    },
+    "siteBranding": {
+      "singletonId": 1,
+      "displayName": "Ресторан-кафе у Ризвана",
+      "businessType": "Ресторан-кафе",
+      "logoAssetRef": "asset:logo",
+      "logoAlt": "Логотип ресторан-кафе «У Ризвана»",
+      "faviconAssetRef": null,
+      "designTokens": {
+        "primaryColor": "#721F2A",
+        "secondaryColor": "#4B1018",
+        "accentColor": "#C8A467",
+        "backgroundColor": "#F7F0E3",
+        "surfaceColor": "#FFFDF8",
+        "textColor": "#2E2020",
+        "mutedTextColor": "#7C6A64",
+        "borderRadius": "21px",
+        "fontFamily": "Georgia, Times New Roman, serif"
+      },
+      "localizedTexts": [
+        {
+          "locale": "ru-RU",
+          "displayName": "Ресторан-кафе у Ризвана",
+          "shortName": "у Ризвана",
+          "businessTypeLabel": "Ресторан-кафе",
+          "cuisineText": "Турецкая кухня",
+          "slogan": "Вкус Стамбула рядом с вами",
+          "introText": "Выбирайте любимые блюда — мы соберём заказ и передадим его менеджеру в WhatsApp.",
+          "menuSectionTitle": "Выберите блюда",
+          "cartTitle": "Ваш заказ",
+          "orderTypeLegend": "Как хотите получить заказ?"
+        }
+      ],
+      "hero": {
+        "imageAssetRef": null,
+        "imageAlt": null,
+        "title": "Вкус Стамбула рядом с вами",
+        "subtitle": "Турецкая кухня",
+        "ctaLabel": "Смотреть меню",
+        "benefits": []
+      },
+      "seo": {
+        "title": "У ризвана — электронное меню",
+        "description": "Электронное меню ресторан-кафе «У Ризвана»",
+        "canonicalUrl": "https://stambul.localhost",
+        "openGraphAssetRef": null
+      }
+    },
+    "siteProfile": {
+      "singletonId": 1,
+      "publicPhone": "+7 (989) 442-81-81",
+      "publicPhoneLabel": "Позвонить ресторану",
+      "publicEmail": null,
+      "address": null,
+      "location": null,
+      "socialLinks": [],
+      "workingHoursText": "Ежедневно с 10:00 до 23:00",
+      "schedule": [
+        {
+          "dayOfWeek": "monday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        },
+        {
+          "dayOfWeek": "tuesday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        },
+        {
+          "dayOfWeek": "wednesday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        },
+        {
+          "dayOfWeek": "thursday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        },
+        {
+          "dayOfWeek": "friday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        },
+        {
+          "dayOfWeek": "saturday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        },
+        {
+          "dayOfWeek": "sunday",
+          "intervals": [{ "opensAt": "10:00", "closesAt": "23:00" }]
+        }
+      ]
+    },
+    "features": {
+      "orders": true,
+      "contacts": true,
+      "geoLocation": false,
+      "socialLinks": false,
+      "delivery": true,
+      "pickup": true,
+      "preorder": true,
+      "customTheme": true,
+      "whatsappFallback": true,
+      "promotions": false,
+      "loyalty": false,
+      "reservations": false,
+      "deliveryBlocks": false
+    },
+    "orderTypes": [
+      { "code": "preorder", "label": "Предзаказ", "isDefault": true },
+      { "code": "delivery", "label": "Доставка", "isDefault": false },
+      { "code": "pickup", "label": "Самовывоз", "isDefault": false }
+    ],
+    "limits": {
+      "maxItemQuantity": 99,
+      "maxTotalItems": 200,
+      "maxNameLength": 80,
+      "maxPhoneLength": 32,
+      "maxAddressLength": 240,
+      "maxCommentLength": 500,
+      "delayedOrderConfirmationMinutes": 15
+    },
+    "deliveryConfiguration": {
+      "enabled": true,
+      "addressRequired": true,
+      "feePolicy": "none",
+      "minimumOrderMinor": null,
+      "freeDeliveryThresholdMinor": null
+    },
+    "restaurant": {
+      "deterministicName": "restaurant:stambul",
+      "externalKey": "stambul",
+      "slug": "stambul",
+      "displayName": "Ресторан-кафе у Ризвана",
+      "status": "active",
+      "isDefault": true
+    },
+    "menu": {
+      "deterministicName": "menu:stambul:1",
+      "version": 1,
+      "status": "published",
+      "publishedAt": "2026-07-01T00:00:00.000Z",
+      "currency": "RUB",
+      "categories": [
+        { "categoryId": "rolls", "name": "Роллы", "sortOrder": 0, "imageAssetRef": null },
+        { "categoryId": "pizza", "name": "Пицца", "sortOrder": 1, "imageAssetRef": null },
+        { "categoryId": "sides", "name": "Гарниры", "sortOrder": 2, "imageAssetRef": null },
+        { "categoryId": "burgers", "name": "Бургеры", "sortOrder": 3, "imageAssetRef": null }
+      ],
+      "items": [
+        {
+          "menuItemId": "cezar-roll-chicken",
+          "categoryId": "rolls",
+          "name": "Ролл Цезарь с курицей",
+          "description": "Ролл с курицей, свежими овощами и соусом Цезарь",
+          "priceMinor": 25000,
+          "available": true,
+          "sortOrder": 0,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "cezar-roll-shrimp",
+          "categoryId": "rolls",
+          "name": "Ролл Цезарь с креветкой",
+          "description": "Ролл с креветкой, овощами и фирменным соусом",
+          "priceMinor": 30000,
+          "available": true,
+          "sortOrder": 1,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "sake-maki",
+          "categoryId": "rolls",
+          "name": "Ролл Горячий шик",
+          "description": "Классический ролл с лососем",
+          "priceMinor": 30000,
+          "available": true,
+          "sortOrder": 2,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "hot-roll-salmon",
+          "categoryId": "rolls",
+          "name": "Горячий ролл с лососем",
+          "description": "Запечённый ролл с лососем и нежной начинкой",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 3,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "cheese-baked-roll",
+          "categoryId": "rolls",
+          "name": "Ролл Сырный запечённые",
+          "description": "Запечённые роллы с сырной начинкой",
+          "priceMinor": 30000,
+          "available": true,
+          "sortOrder": 4,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "bonito-roll",
+          "categoryId": "rolls",
+          "name": "Ролл Ойси",
+          "description": "Ролл с традиционной японской начинкой и стружкой тунца",
+          "priceMinor": 40000,
+          "available": true,
+          "sortOrder": 5,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "philadelphia-chicken-roll",
+          "categoryId": "rolls",
+          "name": "Ролл Ойси с курицей",
+          "description": "Ролл с курицей и сливочным сыром",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 6,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "philadelphia-roll",
+          "categoryId": "rolls",
+          "name": "Ролл Филадельфия",
+          "description": "Классический ролл с лососем и сливочным сыром",
+          "priceMinor": 40000,
+          "available": true,
+          "sortOrder": 7,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-caesar",
+          "categoryId": "pizza",
+          "name": "Пицца Цезарь",
+          "description": "Пицца с курицей, сыром и соусом Цезарь",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 0,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-pepperoni",
+          "categoryId": "pizza",
+          "name": "Пицца Пепперони",
+          "description": "Классическая пицца с колбасками пепперони",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 1,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-mushroom",
+          "categoryId": "pizza",
+          "name": "Пицца Грибная",
+          "description": "Пицца с грибами и сыром",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 2,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-cheese",
+          "categoryId": "pizza",
+          "name": "Пицца Сырная",
+          "description": "Пицца с несколькими видами сыра",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 3,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-julienne",
+          "categoryId": "pizza",
+          "name": "Пицца Жульен",
+          "description": "Пицца с курицей, грибами и сливочным соусом",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 4,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-assorti",
+          "categoryId": "pizza",
+          "name": "Пицца Ассорти",
+          "description": "Пицца с разнообразной начинкой",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 5,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-margherita",
+          "categoryId": "pizza",
+          "name": "Пицца Маргарита",
+          "description": "Классическая пицца с томатами, сыром и соусом",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 6,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-chicken",
+          "categoryId": "pizza",
+          "name": "Пицца Куриная",
+          "description": "Пицца с курицей и сыром",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 7,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-four-cheese",
+          "categoryId": "pizza",
+          "name": "Пицца    4 сыра",
+          "description": "Пицца с четырьмя видами сыра",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 8,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "pizza-hunter",
+          "categoryId": "pizza",
+          "name": "Пицца Охотничья",
+          "description": "Пицца с мясными ингредиентами и сыром",
+          "priceMinor": 35000,
+          "available": true,
+          "sortOrder": 9,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "french-fries",
+          "categoryId": "sides",
+          "name": "Картофель фри",
+          "description": "Хрустящий картофель фри",
+          "priceMinor": 12000,
+          "available": true,
+          "sortOrder": 0,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "village-potato",
+          "categoryId": "sides",
+          "name": "Картофель по-деревенски",
+          "description": "Картофельные дольки со специями",
+          "priceMinor": 12000,
+          "available": true,
+          "sortOrder": 1,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "nuggets",
+          "categoryId": "sides",
+          "name": "Наггетсы",
+          "description": "Куриные наггетсы с хрустящей корочкой",
+          "priceMinor": 20000,
+          "available": true,
+          "sortOrder": 2,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "burger-beef",
+          "categoryId": "burgers",
+          "name": "Бургер говяжий",
+          "description": "Сочный бургер с говяжьей котлетой и фирменным соусом",
+          "priceMinor": 27000,
+          "available": true,
+          "sortOrder": 0,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        },
+        {
+          "menuItemId": "burger-chicken",
+          "categoryId": "burgers",
+          "name": "Бургер куриный",
+          "description": "Бургер с куриной котлетой и свежими овощами",
+          "priceMinor": 27000,
+          "available": true,
+          "sortOrder": 1,
+          "imageAssetRef": null,
+          "modifierGroups": []
+        }
+      ]
+    },
+    "notification": {
+      "workerEnabled": false,
+      "destination": null
+    },
+    "explicitlyAbsent": {
+      "favicon": true,
+      "heroImage": true,
+      "openGraphImage": true,
+      "categoryImages": true,
+      "menuItemImages": true,
+      "modifierGroups": true,
+      "modifierOptions": true,
+      "publicEmail": true,
+      "publicAddress": true,
+      "geoLocation": true,
+      "socialLinks": true,
+      "promotions": true,
+      "loyalty": true,
+      "reservations": true,
+      "deliveryBlocks": true,
+      "minimumOrder": true,
+      "freeDeliveryThreshold": true,
+      "notificationDestination": true,
+      "adamasContent": true
+    },
+    "runtimeTablesExpectedEmptyAfterImport": [
+      "orders",
+      "order_items",
+      "order_status_history",
+      "outbox_events",
+      "notification_deliveries",
+      "notification_destinations"
+    ]
+  },
+  "intentionalNonImports": [
+    "slug-driven runtime dataset selection",
+    "submitMode",
+    "managerPhone raw destination",
+    "apiBaseUrl",
+    "allowedImageOrigins",
+    "legacyValue order-type aliases",
+    "cart/form/submit adapter copy not represented by the public contract",
+    "maxFinalMessageLength",
+    "empty-string address/image/location placeholders",
+    "duplicate logo bytes at Электронное меню/images/logo-stambul.png"
+  ],
+  "publicationSafety": {
+    "dryRunExternalWrites": 0,
+    "applyPreflightReadTransactionCount": 1,
+    "applyWriteTransactionCount": 1,
+    "assetUploadBeforeDatabaseCommit": "immutable-put-and-verify-only",
+    "identicalBundleReplay": "UNCHANGED with zero database/object writes",
+    "differentBundleAgainstExistingGraph": "CONFLICT with zero writes",
+    "concurrentApply": "serialized; exactly one publish result and no partial graph",
+    "databaseFailureAfterAssetUpload": "no public database graph; unreferenced immutable object only",
+    "forbiddenSideEffects": [
+      "orders",
+      "order_items",
+      "order_status_history",
+      "outbox_events",
+      "notification_deliveries",
+      "provider calls"
+    ]
+  }
+}

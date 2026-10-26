@@ -1,0 +1,1647 @@
+openapi: 3.0.3
+info:
+  title: E-menu Public API
+  version: 1.0.0
+  description: |
+    Public contract for one restaurant deployment. The request authority is validated
+    by infrastructure but never selects business data. Prices, availability, fulfillment
+    rules and notification destinations are always resolved by the backend.
+  license:
+    name: Proprietary
+    url: https://menu.example.com/legal/api-license
+servers:
+  - url: https://menu.example.com
+    description: Canonical production origin.
+tags:
+  - name: Config
+    description: Public branding, contacts, capabilities and operational configuration.
+  - name: Menu
+    description: Current published menu.
+  - name: Orders
+    description: Idempotent public order creation.
+security: []
+
+paths:
+  /api/v1/public/availability:
+    get:
+      tags: [Config]
+      summary: Get current business day and planned days off
+      operationId: getPublicAvailability
+      description: Fresh operational information in the configured business timezone. Never cached.
+      responses:
+        '200':
+          description: Current calendar availability.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicAvailability'
+              example:
+                businessDate: '2026-10-28'
+                timezone: Europe/Moscow
+                closedToday: true
+                weeklyClosedDays: [3]
+                closedDates: ['2026-11-04']
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/SiteNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/public/config:
+    get:
+      tags: [Config]
+      summary: Get public configuration
+      description: Returns the configuration of this deployment.
+      operationId: getPublicConfiguration
+      responses:
+        '200':
+          description: Current public configuration.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ConfigETag'
+            Cache-Control:
+              $ref: '#/components/headers/ConfigCacheControl'
+            Cache-Tag:
+              $ref: '#/components/headers/ConfigCacheTag'
+            Surrogate-Key:
+              $ref: '#/components/headers/ConfigSurrogateKey'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicConfigurationResponse'
+              examples:
+                configuration:
+                  $ref: '#/components/examples/PublicConfiguration'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '503':
+          $ref: '#/components/responses/SiteNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/public/menu:
+    get:
+      tags: [Menu]
+      summary: Get published menu
+      description: Returns the current immutable published menu snapshot.
+      operationId: getPublicMenu
+      responses:
+        '200':
+          description: Current published menu.
+          headers:
+            ETag:
+              $ref: '#/components/headers/MenuETag'
+            Cache-Control:
+              $ref: '#/components/headers/MenuCacheControl'
+            Cache-Tag:
+              $ref: '#/components/headers/MenuCacheTag'
+            Surrogate-Key:
+              $ref: '#/components/headers/MenuSurrogateKey'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuResponse'
+              examples:
+                menu:
+                  $ref: '#/components/examples/PublicMenu'
+        '404':
+          $ref: '#/components/responses/MenuNotFound'
+        '503':
+          $ref: '#/components/responses/SiteNotReady'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/public/orders:
+    post:
+      tags: [Orders]
+      summary: Create an order
+      description: |
+        Creates one order per idempotency key. The backend validates the current menu,
+        selected modifiers, item availability, quantities and fulfillment rules. It
+        calculates all prices and resolves external destinations from server-side config.
+        New orders are rejected with RESTAURANT_CLOSED (409) on a closed business date,
+        including weekly closures. Identical replays still return the original order.
+      operationId: createPublicOrder
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              preorder:
+                $ref: '#/components/examples/PreorderRequest'
+              delivery:
+                $ref: '#/components/examples/DeliveryRequest'
+              pickup:
+                $ref: '#/components/examples/PickupRequest'
+      responses:
+        '201':
+          description: Order created, or the original result returned for an identical replay.
+          headers:
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+              examples:
+                preorder:
+                  $ref: '#/components/examples/PreorderResponse'
+                delivery:
+                  $ref: '#/components/examples/DeliveryResponse'
+                pickup:
+                  $ref: '#/components/examples/PickupResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/MenuNotFound'
+        '409':
+          $ref: '#/components/responses/OrderConflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/DependencyUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID reused only when retrying the same canonical order payload.
+      schema:
+        type: string
+        format: uuid
+      example: 6a43ed97-c755-4df2-a600-b4cf523f176c
+  headers:
+    ConfigETag:
+      description: Strong entity tag for the complete public configuration representation.
+      schema:
+        type: string
+      example: '"config-20b4851e"'
+    ConfigCacheControl:
+      description: Browser and shared-cache freshness policy for public configuration.
+      schema:
+        type: string
+      example: public, max-age=60, s-maxage=300, stale-while-revalidate=60
+    ConfigCacheTag:
+      description: Stable CDN invalidation tag for public configuration.
+      schema:
+        type: string
+      example: site-config
+    ConfigSurrogateKey:
+      description: Space-separated CDN invalidation keys for public configuration.
+      schema:
+        type: string
+      example: site-config
+    MenuETag:
+      description: Strong entity tag for the complete published menu representation.
+      schema:
+        type: string
+      example: '"menu-v7-90d5f358"'
+    MenuCacheControl:
+      description: Browser and shared-cache freshness policy for the published menu.
+      schema:
+        type: string
+      example: public, max-age=30, s-maxage=300, stale-while-revalidate=60
+    MenuCacheTag:
+      description: Stable CDN invalidation tag for the published menu.
+      schema:
+        type: string
+      example: menu
+    MenuSurrogateKey:
+      description: Space-separated CDN invalidation keys for the published menu.
+      schema:
+        type: string
+      example: menu menu-v7
+    NoStore:
+      description: Prevents storage of order responses by shared or browser caches.
+      schema:
+        type: string
+        enum: [no-store]
+      example: no-store
+    IdempotencyReplayed:
+      description: True when the original response is returned for an identical idempotent replay.
+      schema:
+        type: boolean
+      example: false
+    RetryAfter:
+      description: Seconds before the client should retry.
+      schema:
+        type: integer
+        minimum: 1
+      example: 30
+
+  responses:
+    ValidationError:
+      description: Request structure, input format or fulfillment data is invalid.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validationError:
+              $ref: '#/components/examples/ValidationError'
+    MenuNotFound:
+      description: No current published menu is available.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            menuNotFound:
+              $ref: '#/components/examples/MenuNotFoundError'
+    OrderConflict:
+      description: Current menu, closed business date or idempotency state conflicts with the submitted order.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            menuChanged:
+              $ref: '#/components/examples/MenuChangedError'
+            restaurantClosed:
+              $ref: '#/components/examples/RestaurantClosedError'
+            itemUnavailable:
+              $ref: '#/components/examples/ItemUnavailableError'
+            modifierUnavailable:
+              $ref: '#/components/examples/ModifierUnavailableError'
+            idempotencyConflict:
+              $ref: '#/components/examples/IdempotencyConflictError'
+    RateLimited:
+      description: Too many requests for the client or global rate-limit scope.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rateLimited:
+              $ref: '#/components/examples/RateLimitedError'
+    SiteNotReady:
+      description: Required public configuration is missing or not ready.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            siteNotReady:
+              $ref: '#/components/examples/SiteNotReadyError'
+    DependencyUnavailable:
+      description: A required backend dependency is temporarily unavailable.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            dependencyUnavailable:
+              $ref: '#/components/examples/DependencyUnavailableError'
+    InternalError:
+      description: Unexpected server failure. The trace ID can be reported to support.
+      headers:
+        Cache-Control:
+          $ref: '#/components/headers/NoStore'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internalError:
+              $ref: '#/components/examples/InternalError'
+
+  schemas:
+    PublicConfigurationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - restaurantId
+        - branding
+        - seo
+        - profile
+        - features
+        - orderTypes
+        - limits
+        - schedule
+        - deliveryConfiguration
+        - locale
+        - currency
+        - timezone
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+          description: Stable public identifier of the configured restaurant.
+        branding:
+          $ref: '#/components/schemas/Branding'
+        seo:
+          $ref: '#/components/schemas/SeoMetadata'
+        profile:
+          $ref: '#/components/schemas/PublicProfile'
+        features:
+          $ref: '#/components/schemas/SiteFeatures'
+        orderTypes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/AvailableOrderType'
+        limits:
+          $ref: '#/components/schemas/OrderLimits'
+        schedule:
+          $ref: '#/components/schemas/WeeklySchedule'
+        deliveryConfiguration:
+          $ref: '#/components/schemas/DeliveryConfiguration'
+        locale:
+          type: string
+          description: The first public-web release supports Russian localization only.
+          enum: [ru-RU]
+          example: ru-RU
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          pattern: '^[A-Z]{3}$'
+          example: RUB
+        timezone:
+          type: string
+          description: IANA timezone used for business rules and display.
+          example: Europe/Moscow
+
+    Branding:
+      type: object
+      additionalProperties: false
+      required: [logoUrl, logoAlt, hero, designTokens, localizedTexts]
+      properties:
+        logoUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+          description: Immutable content-addressed public asset URL.
+        logoAlt:
+          type: string
+          minLength: 1
+          maxLength: 160
+        faviconUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+          description: Immutable content-addressed public asset URL.
+        hero:
+          $ref: '#/components/schemas/Hero'
+        designTokens:
+          $ref: '#/components/schemas/DesignTokens'
+        localizedTexts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/LocalizedSiteText'
+
+    Hero:
+      type: object
+      additionalProperties: false
+      required: [title, ctaLabel]
+      properties:
+        imageUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+          description: Immutable content-addressed public asset URL.
+        imageAlt:
+          type: string
+          maxLength: 160
+        eyebrow:
+          type: string
+          maxLength: 100
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        subtitle:
+          type: string
+          maxLength: 240
+        ctaLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        benefits:
+          type: array
+          maxItems: 6
+          items:
+            $ref: '#/components/schemas/HeroBenefit'
+
+    HeroBenefit:
+      type: object
+      additionalProperties: false
+      required: [icon, text]
+      properties:
+        icon:
+          type: string
+          minLength: 1
+          maxLength: 16
+        text:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+    DesignTokens:
+      type: object
+      additionalProperties: false
+      required:
+        - primaryColor
+        - secondaryColor
+        - accentColor
+        - backgroundColor
+        - surfaceColor
+        - textColor
+        - mutedTextColor
+        - borderRadius
+        - fontFamily
+      properties:
+        primaryColor:
+          $ref: '#/components/schemas/CssColor'
+        secondaryColor:
+          $ref: '#/components/schemas/CssColor'
+        accentColor:
+          $ref: '#/components/schemas/CssColor'
+        backgroundColor:
+          $ref: '#/components/schemas/CssColor'
+        surfaceColor:
+          $ref: '#/components/schemas/CssColor'
+        textColor:
+          $ref: '#/components/schemas/CssColor'
+        mutedTextColor:
+          $ref: '#/components/schemas/CssColor'
+        borderRadius:
+          type: string
+          pattern: '^[0-9]+(?:\.[0-9]+)?(?:px|rem)$'
+          example: 1rem
+        fontFamily:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[A-Za-z_-][A-Za-z0-9 _-]*(?:,\s*[A-Za-z_-][A-Za-z0-9 _-]*)*$'
+          description: Safe comma-separated CSS font family names; CSS functions and declarations are forbidden.
+
+    CssColor:
+      type: string
+      description: Six-digit hexadecimal CSS color.
+      pattern: '^#[0-9A-Fa-f]{6}$'
+      example: '#A33A2B'
+
+    LocalizedSiteText:
+      type: object
+      additionalProperties: false
+      required:
+        - locale
+        - displayName
+        - shortName
+        - businessTypeLabel
+        - cuisineText
+        - slogan
+        - introText
+        - menuSectionTitle
+        - cartTitle
+        - orderTypeLegend
+      properties:
+        locale:
+          type: string
+          enum: [ru-RU]
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        shortName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        businessTypeLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        cuisineText:
+          type: string
+          maxLength: 160
+        slogan:
+          type: string
+          maxLength: 200
+        introText:
+          type: string
+          maxLength: 500
+        menuSectionTitle:
+          type: string
+          minLength: 1
+          maxLength: 120
+        cartTitle:
+          type: string
+          minLength: 1
+          maxLength: 120
+        orderTypeLegend:
+          type: string
+          minLength: 1
+          maxLength: 160
+
+    SeoMetadata:
+      type: object
+      additionalProperties: false
+      required: [title, description, canonicalUrl]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          minLength: 1
+          maxLength: 320
+        canonicalUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+        openGraphImageUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+          description: Immutable content-addressed public asset URL.
+
+    PublicProfile:
+      type: object
+      additionalProperties: false
+      required: [publicPhone, publicPhoneLabel, socialLinks]
+      properties:
+        publicPhone:
+          type: string
+          minLength: 5
+          maxLength: 32
+        publicPhoneLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        publicEmail:
+          type: string
+          format: email
+          maxLength: 254
+        address:
+          type: string
+          maxLength: 240
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+        socialLinks:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/SocialLink'
+
+    PublicAvailability:
+      type: object
+      additionalProperties: false
+      required: [businessDate, timezone, closedToday, weeklyClosedDays, closedDates]
+      properties:
+        businessDate:
+          type: string
+          format: date
+        timezone:
+          type: string
+          minLength: 1
+        closedToday:
+          type: boolean
+        nextOpenDate:
+          type: string
+          format: date
+          nullable: true
+          description: Next open business date within the configured one-year horizon, or null if none is known.
+        weeklyClosedDays:
+          type: array
+          maxItems: 7
+          uniqueItems: true
+          description: ISO weekdays, Monday equals 1 and Sunday equals 7.
+          items:
+            type: integer
+            minimum: 1
+            maximum: 7
+        closedDates:
+          type: array
+          maxItems: 366
+          uniqueItems: true
+          items:
+            type: string
+            format: date
+    WeeklySchedule:
+      type: object
+      additionalProperties: false
+      required: [timezone, displayText, days]
+      properties:
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: IANA timezone used to interpret all local opening intervals.
+          example: Europe/Moscow
+        displayText:
+          type: string
+          minLength: 1
+          maxLength: 240
+          description: Localized human-readable summary; structured days remain authoritative.
+        days:
+          type: array
+          minItems: 7
+          maxItems: 7
+          description: Exactly one entry for every day of the week, ordered Monday through Sunday.
+          items:
+            $ref: '#/components/schemas/WeeklyScheduleDay'
+
+    WeeklyScheduleDay:
+      type: object
+      additionalProperties: false
+      required: [dayOfWeek, intervals]
+      properties:
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeek'
+        intervals:
+          type: array
+          maxItems: 8
+          description: Non-overlapping local-time intervals; an empty array means closed.
+          items:
+            $ref: '#/components/schemas/OpeningInterval'
+
+    DayOfWeek:
+      type: string
+      enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
+
+    OpeningInterval:
+      type: object
+      additionalProperties: false
+      required: [opensAt, closesAt]
+      properties:
+        opensAt:
+          type: string
+          pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Opening local wall-clock time in `HH:mm` format.
+          example: '10:00'
+        closesAt:
+          type: string
+          pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: Closing local wall-clock time in `HH:mm` format.
+          example: '23:00'
+
+    DeliveryConfiguration:
+      type: object
+      additionalProperties: false
+      required: [enabled, addressRequired, feePolicy]
+      properties:
+        enabled:
+          type: boolean
+          description: Whether delivery can currently be selected.
+        addressRequired:
+          type: boolean
+          description: Whether a delivery order requires a non-empty address.
+        feePolicy:
+          type: string
+          enum: [none]
+          description: Current operational delivery fee policy; marketing thresholds are not policy.
+
+    GeoLocation:
+      type: object
+      additionalProperties: false
+      required: [latitude, longitude, label]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        label:
+          type: string
+          minLength: 1
+          maxLength: 240
+
+    SocialLink:
+      type: object
+      additionalProperties: false
+      required: [type, label, url]
+      properties:
+        type:
+          type: string
+          enum: [website, instagram, telegram, vk, facebook, other]
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        url:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+
+    SiteFeatures:
+      type: object
+      additionalProperties: false
+      required:
+        - orders
+        - contacts
+        - geoLocation
+        - socialLinks
+        - delivery
+        - pickup
+        - preorder
+        - customTheme
+        - whatsappFallback
+        - promotions
+        - loyalty
+        - reservations
+        - deliveryBlocks
+      properties:
+        orders:
+          type: boolean
+        contacts:
+          type: boolean
+        geoLocation:
+          type: boolean
+        socialLinks:
+          type: boolean
+        delivery:
+          type: boolean
+        pickup:
+          type: boolean
+        preorder:
+          type: boolean
+        customTheme:
+          type: boolean
+        whatsappFallback:
+          type: boolean
+        promotions:
+          type: boolean
+        loyalty:
+          type: boolean
+        reservations:
+          type: boolean
+        deliveryBlocks:
+          type: boolean
+
+    AvailableOrderType:
+      type: object
+      additionalProperties: false
+      required: [code, label, isDefault]
+      properties:
+        code:
+          $ref: '#/components/schemas/OrderType'
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        isDefault:
+          type: boolean
+
+    OrderLimits:
+      type: object
+      additionalProperties: false
+      required:
+        - maxItemQuantity
+        - maxTotalItems
+        - maxNameLength
+        - maxPhoneLength
+        - maxAddressLength
+        - maxCommentLength
+        - delayedOrderConfirmationMinutes
+      properties:
+        maxItemQuantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+          description: Maximum quantity of one menu item in an order.
+        maxTotalItems:
+          type: integer
+          minimum: 1
+          maximum: 200
+          description: Maximum sum of all item quantities in an order.
+        maxNameLength:
+          type: integer
+          minimum: 1
+          maximum: 80
+        maxPhoneLength:
+          type: integer
+          minimum: 5
+          maximum: 32
+        maxAddressLength:
+          type: integer
+          minimum: 1
+          maximum: 240
+        maxCommentLength:
+          type: integer
+          minimum: 1
+          maximum: 500
+        delayedOrderConfirmationMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+
+    MenuResponse:
+      type: object
+      additionalProperties: false
+      required: [restaurantId, version, publishedAt, currency, categories, items]
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        publishedAt:
+          type: string
+          format: date-time
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuCategory'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+
+    MenuCategory:
+      type: object
+      additionalProperties: false
+      required: [categoryId, name, sortOrder]
+      properties:
+        categoryId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: Stable public category key within a menu snapshot.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        imageUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+          description: Immutable content-addressed public asset URL.
+        sortOrder:
+          type: integer
+          minimum: 0
+
+    MenuItem:
+      type: object
+      additionalProperties: false
+      required:
+        - menuItemId
+        - categoryId
+        - name
+        - priceMinor
+        - available
+        - sortOrder
+        - modifierGroups
+      properties:
+        menuItemId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: Stable public item key preserved across menu versions.
+        categoryId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: string
+          maxLength: 1000
+        priceMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 1000000000000
+        imageUrl:
+          type: string
+          format: uri
+          pattern: '^https?://(?![^/?#]*@)'
+          description: Immutable content-addressed public asset URL.
+        available:
+          type: boolean
+        sortOrder:
+          type: integer
+          minimum: 0
+        modifierGroups:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/MenuModifierGroup'
+
+    MenuModifierGroup:
+      type: object
+      additionalProperties: false
+      required: [modifierGroupId, name, minSelections, maxSelections, sortOrder, options]
+      properties:
+        modifierGroupId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        minSelections:
+          type: integer
+          minimum: 0
+          maximum: 99
+        maxSelections:
+          type: integer
+          minimum: 1
+          maximum: 99
+        sortOrder:
+          type: integer
+          minimum: 0
+        options:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/MenuModifierOption'
+
+    MenuModifierOption:
+      type: object
+      additionalProperties: false
+      required: [optionId, name, priceDeltaMinor, available, sortOrder]
+      properties:
+        optionId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        priceDeltaMinor:
+          type: integer
+          format: int64
+          minimum: -1000000000000
+          maximum: 1000000000000
+          description: Signed adjustment applied by the backend to one item unit.
+        available:
+          type: boolean
+        sortOrder:
+          type: integer
+          minimum: 0
+
+    CreateOrderRequest:
+      oneOf:
+        - $ref: '#/components/schemas/DeliveryOrderRequest'
+        - $ref: '#/components/schemas/PreorderOrderRequest'
+        - $ref: '#/components/schemas/PickupOrderRequest'
+      discriminator:
+        propertyName: orderType
+        mapping:
+          delivery: '#/components/schemas/DeliveryOrderRequest'
+          preorder: '#/components/schemas/PreorderOrderRequest'
+          pickup: '#/components/schemas/PickupOrderRequest'
+
+    DeliveryOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [orderType, customer, fulfillment, items, clientMenuVersion]
+      properties:
+        orderType:
+          type: string
+          enum: [delivery]
+        customer:
+          $ref: '#/components/schemas/OrderCustomer'
+        fulfillment:
+          $ref: '#/components/schemas/DeliveryFulfillment'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: Sum of item quantities must not exceed the configured maxTotalItems.
+          items:
+            $ref: '#/components/schemas/CreateOrderItem'
+        comment:
+          type: string
+          maxLength: 500
+        clientMenuVersion:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Menu version displayed when the cart was confirmed.
+
+    PreorderOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [orderType, customer, fulfillment, items, clientMenuVersion]
+      properties:
+        orderType:
+          type: string
+          enum: [preorder]
+        customer:
+          $ref: '#/components/schemas/OrderCustomer'
+        fulfillment:
+          $ref: '#/components/schemas/NonDeliveryFulfillment'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: Sum of item quantities must not exceed the configured maxTotalItems.
+          items:
+            $ref: '#/components/schemas/CreateOrderItem'
+        comment:
+          type: string
+          maxLength: 500
+        clientMenuVersion:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Menu version displayed when the cart was confirmed.
+
+    PickupOrderRequest:
+      type: object
+      additionalProperties: false
+      required: [orderType, customer, fulfillment, items, clientMenuVersion]
+      properties:
+        orderType:
+          type: string
+          enum: [pickup]
+        customer:
+          $ref: '#/components/schemas/OrderCustomer'
+        fulfillment:
+          $ref: '#/components/schemas/NonDeliveryFulfillment'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 200
+          description: Sum of item quantities must not exceed the configured maxTotalItems.
+          items:
+            $ref: '#/components/schemas/CreateOrderItem'
+        comment:
+          type: string
+          maxLength: 500
+        clientMenuVersion:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Menu version displayed when the cart was confirmed.
+
+    OrderType:
+      type: string
+      enum: [preorder, delivery, pickup]
+
+    OrderCustomer:
+      type: object
+      additionalProperties: false
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        phone:
+          type: string
+          minLength: 5
+          maxLength: 32
+          pattern: '^\+?(?=(?:[ ()-]*[0-9]){5,15}[ ()-]*$)[0-9 ()-]{5,32}$'
+
+    DeliveryFulfillment:
+      type: object
+      additionalProperties: false
+      required: [address]
+      properties:
+        address:
+          type: string
+          minLength: 1
+          maxLength: 240
+        guestCount:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    NonDeliveryFulfillment:
+      type: object
+      additionalProperties: false
+      description: Fulfillment data shared by preorder and pickup in the confirmed legacy behavior.
+      properties:
+        guestCount:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    CreateOrderItem:
+      type: object
+      additionalProperties: false
+      required: [menuItemId, quantity, modifiers]
+      properties:
+        menuItemId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+        modifiers:
+          type: array
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/CreateOrderModifier'
+
+    CreateOrderModifier:
+      type: object
+      additionalProperties: false
+      required: [modifierGroupId, optionId, quantity]
+      properties:
+        modifierGroupId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        optionId:
+          type: string
+          minLength: 1
+          maxLength: 120
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+
+    CreateOrderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - orderId
+        - orderNumber
+        - status
+        - serverTotalMinor
+        - currency
+        - serverReceivedAt
+        - needsConfirmation
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          minLength: 1
+          maxLength: 40
+        status:
+          type: string
+          enum: [new]
+        serverTotalMinor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 1000000000000
+          description: Authoritative total calculated from the current menu by the backend.
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        serverReceivedAt:
+          type: string
+          format: date-time
+        needsConfirmation:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message, details, traceId]
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          minLength: 1
+          maxLength: 500
+        details:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+        traceId:
+          type: string
+          minLength: 1
+          maxLength: 128
+
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - MENU_NOT_FOUND
+        - MENU_CHANGED
+        - RESTAURANT_CLOSED
+        - ITEM_UNAVAILABLE
+        - MODIFIER_UNAVAILABLE
+        - IDEMPOTENCY_CONFLICT
+        - RATE_LIMITED
+        - SITE_NOT_READY
+        - DEPENDENCY_UNAVAILABLE
+        - INTERNAL_ERROR
+
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [field, reason]
+      properties:
+        field:
+          type: string
+          minLength: 1
+          maxLength: 160
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 160
+
+  examples:
+    PublicConfiguration:
+      summary: Public restaurant configuration
+      value:
+        restaurantId: 10000000-0000-4000-8000-000000000001
+        branding:
+          logoUrl: https://cdn.menu.example.com/assets/logo/52c1d6a9.png
+          logoAlt: Логотип ресторана
+          faviconUrl: https://cdn.menu.example.com/assets/favicon/a8f3c212.png
+          hero:
+            imageUrl: https://cdn.menu.example.com/assets/hero/b469c50e.png
+            imageAlt: Интерьер ресторана
+            eyebrow: Наше меню
+            title: Добро пожаловать
+            subtitle: Готовим с заботой каждый день
+            ctaLabel: Смотреть меню
+            benefits:
+              - icon: ✓
+                text: Свежие продукты
+          designTokens:
+            primaryColor: '#A33A2B'
+            secondaryColor: '#71362D'
+            accentColor: '#DDAA55'
+            backgroundColor: '#FFF9F2'
+            surfaceColor: '#FFFFFF'
+            textColor: '#2A1814'
+            mutedTextColor: '#7A6962'
+            borderRadius: 1rem
+            fontFamily: Inter, sans-serif
+          localizedTexts:
+            - locale: ru-RU
+              displayName: Ресторан
+              shortName: Меню
+              businessTypeLabel: Ресторан
+              cuisineText: Домашняя кухня
+              slogan: Вкусная еда рядом
+              introText: Выберите блюда и оформите заказ онлайн.
+              menuSectionTitle: Меню
+              cartTitle: Ваш заказ
+              orderTypeLegend: Выберите способ получения
+        seo:
+          title: Ресторан — официальное меню
+          description: Актуальное меню и оформление заказа онлайн.
+          canonicalUrl: https://menu.example.com/
+          openGraphImageUrl: https://cdn.menu.example.com/assets/open_graph/c854dd01.png
+        profile:
+          publicPhone: '+7 (900) 000-00-00'
+          publicPhoneLabel: Позвонить
+          publicEmail: hello@menu.example.com
+          address: Москва, Центральная улица, 1
+          location:
+            latitude: 55.7558
+            longitude: 37.6173
+            label: Москва, Центральная улица, 1
+          socialLinks:
+            - type: website
+              label: Официальный сайт
+              url: https://menu.example.com/
+        features:
+          orders: true
+          contacts: true
+          geoLocation: true
+          socialLinks: true
+          delivery: true
+          pickup: true
+          preorder: true
+          customTheme: true
+          whatsappFallback: false
+          promotions: false
+          loyalty: false
+          reservations: false
+          deliveryBlocks: false
+        orderTypes:
+          - code: preorder
+            label: Предзаказ
+            isDefault: true
+          - code: delivery
+            label: Доставка
+            isDefault: false
+          - code: pickup
+            label: Самовывоз
+            isDefault: false
+        limits:
+          maxItemQuantity: 99
+          maxTotalItems: 200
+          maxNameLength: 80
+          maxPhoneLength: 32
+          maxAddressLength: 240
+          maxCommentLength: 500
+          delayedOrderConfirmationMinutes: 15
+        schedule:
+          timezone: Europe/Moscow
+          displayText: Ежедневно с 10:00 до 23:00
+          days:
+            - dayOfWeek: monday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+            - dayOfWeek: tuesday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+            - dayOfWeek: wednesday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+            - dayOfWeek: thursday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+            - dayOfWeek: friday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+            - dayOfWeek: saturday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+            - dayOfWeek: sunday
+              intervals:
+                - opensAt: '10:00'
+                  closesAt: '23:00'
+        deliveryConfiguration:
+          enabled: true
+          addressRequired: true
+          feePolicy: none
+        locale: ru-RU
+        currency: RUB
+        timezone: Europe/Moscow
+
+    PublicMenu:
+      summary: Current published menu
+      value:
+        restaurantId: 10000000-0000-4000-8000-000000000001
+        version: 7
+        publishedAt: '2026-07-14T09:00:00Z'
+        currency: RUB
+        categories:
+          - categoryId: pizza
+            name: Пицца
+            description: Пицца из печи
+            imageUrl: https://cdn.menu.example.com/assets/menu_category_image/789ac412.png
+            sortOrder: 10
+        items:
+          - menuItemId: pizza-pepperoni
+            categoryId: pizza
+            name: Пепперони
+            description: Томатный соус, моцарелла и пепперони
+            priceMinor: 59000
+            imageUrl: https://cdn.menu.example.com/assets/menu_item_image/590ace23.png
+            available: true
+            sortOrder: 10
+            modifierGroups:
+              - modifierGroupId: size
+                name: Размер
+                minSelections: 1
+                maxSelections: 1
+                sortOrder: 10
+                options:
+                  - optionId: standard
+                    name: Стандартная
+                    priceDeltaMinor: 0
+                    available: true
+                    sortOrder: 10
+                  - optionId: large
+                    name: Большая
+                    priceDeltaMinor: 15000
+                    available: true
+                    sortOrder: 20
+
+    PreorderRequest:
+      summary: Preorder
+      value:
+        orderType: preorder
+        customer:
+          name: Иван
+          phone: '+7 999 111-22-33'
+        fulfillment:
+          guestCount: 2
+        items:
+          - menuItemId: pizza-pepperoni
+            quantity: 1
+            modifiers:
+              - modifierGroupId: size
+                optionId: large
+                quantity: 1
+        comment: Стол у окна, если возможно
+        clientMenuVersion: 7
+
+    DeliveryRequest:
+      summary: Delivery order
+      value:
+        orderType: delivery
+        customer:
+          name: Анна
+          phone: '+7 999 444-55-66'
+        fulfillment:
+          address: Москва, Центральная улица, 10, квартира 4
+          guestCount: 2
+        items:
+          - menuItemId: pizza-pepperoni
+            quantity: 2
+            modifiers: []
+        comment: Позвонить перед приездом
+        clientMenuVersion: 7
+
+    PickupRequest:
+      summary: Pickup order
+      value:
+        orderType: pickup
+        customer:
+          name: Олег
+          phone: '+7 999 777-88-99'
+        fulfillment: {}
+        items:
+          - menuItemId: pizza-pepperoni
+            quantity: 1
+            modifiers: []
+        clientMenuVersion: 7
+
+    PreorderResponse:
+      summary: Created preorder
+      value:
+        orderId: 30000000-0000-4000-8000-000000000001
+        orderNumber: '1041'
+        status: new
+        serverTotalMinor: 74000
+        currency: RUB
+        serverReceivedAt: '2026-07-14T10:15:01Z'
+        needsConfirmation: true
+
+    DeliveryResponse:
+      summary: Created delivery order
+      value:
+        orderId: 30000000-0000-4000-8000-000000000002
+        orderNumber: '1042'
+        status: new
+        serverTotalMinor: 118000
+        currency: RUB
+        serverReceivedAt: '2026-07-14T10:16:01Z'
+        needsConfirmation: true
+
+    PickupResponse:
+      summary: Created pickup order
+      value:
+        orderId: 30000000-0000-4000-8000-000000000003
+        orderNumber: '1043'
+        status: new
+        serverTotalMinor: 59000
+        currency: RUB
+        serverReceivedAt: '2026-07-14T10:17:01Z'
+        needsConfirmation: false
+
+    ValidationError:
+      summary: Invalid delivery data
+      value:
+        code: VALIDATION_ERROR
+        message: Некорректные данные заказа
+        details:
+          - field: fulfillment.address
+            reason: REQUIRED_FOR_DELIVERY
+        traceId: 74c2e68d32584f20ad9e4ee45fc2bb0d
+
+    MenuNotFoundError:
+      summary: No published menu
+      value:
+        code: MENU_NOT_FOUND
+        message: Меню пока недоступно
+        details: []
+        traceId: 4bf92f3577b34da6a3ce929d0e0e4736
+
+    RestaurantClosedError:
+      value:
+        code: RESTAURANT_CLOSED
+        message: Сегодня выходной. К сожалению, оформить заказ нельзя.
+        details: []
+        traceId: example-trace-closed
+    MenuChangedError:
+      summary: Client used an obsolete menu version
+      value:
+        code: MENU_CHANGED
+        message: Меню обновилось, проверьте корзину
+        details:
+          - field: clientMenuVersion
+            reason: STALE_VERSION
+        traceId: 15df4d7895dc4efabb785a7b7fd7a2ad
+
+    ItemUnavailableError:
+      summary: Item is no longer available
+      value:
+        code: ITEM_UNAVAILABLE
+        message: Некоторые позиции сейчас недоступны
+        details:
+          - field: items[0].menuItemId
+            reason: NOT_AVAILABLE
+        traceId: 31829356b1fe4d9386e7eb43942d59c9
+
+    ModifierUnavailableError:
+      summary: Modifier option is no longer available
+      value:
+        code: MODIFIER_UNAVAILABLE
+        message: Выбранная опция сейчас недоступна
+        details:
+          - field: items[0].modifiers[0].optionId
+            reason: NOT_AVAILABLE
+        traceId: 31829356b1fe4d9386e7eb43942d59c9
+
+    IdempotencyConflictError:
+      summary: Key was reused for another canonical payload
+      value:
+        code: IDEMPOTENCY_CONFLICT
+        message: Ключ повторной отправки уже использован для другого заказа
+        details:
+          - field: Idempotency-Key
+            reason: PAYLOAD_MISMATCH
+        traceId: 00a95c16099f44379b65932e2fd71f9c
+
+    RateLimitedError:
+      summary: Rate limit exceeded
+      value:
+        code: RATE_LIMITED
+        message: Слишком много запросов, повторите позже
+        details:
+          - field: request
+            reason: RETRY_LATER
+        traceId: c70949b54e2c4fdf882cd8a107ce8b34
+
+    SiteNotReadyError:
+      summary: Public configuration is not ready
+      value:
+        code: SITE_NOT_READY
+        message: Сервис временно недоступен
+        details: []
+        traceId: 922fe16fa9c34a80933f4e83c7086f72
+
+    DependencyUnavailableError:
+      summary: Required dependency is unavailable
+      value:
+        code: DEPENDENCY_UNAVAILABLE
+        message: Не удалось завершить операцию, повторите позже
+        details: []
+        traceId: ad1d196af49b4737ac3b738f3c726acc
+
+    InternalError:
+      summary: Unexpected internal failure
+      value:
+        code: INTERNAL_ERROR
+        message: Не удалось обработать запрос
+        details: []
+        traceId: 9346a4e91ec84235aa2592fd1e831f84

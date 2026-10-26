@@ -1,0 +1,42 @@
+spring:
+  config:
+    activate:
+      on-profile: production
+
+logging:
+  structured:
+    format:
+      console: logstash
+
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:8081}
+    # Use a routable address only when the deployment network keeps this port private.
+    address: ${MANAGEMENT_SERVER_ADDRESS:127.0.0.1}
+  tracing:
+    export:
+      otlp:
+        enabled: ${OTEL_TRACES_EXPORT_ENABLED:true}
+  opentelemetry:
+    resource-attributes:
+      deployment.environment.name: production
+      service.namespace: salamu-menu-platform
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_TRACES_ENDPOINT}
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:true}
+        url: ${OTEL_METRICS_ENDPOINT}
+
+app:
+  security:
+    cors:
+      allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:}
+    request-authority:
+      allowed-hosts: ${APP_SECURITY_ALLOWED_HOSTS:}
+  external:
+    public-base-url: ${PUBLIC_BASE_URL}
+    asset-base-url: ${ASSET_BASE_URL}

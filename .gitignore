@@ -14,21 +14,30 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Node / frontend, если позже появится сборка
+# Node / frontend
 node_modules/
 dist/
 build/
+.next/
+.next-dev/
+.runtime/
+.turbo/
+*.tsbuildinfo
 
-# Go / backend, если позже появится backend
-backend/bin/
-backend/tmp/
-*.exe
+# Java / Gradle backend
+.gradle/
+**/build/
+out/
 
 # Docker / database local data
 postgres_data/
 data/
+!docs/migration/data/
+!docs/migration/data/**
 tmp/
 
 # Coverage
 coverage/
 *.cover
+**/playwright-report/
+**/test-results/

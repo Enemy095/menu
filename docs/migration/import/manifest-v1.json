@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "legacy-stambul-adamas-v1",
+  "fixture": "fixtures/expected-tenants-v1.json",
+  "checksumPolicy": {
+    "fileAlgorithm": "SHA-256(raw-file-bytes)",
+    "textEncodingValidation": "strict UTF-8 without BOM; encoding is not used when hashing",
+    "pathNormalization": "repository-relative paths with forward slashes",
+    "setAlgorithm": "sort entries by Unicode code point path or role; UTF-8 encode '<key>\\u0000<lowercase-file-sha256>\\n'; SHA-256 the concatenation",
+    "globalSourceSetSha256": "b0ac237c4ed49a8e2d6c4cf0fb7094d63077956dc9d4ada8af26f316457d4ec1",
+    "completeSourceSetSha256": "4412cf89ebf5a6664064afb9f7f745682be126e3bd1482ce0dff20175f31f064"
+  },
+  "globalSources": [
+    {
+      "path": "Электронное меню/restaurants/_defaults.js",
+      "bytes": 3799,
+      "sha256": "d4c88cfc9e7206aa11f97349ef2840011d0358ddbf541ebf2c559e311e4b0a25",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "Электронное меню/restaurants/registry.js",
+      "bytes": 1989,
+      "sha256": "090c2901ffe192520e188fdbfd24a93f97f2d5528d4a05273f6576ec6da5aa51",
+      "encoding": "UTF-8"
+    },
+    {
+      "path": "Электронное меню/themes/_base.css",
+      "bytes": 1161,
+      "sha256": "ab4b35fda300c5bc47bffdda7a0d2f4371e074bca6d38bb6a13e81f68f8b275f",
+      "encoding": "UTF-8"
+    }
+  ],
+  "tenants": [
+    {
+      "slug": "stambul",
+      "sourceSetSha256": "35cd63f27a6a533298a6eda7e75cdf05927538fbee8adeed63743c5d3ef3d013",
+      "assetSetSha256": "9864578140df22ea7dbf34c57e41af1d326bd12aa702efc2656fda75246e9e7b",
+      "sources": [
+        {
+          "kind": "config",
+          "path": "Электронное меню/restaurants/stambul/config.js",
+          "bytes": 4696,
+          "sha256": "3110348a95b27ec008fc46910ca205606090a54f4641b5abb613a277f1f5d7c3",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "features",
+          "path": "Электронное меню/restaurants/stambul/features.js",
+          "bytes": 713,
+          "sha256": "8d9282273f257803e0b901cf7a233943ea874fdd0a0f71964cb6ed3bd719aa1c",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "menu",
+          "path": "Электронное меню/restaurants/stambul/menu.js",
+          "bytes": 7333,
+          "sha256": "242954101114d367af2fb863a216785f8b35ffd45faa11cdb7d3d521e9562495",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "order-types",
+          "path": "Электронное меню/restaurants/stambul/order-types.js",
+          "bytes": 744,
+          "sha256": "bb2489ca8416792192ed755b0c0490df1a3136e4b76bf3eea25a6072e4a15503",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "theme",
+          "path": "Электронное меню/themes/stambul/theme.css",
+          "bytes": 538,
+          "sha256": "619a529a3a24a8e3617972c72e6dccb08a59ee97540157b3fa28d29ab9f2c217",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "asset",
+          "roles": ["LOGO"],
+          "path": "Электронное меню/restaurants/stambul/branding/logo.png",
+          "bytes": 43728,
+          "sha256": "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b",
+          "contentType": "image/png",
+          "width": 197,
+          "height": 179
+        }
+      ],
+      "expectedFacts": {
+        "status": "active",
+        "defaultRestaurantCount": 1,
+        "menuVersion": 1,
+        "categoryCount": 4,
+        "menuItemCount": 23,
+        "availableMenuItemCount": 23,
+        "orderTypeCodes": ["preorder", "delivery", "pickup"],
+        "defaultOrderType": "preorder",
+        "deliveryBlocks": false,
+        "location": null,
+        "currency": "RUB",
+        "locale": "ru-RU"
+      },
+      "requiredSecrets": [
+        "required-secret:LEGACY_IMPORT_STAMBUL_WHATSAPP_DESTINATION_REF"
+      ]
+    },
+    {
+      "slug": "adamas",
+      "sourceSetSha256": "2b20446a0e9fd8b7f68d64198f222516402980bf8890b3d412cdb171a337cc53",
+      "assetSetSha256": "25f480c961502316a65149c77cdab697bad620e08cb19d36e1c2d383a3733451",
+      "sources": [
+        {
+          "kind": "config",
+          "path": "Электронное меню/restaurants/adamas/config.js",
+          "bytes": 4917,
+          "sha256": "0e11098276ef1236430c9d11bdee6971d5e62cb304f53daa0e45ac6a042663e9",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "features",
+          "path": "Электронное меню/restaurants/adamas/features.js",
+          "bytes": 447,
+          "sha256": "fa2dcf6b1a815fc7cf915cb35343b15171bfeb0cedcc472241653ac36094ecf5",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "menu",
+          "path": "Электронное меню/restaurants/adamas/menu.js",
+          "bytes": 5769,
+          "sha256": "5555508565d47bced7875e6752870d6d29514bade043109f593b33116e2ae721",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "order-types",
+          "path": "Электронное меню/restaurants/adamas/order-types.js",
+          "bytes": 519,
+          "sha256": "3fe160b52fcf99a8bcd6ebccf1cf0a675d3463e78f88cd3d42735c95543319fe",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "theme",
+          "path": "Электронное меню/themes/delivery/theme.css",
+          "bytes": 15397,
+          "sha256": "8b37509cae5baf8c30d9b89c2caa657ed3812eaa9be7fe977e210db660f16b22",
+          "encoding": "UTF-8"
+        },
+        {
+          "kind": "asset",
+          "roles": ["LOGO", "HERO"],
+          "path": "Электронное меню/restaurants/adamas/branding/hero-burger.png",
+          "bytes": 447184,
+          "sha256": "68eed81f6b021efd58113f4ab6edc8feef68d91336f600729c776a07ab6caaab",
+          "contentType": "image/png",
+          "width": 658,
+          "height": 434
+        }
+      ],
+      "expectedFacts": {
+        "status": "active",
+        "defaultRestaurantCount": 1,
+        "menuVersion": 1,
+        "categoryCount": 4,
+        "menuItemCount": 19,
+        "availableMenuItemCount": 19,
+        "orderTypeCodes": ["preorder", "delivery", "pickup"],
+        "defaultOrderType": "preorder",
+        "deliveryBlocks": true,
+        "location": null,
+        "currency": "RUB",
+        "locale": "ru-RU"
+      },
+      "requiredSecrets": [
+        "required-secret:LEGACY_IMPORT_ADAMAS_WHATSAPP_DESTINATION_REF"
+      ]
+    }
+  ],
+  "promotionRequirements": [
+    "confirm-timezone:Europe/Moscow",
+    "confirm-public-contacts:stambul",
+    "confirm-public-contacts:adamas",
+    "configure-canonical-platform-url:stambul",
+    "configure-canonical-platform-url:adamas",
+    "verify-before-activate:any-custom-domain",
+    "inject-required-secret-references",
+    "resolve-stambul-geolocation-feature-without-coordinates",
+    "confirm-adamas-delivery-threshold-policy",
+    "approve-visual-assets:adamas-logo-hero-and-missing-optional-assets"
+  ]
+}

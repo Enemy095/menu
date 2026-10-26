@@ -1,0 +1,13 @@
+# Pinned SC-DATA-001 approval bytes are canonical LF on every checkout.
+infra/local/bootstrap/** text eol=lf
+infra/local/bootstrap/**/*.png -text
+infra/local/bootstrap/**/*.jpg -text
+infra/local/bootstrap/**/*.webp -text
+infra/local/bootstrap/**/*.ico -text
+docs/migration/data/stambul-approved-v1.json text eol=lf
+"Электронное меню/restaurants/stambul/config.js" text eol=lf
+"Электронное меню/restaurants/stambul/features.js" text eol=lf
+"Электронное меню/restaurants/stambul/order-types.js" text eol=lf
+"Электронное меню/restaurants/stambul/menu.js" text eol=lf
+"Электронное меню/themes/stambul/theme.css" text eol=lf
+"Электронное меню/restaurants/stambul/branding/logo.png" -text

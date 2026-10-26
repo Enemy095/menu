@@ -11,7 +11,15 @@ import tools.jackson.databind.ObjectMapper;
 class TelegramOrderMessageFactoryTests {
 
     private final TelegramOrderMessageFactory factory =
-            new TelegramOrderMessageFactory(new ObjectMapper());
+            new TelegramOrderMessageFactory(new ObjectMapper(), site());
+
+    static com.salamu.menu.site.api.SiteConfigurationQuery site() {
+        var query = org.mockito.Mockito.mock(com.salamu.menu.site.api.SiteConfigurationQuery.class);
+        var configuration = org.mockito.Mockito.mock(com.salamu.menu.site.api.SiteConfigurationSnapshot.class);
+        org.mockito.Mockito.when(query.current()).thenReturn(configuration);
+        org.mockito.Mockito.when(configuration.timezone()).thenReturn("Europe/Moscow");
+        return query;
+    }
 
     @Test
     void rendersCompleteEscapedOrderMessage() {
@@ -26,7 +34,7 @@ class TelegramOrderMessageFactoryTests {
                   "guestCount": 3,
                   "serverTotalMinor": 109000,
                   "currency": "RUB",
-                  "serverReceivedAt": "2026-07-17T18:42:00Z",
+                  "serverReceivedAt": "2026-07-17T18:42:00.320350Z",
                   "items": [
                     {
                       "name": "Цезарь с курицей",
@@ -48,7 +56,9 @@ class TelegramOrderMessageFactoryTests {
 
         assertThat(message)
                 .contains("🍽 <b>НОВЫЙ ЗАКАЗ №1042</b>")
-                .contains("<b>Получение:</b> Доставка")
+                .contains("<b>Получение:</b> <b>Доставка</b>\n\n<b>Клиент:</b>")
+                .contains("<b>Получен:</b> 17.07.2026 21:42:00")
+                .doesNotContain(".320350", "T18:42")
                 .contains("Иван &lt;Петров&gt;")
                 .contains("ул. Центральная, 10 &amp; 2")
                 .contains("• Цезарь с курицей × 2 — 500,00 ₽")

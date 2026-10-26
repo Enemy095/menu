@@ -11,6 +11,8 @@ cd /bootstrap/v1
 sha256sum -c checksums.sha256
 cd /bootstrap/v2
 sha256sum -c checksums.sha256
+cd /bootstrap/v3
+sha256sum -c checksums.sha256
 cd /bootstrap/v1
 # Check before copying any objects. Existing installations keep their own content.
 empty=$(psql -X -v ON_ERROR_STOP=1 -At -f /bootstrap/is-empty.sql -c '\echo :bootstrap_empty')

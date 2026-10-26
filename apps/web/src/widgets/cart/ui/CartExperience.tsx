@@ -16,6 +16,7 @@ import { CartProvider } from "@/features/cart/model/cart-context";
 import { CartOverlayProvider, useCartOverlay } from "@/features/cart/model/cart-overlay-context";
 import { CheckoutForm } from "@/features/checkout/ui/CheckoutForm";
 import { formatMoney } from "@/shared/lib/format-money";
+import type { PickupLocationData } from "@/entities/site/ui/PickupLocation";
 
 type CartExperienceProps = {
   catalog: CartCatalog;
@@ -24,6 +25,7 @@ type CartExperienceProps = {
   locale: string;
   currency: string;
   title: string;
+  pickupLocation?: PickupLocationData;
   header?: ReactNode;
   children: ReactNode;
 };
@@ -76,7 +78,7 @@ export function CartExperience(props: CartExperienceProps) {
   );
 }
 
-function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: CartExperienceProps) {
+function CartPanel({ catalog, limits, orderTypes, locale, currency, title, pickupLocation }: CartExperienceProps) {
   const availability = useBusinessAvailability();
   const { open, openCart, closeCart } = useCartOverlay();
   const [receiptVisible, setReceiptVisible] = useState(false);
@@ -274,6 +276,7 @@ function CartPanel({ catalog, limits, orderTypes, locale, currency, title }: Car
             limits={limits}
             locale={locale}
             onReceiptChange={handleReceiptChange}
+            pickupLocation={pickupLocation}
           />
         ) : null}
       </aside>

@@ -17,4 +17,5 @@ SELECT pg_advisory_xact_lock(1835363957, 1);
     \echo LOCAL_BOOTSTRAP_SKIPPED: database already contains application data
 \endif
 \ir v2/update.sql
+\ir v3/update.sql
 COMMIT;

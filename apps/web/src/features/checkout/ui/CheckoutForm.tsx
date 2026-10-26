@@ -24,6 +24,7 @@ import {
 import { formatMoney } from "@/shared/lib/format-money";
 import { createClientId } from "@/shared/lib/client-id";
 import { CLOSED_MESSAGE, useBusinessAvailability } from "@/entities/restaurant/model/business-availability";
+import { PickupLocation, type PickupLocationData } from "@/entities/site/ui/PickupLocation";
 
 type CheckoutFormProps = {
   items: CartLine[];
@@ -31,6 +32,7 @@ type CheckoutFormProps = {
   limits: OrderLimits;
   locale: string;
   onReceiptChange: (visible: boolean) => void;
+  pickupLocation?: PickupLocationData;
 };
 
 type SubmissionState =
@@ -88,6 +90,7 @@ export function CheckoutForm({
   limits,
   locale,
   onReceiptChange,
+  pickupLocation,
 }: CheckoutFormProps) {
   const beginSubmission = useCartStore((state) => state.beginSubmission);
   const availability = useBusinessAvailability();
@@ -244,6 +247,7 @@ export function CheckoutForm({
             {form.formState.errors.orderType.message}
           </small>
         ) : null}
+        {orderType === "pickup" ? <PickupLocation profile={pickupLocation} /> : null}
         <Field id="checkout-name" label="Имя" error={form.formState.errors.name?.message}>
           {(a11y) => <input {...a11y} autoComplete="name" maxLength={Math.min(80, limits.maxNameLength)} {...form.register("name")} />}
         </Field>

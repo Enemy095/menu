@@ -261,6 +261,16 @@ result. Existing cart contents and already accepted orders are preserved.
 The notice, dish detail and cart show the next working date after consecutive
 date-specific or weekly closures. If no opening is known within a year, no date is
 invented. Calendar choices persist in PostgreSQL across updates and restarts.
+The header's **График работы** link opens a compact calendar below contacts.
+Red squares show upcoming closed dates, combining weekly and date-specific rules;
+today has a gold outline. Month navigation covers the one-year availability horizon.
+Past dates are dimmed because the public endpoint supplies current/future closures.
+Telegram order receipt timestamps use the same business timezone and the format
+`dd.MM.yyyy HH:mm:ss`.
+The contacts section also shows the configured pickup address and a clickable
+Yandex Maps preview. Checkout shows the same point below fulfillment choices only
+when **Самовывоз** is selected. The v3 content release provisions the owner-approved
+address and coordinates once on existing and fresh local installations.
 
 Only configured user IDs in their own private chat can change the calendar; a group
 notification destination does not grant access. The public HTTP endpoint is read-only.

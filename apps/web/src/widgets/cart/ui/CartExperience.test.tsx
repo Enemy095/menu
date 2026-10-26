@@ -45,12 +45,13 @@ const limits = {
   delayedOrderConfirmationMinutes: 10,
 };
 
-function renderCart() {
+function renderCart(withPickupLocation = false) {
   return render(
     <CartExperience
       catalog={catalog}
       limits={limits}
-      orderTypes={[{ code: OrderType.pickup, label: "Самовывоз", isDefault: true }]}
+      orderTypes={[{ code: OrderType.pickup, label: "Самовывоз", isDefault: true }, ...(withPickupLocation ? [{code: OrderType.delivery, label:"Доставка", isDefault:false}] : [])]}
+      pickupLocation={withPickupLocation ? {address:"Хасавюрт, 20-я улица, 12", location:{latitude:43.225478,longitude:46.566266,label:"Самовывоз"}} : undefined}
       locale="ru-RU"
       currency="RUB"
       title="Корзина"
@@ -66,6 +67,16 @@ describe("CartExperience", () => {
     window.localStorage.clear();
     resetCartStoreForTests();
     submitMock.mockReset();
+  });
+  it("shows the pickup map before customer fields only for pickup", async () => {
+    const user = userEvent.setup();
+    renderCart(true);
+    await user.click(screen.getByRole("button", {name:"Добавить"}));
+    const map = await screen.findByTitle(/Карта: Хасавюрт/);
+    const name = screen.getByRole("textbox", {name:"Имя"});
+    expect(map.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.click(screen.getByRole("radio", {name:"Доставка"}));
+    expect(screen.queryByTitle(/Карта: Хасавюрт/)).not.toBeInTheDocument();
   });
 
   it("opens the same mobile cart from the header badge and bottom summary", async () => {

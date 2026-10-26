@@ -1070,6 +1070,57 @@ h2 {
 }
 .cart-closure-notice p { margin: 0; }
 .cart-closure-notice p + p { margin-top: 8px; }
+
+.work-schedule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  align-items: start;
+  gap: 28px;
+  margin-top: 24px;
+  padding: clamp(20px, 3vw, 32px);
+  scroll-margin-top: 140px;
+  border: 1px solid #303030;
+  border-radius: 8px;
+  background: #121212;
+  color: #f4f1e7;
+}
+.work-schedule__description h2 { margin: 12px 0 16px; font-size: clamp(24px, 3vw, 32px); }
+.work-schedule .eyebrow { color: #facc15; }
+
+.contacts__grid:has(.contact-card--map) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; }
+.contact-card--map { grid-column: 2; grid-row: 1 / span 2; }
+.pickup-location { display: grid; gap: 10px; width: 100%; min-width: 0; margin-block: 12px; color: #f4f1e7; font: 14px/1.55 Arial, sans-serif; }
+.pickup-location > strong { font-size: 15px; }
+.pickup-location__address { color: #facc15; font-size: 13px; line-height: 1.6; text-decoration: none; overflow-wrap: anywhere; }
+.pickup-location__preview { position: relative; width: 100%; height: 200px; overflow: hidden; border: 1px solid #48443a; border-radius: 8px; background: #e8e3d5; }
+.pickup-location__preview iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.pickup-location__open { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 12px; color: #fff; text-align: center; text-decoration: none; background: linear-gradient(transparent 55%, #000000b8); }
+.pickup-location__open span { padding: 7px 10px; border-radius: 5px; background: #161616df; color: #fff; font: 700 12px/1.4 Arial, sans-serif; }
+.pickup-location__open:focus-visible { outline: 3px solid #facc15; outline-offset: -4px; }
+.checkout-form .pickup-location__preview { height: 150px; }
+@media (max-width: 639px) {
+  .contacts__grid:has(.contact-card--map) { grid-template-columns: minmax(0, 1fr); }
+  .contact-card--map { grid-column: auto; grid-row: auto; }
+}
+.work-schedule__description > p:not(.eyebrow) { margin: 10px 0; color: #c7c3b7; font: 14px/1.65 Arial, sans-serif; }
+.work-calendar { width: 100%; padding: 16px; border: 1px solid #36332a; border-radius: 10px; background: #191919; }
+.work-calendar__heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.work-calendar__heading h3 { margin: 0; font: 700 16px/1.4 Arial, sans-serif; text-transform: capitalize; }
+.work-calendar__heading button { width: 34px; height: 34px; border: 1px solid #444037; border-radius: 6px; background: #24221b; color: #facc15; font-size: 24px; cursor: pointer; }
+.work-calendar__heading button:disabled { opacity: .3; cursor: default; }
+.work-calendar__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.work-calendar__weekday { padding: 4px 0; color: #aaa69a; font: 12px/1.4 Arial, sans-serif; text-align: center; }
+.work-calendar__day { display: grid; min-width: 0; aspect-ratio: 1; place-items: center; border: 1px solid #3d3b34; border-radius: 4px; background: #242424; color: #f3efe4; font: 13px/1 Arial, sans-serif; }
+.work-calendar__day--closed { border-color: #db6666; background: #8d3030; color: #fff; }
+.work-calendar__day--unknown { opacity: .35; }
+.work-calendar__day[aria-current="date"] { outline: 2px solid #facc15; outline-offset: 1px; }
+.work-calendar__legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; font: 12px/1.5 Arial, sans-serif; }
+.work-calendar__legend > span { width: 12px; height: 12px; border: 1px solid #db6666; border-radius: 2px; background: #8d3030; }
+.work-calendar__legend small { width: 100%; color: #aaa69a; font-size: 11px; }
+@media (max-width: 639px) {
+  .work-schedule { grid-template-columns: minmax(0, 1fr); margin-inline: 16px; gap: 18px; }
+  .work-calendar { max-width: 340px; margin-inline: auto; }
+}
 .menu-card__order button:disabled, .dish-dialog__add:disabled, .checkout-form__submit:disabled {
   opacity: .45;
   cursor: not-allowed;
@@ -3391,4 +3442,19 @@ body {
     font-weight: 800;
     line-height: 1;
   }
+}
+
+@media (max-width: 1023px) {
+  .site-header__inner { flex-wrap: wrap; row-gap: 0; padding-block: 8px; }
+  .site-header__nav {
+    display: flex;
+    order: 5;
+    flex-basis: 100%;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 8px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid #292929;
+  }
+  .site-header__nav a { min-height: 32px; display: inline-flex; align-items: center; font-size: 14px; }
 }

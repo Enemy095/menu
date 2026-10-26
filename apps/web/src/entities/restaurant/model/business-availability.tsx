@@ -9,8 +9,9 @@ const schema = z.object({
   closedDates: z.array(z.iso.date()).max(366),
   nextOpenDate: z.iso.date().nullable().optional(),
 }).strict();
+type Availability = z.infer<typeof schema>;
 export const CLOSED_MESSAGE = "Сегодня выходной. К сожалению, оформить заказ нельзя.";
-const Context = createContext({ closedToday: false, blocked: false, message: "", reopening: "" });
+const Context = createContext({ closedToday: false, blocked: false, message: "", reopening: "", availability: null as Availability | null });
 const workingDays = ["в воскресенье", "в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу"];
 
 export function BusinessAvailabilityProvider({ children }: { children: ReactNode }) {
@@ -46,7 +47,7 @@ export function BusinessAvailabilityProvider({ children }: { children: ReactNode
   const reopening = closedToday && nextDate ? `Снова работаем ${workingDays[nextDate.getUTCDay()]}, ${new Intl.DateTimeFormat("ru-RU", {
     day: "numeric", month: "long", timeZone: "UTC",
   }).format(nextDate)}. Возвращайтесь к нам в этот день.` : "";
-  return <Context value={{ closedToday, blocked: !availability || closedToday, message, reopening }}>{children}</Context>;
+  return <Context value={{ closedToday, blocked: !availability || closedToday, message, reopening, availability }}>{children}</Context>;
 }
 
 export function useBusinessAvailability() { return useContext(Context); }

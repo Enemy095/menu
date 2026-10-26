@@ -5,6 +5,7 @@ import { BusinessAvailabilityProvider } from "@/entities/restaurant/model/busine
 import { themeStyle } from "@/shared/lib/theme-style";
 import { Contacts } from "@/widgets/contacts/ui/Contacts";
 import { Hero } from "@/widgets/hero/ui/Hero";
+import { WorkSchedule } from "@/widgets/business-calendar/ui/WorkSchedule";
 import { BusinessCalendarBanner } from "@/widgets/business-calendar/ui/BusinessCalendarBanner";
 import { MenuBrowser } from "@/widgets/menu-browser/ui/MenuBrowser";
 import { SiteHeader } from "@/widgets/site-header/ui/SiteHeader";
@@ -41,6 +42,7 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
         features={configuration.features}
         schedule={configuration.schedule}
       />
+      <WorkSchedule displayText={configuration.schedule.displayText} />
     </div>
   );
 
@@ -68,6 +70,7 @@ export function PublicMenuPage({ configuration, menu }: PublicMenuPageProps) {
             locale={configuration.locale}
             currency={configuration.currency}
             title={text.cartTitle}
+            pickupLocation={configuration.features.geoLocation ? configuration.profile : undefined}
           >
             {content}
         </CartExperience>

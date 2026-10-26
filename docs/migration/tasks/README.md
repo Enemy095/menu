@@ -66,6 +66,10 @@ Presentation correction: [APP-LOCAL-004](APP-LOCAL-004.md) restores the food her
 limits the public closure notice to today.
 Ordering follow-up: [APP-LOCAL-005](APP-LOCAL-005.md) blocks closed-day orders,
 shows reopening dates and isolates bot command checkpoints.
+Presentation follow-up: [APP-LOCAL-006](APP-LOCAL-006.md) formats Telegram order
+messages and adds the synchronized public work calendar.
+Pickup location: [APP-LOCAL-007](APP-LOCAL-007.md) shares the configured address and
+Yandex Maps preview between contacts and pickup checkout, with a v3 content release.
 
 Каждый task-файл обязан содержать:
 

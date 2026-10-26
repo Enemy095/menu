@@ -1,4 +1,5 @@
 import type { PublicProfile, SiteFeatures, WeeklySchedule } from "@e-menu/api-contract/generated";
+import { PickupLocation } from "@/entities/site/ui/PickupLocation";
 
 type ContactsProps = {
   profile: PublicProfile;
@@ -22,7 +23,7 @@ export function Contacts({ profile, features, schedule }: ContactsProps) {
             <span>{profile.publicPhoneLabel}</span>
             <a href={phoneHref}>{profile.publicPhone}</a>
             {profile.publicEmail ? <a href={`mailto:${profile.publicEmail}`}>{profile.publicEmail}</a> : null}
-            {profile.address ? <p>{profile.address}</p> : null}
+            {profile.address && !showLocation ? <p>{profile.address}</p> : null}
           </address>
           <div className="contact-card">
             <span>Режим работы</span>
@@ -30,9 +31,8 @@ export function Contacts({ profile, features, schedule }: ContactsProps) {
             <small>{schedule.timezone}</small>
           </div>
           {showLocation ? (
-            <div className="contact-card">
-              <span>Местоположение</span>
-              <strong>{profile.location?.label}</strong>
+            <div className="contact-card contact-card--map">
+              <PickupLocation profile={profile} />
             </div>
           ) : null}
         </div>

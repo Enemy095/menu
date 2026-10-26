@@ -66,7 +66,7 @@ class TelegramNotificationProviderTests {
     private TelegramNotificationProvider provider(FakeBotApi botApi) {
         return new TelegramNotificationProvider(
                 properties,
-                new TelegramOrderMessageFactory(new ObjectMapper()),
+                new TelegramOrderMessageFactory(new ObjectMapper(), TelegramOrderMessageFactoryTests.site()),
                 botApi);
     }
 

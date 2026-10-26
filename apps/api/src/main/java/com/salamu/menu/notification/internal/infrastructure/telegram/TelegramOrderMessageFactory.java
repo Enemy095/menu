@@ -18,9 +18,11 @@ final class TelegramOrderMessageFactory {
     private static final int SAFE_TEXT_LIMIT = 4000;
 
     private final ObjectMapper objectMapper;
+    private final com.salamu.menu.site.api.SiteConfigurationQuery site;
 
-    TelegramOrderMessageFactory(ObjectMapper objectMapper) {
+    TelegramOrderMessageFactory(ObjectMapper objectMapper, com.salamu.menu.site.api.SiteConfigurationQuery site) {
         this.objectMapper = objectMapper;
+        this.site = site;
     }
 
     String create(OpaqueEventPayload payload) {
@@ -38,6 +40,13 @@ final class TelegramOrderMessageFactory {
         long totalMinor = requiredNonNegativeLong(root, "serverTotalMinor");
         String currency = requiredText(root, "currency");
         String receivedAt = requiredText(root, "serverReceivedAt");
+        try {
+            receivedAt = java.time.format.DateTimeFormatter.ofPattern("dd.MM.uuuu HH:mm:ss", Locale.ROOT)
+                    .withZone(java.time.ZoneId.of(site.current().timezone()))
+                    .format(java.time.Instant.parse(receivedAt));
+        } catch (java.time.DateTimeException exception) {
+            throw new InvalidOrderEventException();
+        }
         JsonNode items = root.path("items");
         if (!items.isArray() || items.isEmpty()) {
             throw new InvalidOrderEventException();
@@ -47,7 +56,7 @@ final class TelegramOrderMessageFactory {
         message.append("🍽 <b>НОВЫЙ ЗАКАЗ №")
                 .append(html(orderNumber))
                 .append("</b>\n\n")
-                .append("<b>Получение:</b> ").append(html(orderType(orderType))).append('\n')
+                .append("<b>Получение:</b> <b>").append(html(orderType(orderType))).append("</b>\n\n")
                 .append("<b>Клиент:</b> ").append(html(customerName)).append('\n')
                 .append("<b>Телефон:</b> <code>").append(html(customerPhone)).append("</code>\n");
         optionalText(root, "customerAddress")

@@ -30,6 +30,7 @@ export function SiteHeader({ branding, text, profile, features, showCartButton =
         <nav className="site-header__nav" aria-label="Основная навигация">
           <a href="#menu">Меню</a>
           <a href="#contacts">Контакты</a>
+          <a href="#work-schedule">График работы</a>
         </nav>
         {features.contacts ? (
           <a className="site-header__phone" href={phoneHref}>

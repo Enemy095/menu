@@ -9,6 +9,8 @@
 | BE-001/MOD-001 | Spring Boot scaffold и Modulith boundaries | PLAN-001 | 1 | done |
 | API-001 | OpenAPI-first package и TS generation | PLAN-001, LEG-001 | 1 | superseded |
 | INF-001 | Local PostgreSQL/assets/observability infrastructure | PLAN-001 | 1 | done |
+| INF-002 | Windows launcher and container builds for local web/API stack | INF-001 | local | done |
+| INF-003 | Versioned local public-content snapshot and fresh-install bootstrap | INF-002 | local | done |
 | DB-001 | Flyway schema и JPA persistence baseline | BE-001, INF-001 | 2 | superseded |
 | OBS-001 | Logs, traces, health и baseline metrics | BE-001 | 2 | done |
 | CI-001 | Contract/build/migration/security gates | BE-001, API-001, INF-001 | 2 | done |

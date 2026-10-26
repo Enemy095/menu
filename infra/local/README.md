@@ -4,10 +4,97 @@ This Compose stack is for local development only. It deliberately contains no
 production credentials, Redis, message broker, external telemetry exporter or
 production business data.
 
+## One-click Windows application startup
+
+From Windows Explorer, double-click **`start-docker.cmd`** in the repository root.
+From PowerShell, run:
+
+```powershell
+.\start-docker.cmd
+# Include the optional collector and Prometheus:
+.\start-docker.cmd -Observability
+```
+
+Install Docker Desktop with the WSL 2 backend and Linux containers once. Accept
+Docker Desktop's initial setup before the first run. Host Java, Node.js, pnpm and
+Gradle installations are not needed: both application builds run inside Docker.
+The first build requires internet access to download images and dependencies.
+
+The launcher starts Docker Desktop if its engine is unavailable, waits up to
+180 seconds, creates `.env` from `.env.example` only when missing, validates
+Compose, builds application images, and starts the `app` and `assets` profiles.
+Each run checks the current local sources with Docker's build cache. Unchanged
+layers are reused; changed inputs rebuild the affected layers. It does not fetch
+Git changes, change pinned dependency versions or force base-image pulls. Existing
+containers stay running until the image build has succeeded.
+For this local workflow, the launcher disables default build provenance only for
+its build subprocess. This prevents timestamped attestations from changing an
+otherwise cached image and unnecessarily recreating containers. It restores the
+previous environment setting immediately after the build.
+
+The stack contains Next.js, the Spring Boot API/notification worker, PostgreSQL,
+MinIO and its bucket initializer. It waits for the database, bucket initialization,
+API readiness and frontend HTTP health before reporting success. A failed build
+or health check returns a nonzero exit code; the double-click window stays open
+on failure. Containers keep running after the launcher exits.
+
+| Address | Service |
+|---|---|
+| `http://localhost:3000` | Application |
+| `http://localhost:8080/actuator/health/readiness` | API readiness |
+| `http://localhost:9001` | MinIO console |
+
+Change `WEB_PORT` / `API_PORT` in `.env` for port conflicts. Update
+`PUBLIC_BASE_URL` when changing the public origin. The launcher prints the
+configured web/API ports. Internal API/database/object-storage addresses always
+use Compose service names, independently of host port overrides. Web/API ports
+bind to `127.0.0.1` for this local workflow.
+
+Existing `.env.telegram.local`, if present, is passed as a second Compose env file
+and overrides `.env`; shell environment variables take precedence over both.
+Only explicitly mapped API settings reach the API container. Telegram secrets
+are runtime settings and are excluded from Docker build contexts and frontend
+images. If notifications and the worker are enabled in that existing file,
+normal order delivery uses them. The launcher does not send test orders.
+
+PostgreSQL and MinIO reuse their named volumes. On a fresh database, the `bootstrap`
+service loads the versioned public content from `infra/local/bootstrap/v1` after
+Flyway migrations and before the frontend starts. It includes the current 4 categories,
+23 menu items, restaurant configuration, branding and the MinIO logo. Menu photographs,
+illustrations and fonts are already tracked in `apps/web/public` and are included in
+the frontend image. Their hashes are recorded in the bootstrap manifest.
+
+Existing application data is detected and skipped, including local menu edits. No
+reset occurs. The snapshot excludes orders, customer data, notification destinations,
+delivery history and credentials. Telegram needs separate local configuration on
+each machine. Set `LOCAL_BOOTSTRAP_ENABLED=false` in `.env` to opt out of content
+initialization. See [the bootstrap guide](bootstrap/README.md) for export/update and
+clean-install verification. This is a local-development dataset, not production provisioning.
+
+For slower machines, run
+`.\start-docker.cmd -DockerTimeoutSeconds 300 -WaitTimeoutSeconds 300`.
+For troubleshooting and shutdown (preserving all named volumes):
+
+```powershell
+docker compose --profile app --profile assets ps --all
+docker compose --profile app --profile assets logs --tail 100 api web
+docker compose --profile app --profile assets --profile observability down
+```
+
+When reproducing settings manually, include
+`--env-file .env --env-file .env.telegram.local` before the profiles if the
+Telegram file exists. Do not print resolved Compose config when sharing logs:
+it contains runtime credentials.
+
+The default Compose workflow below still starts infrastructure only; application
+containers are opt-in through the `app` profile.
+
 ## Services and ports
 
 | Service | Profile | Host ports | Purpose |
 |---|---|---|---|
+| `api`, `web` | `app` | `8080`, `3000` | Container-built Spring API and Next.js |
+| `bootstrap` | `app` | none | One-time public content initialization for an empty database |
 | `postgres` | default | `5432` | PostgreSQL 17 database `emenu` |
 | `minio` | `assets` | `9000`, `9001` | S3-compatible single-client assets and console |
 | `minio-init` | `assets` | none | One-shot creation of `menu-assets-local` |

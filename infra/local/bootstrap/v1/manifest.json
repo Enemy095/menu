@@ -1,0 +1,115 @@
+{
+    "schemaVersion":  1,
+    "version":  "v1",
+    "requiredFlywayVersion":  "9",
+    "purpose":  "Public restaurant configuration and menu for fresh local Docker installations",
+    "tables":  {
+                   "assets":  1,
+                   "restaurants":  1,
+                   "menu_versions":  1,
+                   "menu_categories":  4,
+                   "menu_items":  23,
+                   "menu_modifier_groups":  0,
+                   "menu_modifier_options":  0,
+                   "site_configuration":  1,
+                   "site_branding":  1,
+                   "site_profile":  1,
+                   "site_features":  13
+               },
+    "assets":  [
+                   {
+                       "object_key":  "assets/logo/90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b.png",
+                       "sha256":  "90374c21b9cd4c15ef5b861521d0e5bcdc4571c3fae6f4aebd5c3927bfb6ee9b",
+                       "size_bytes":  43728,
+                       "content_type":  "image/png"
+                   }
+               ],
+    "frontendAssetsDirectory":  "apps/web/public",
+    "frontendAssets":  [
+                           {
+                               "path":  "assets/brand/delivery-mascot.png",
+                               "sha256":  "cd44894294793424259ca929e4cc1e3859ae2c79d40db37dfad7c377e8c9794e",
+                               "sizeBytes":  1701072
+                           },
+                           {
+                               "path":  "assets/menu/burger-chicken.webp",
+                               "sha256":  "709346b8faffa8b9456958f989217996a5f2bd2faa649aca5ebb8999c6db795a",
+                               "sizeBytes":  174652
+                           },
+                           {
+                               "path":  "assets/menu/cezar-roll-chicken.webp",
+                               "sha256":  "6428448664ee136b3b22a45b1b991f2d09ac8931bd3856bcdb80f84675aa2660",
+                               "sizeBytes":  190626
+                           },
+                           {
+                               "path":  "assets/menu/cezar-roll-shrimp.webp",
+                               "sha256":  "bed794e5e851924fdb16fc68ead9aa4e83c58b8ce7b08285472c1e616a65b3d6",
+                               "sizeBytes":  161440
+                           },
+                           {
+                               "path":  "assets/menu/french-fries.webp",
+                               "sha256":  "cb58c280ddcff823277a4a584134bb6cb54b1b4a7c2440433c22f5afc0ae659e",
+                               "sizeBytes":  151032
+                           },
+                           {
+                               "path":  "assets/menu/hero-burger.webp",
+                               "sha256":  "12b7381d0bab90ca6c31600ffae91aa4f738da9b03e5a75ccf76606062a77ca8",
+                               "sizeBytes":  161598
+                           },
+                           {
+                               "path":  "assets/menu/hot-roll-salmon.webp",
+                               "sha256":  "7df50e03298196d91bd2c7372f5a1c387aa742b7d153355a84db3ba1329361f4",
+                               "sizeBytes":  133572
+                           },
+                           {
+                               "path":  "assets/menu/nuggets.webp",
+                               "sha256":  "eb55510af70bbe34eba827b8d3f627cb5719df519ed6896f65e5883db421966c",
+                               "sizeBytes":  166612
+                           },
+                           {
+                               "path":  "assets/menu/pizza-pepperoni.webp",
+                               "sha256":  "b25dc7c8bd5647e9d156a3eec11988e6d424302ced362eb0752fd2df7aa2a344",
+                               "sizeBytes":  210556
+                           },
+                           {
+                               "path":  "assets/menu/sake-maki.webp",
+                               "sha256":  "b4421889b563703f9b605c28ae6d558e848f18c3e1c0b7bc541ea99ac0f7505f",
+                               "sizeBytes":  128940
+                           },
+                           {
+                               "path":  "assets/menu/village-potato.webp",
+                               "sha256":  "3845301a8ad9296d27689ad3c9589cfc8283a3df502c266ab27a42ab1bac6eed",
+                               "sizeBytes":  244898
+                           },
+                           {
+                               "path":  "fonts/inter-cyrillic.woff2",
+                               "sha256":  "71d5ee93cc1e9f1d520a3a8b66456de18c7879d8df09d57fcd2eaff75fef0075",
+                               "sizeBytes":  18748
+                           },
+                           {
+                               "path":  "fonts/inter-latin.woff2",
+                               "sha256":  "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+                               "sizeBytes":  48256
+                           },
+                           {
+                               "path":  "fonts/montserrat-cyrillic.woff2",
+                               "sha256":  "a187b077090fe8ae3fd2d7496aabbeae604819c718a282e0afc92df72b450766",
+                               "sizeBytes":  23828
+                           },
+                           {
+                               "path":  "fonts/montserrat-latin.woff2",
+                               "sha256":  "06b16db7a969135d48d38c49183be7fb88d4452e2a3011957c7851941f4e4879",
+                               "sizeBytes":  37956
+                           },
+                           {
+                               "path":  "fonts/oswald-cyrillic.woff2",
+                               "sha256":  "92867238f947d9b25b2d22c0ef38916e10824f5482f6ba078190738e392c1246",
+                               "sizeBytes":  6752
+                           },
+                           {
+                               "path":  "fonts/oswald-latin.woff2",
+                               "sha256":  "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16",
+                               "sizeBytes":  12672
+                           }
+                       ]
+}

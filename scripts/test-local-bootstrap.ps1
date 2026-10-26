@@ -96,7 +96,7 @@ volumes:
     }
     if ($model.name -ne $project) { throw "Unsafe test project name." }
     $cleanupAllowed = $true
-    $manifest = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v6/manifest.json") -Raw | ConvertFrom-Json
+    $manifest = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v7/manifest.json") -Raw | ConvertFrom-Json
     $queryPrefix = @("exec", "-T", "postgres", "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", $model.services.postgres.environment.POSTGRES_USER,
         "-d", $model.services.postgres.environment.POSTGRES_DB, "-At", "-c")
     Invoke-TestCompose -Arguments @("up", "--no-build", "--detach", "--wait", "--wait-timeout", "180", "api")
@@ -123,7 +123,7 @@ volumes:
     Invoke-TestCompose -Arguments @("up", "--no-build", "--detach", "--wait", "--wait-timeout", "180")
 
     $menu = Invoke-RestMethod -Uri "http://localhost:$apiPort/api/v1/public/menu"
-    $expectedMenu = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v6/public-menu.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+    $expectedMenu = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v7/public-menu.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($menu.items.Count -ne $expectedMenu.items.Count -or $menu.categories.Count -ne $expectedMenu.categories.Count) {
         throw "Seeded public menu counts differ from the snapshot."
     }
@@ -132,7 +132,7 @@ volumes:
     foreach ($resource in @("config", "menu")) {
         $response = Invoke-WebRequest -Uri "http://localhost:$apiPort/api/v1/public/$resource" -UseBasicParsing
         $actual = [Text.Encoding]::UTF8.GetString($response.RawContentStream.ToArray()).Replace("http://localhost:$assetPort/menu-assets-local", "{{ASSET_BASE_URL}}")
-        $expected = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v6/public-$resource.json") -Raw -Encoding UTF8
+        $expected = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v7/public-$resource.json") -Raw -Encoding UTF8
         if ($actual.Trim() -ne $expected.Trim()) { throw "Fresh public $resource differs from the exported source response." }
     }
 
@@ -169,7 +169,7 @@ volumes:
     $totalAfter = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT sum(price_minor) FROM menu_items"))
     if ("$totalBefore" -ne "$totalAfter") { throw "Bootstrap overwrote a local content edit." }
     $upgradedName = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT display_name FROM site_branding"))
-    $expectedConfiguration = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v6/public-config.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+    $expectedConfiguration = Get-Content -LiteralPath (Join-Path $root "infra/local/bootstrap/v7/public-config.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     if ("$upgradedName" -ne $expectedConfiguration.branding.localizedTexts[0].shortName) { throw "Existing branding was not upgraded." }
     $calendarRows = Invoke-TestCompose -Arguments ($queryPrefix + @("SELECT count(*) FROM restaurant_closed_dates"))
     if ([int] "$calendarRows" -ne 1) { throw "Content upgrade overwrote operational calendar settings." }

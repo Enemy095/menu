@@ -280,6 +280,9 @@ subsequent local edits. If a custom menu has already been published, v5 stops fo
 review instead of silently replacing it.
 The v6 release refines three roll descriptions and photographs from delivery-menu
 references, preserving all printed names/prices and earlier menu/order rows.
+The v7 release clarifies Caesar/four-cheese descriptions and replaces Caesar,
+Julienne and four-cheese photos with higher viewpoints showing the toppings.
+All printed prices, names and historical orders remain unchanged.
 
 Only configured user IDs in their own private chat can change the calendar; a group
 notification destination does not grant access. The public HTTP endpoint is read-only.

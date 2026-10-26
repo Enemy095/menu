@@ -2,7 +2,7 @@
 
 This is the Git-distributed starting content for the single-client local Docker
 deployment. `start-docker.cmd` loads the frozen **v1** snapshot into a fresh database,
-then applies **v2–v6** content releases automatically, including the current owner-approved menu.
+then applies **v2–v7** content releases automatically, including the current owner-approved menu.
 Existing databases receive only pending content releases, once each.
 No separate import command is needed on a new Windows machine.
 
@@ -27,7 +27,9 @@ No separate import command is needed on a new Windows machine.
 | `v5/update.sql` | Publishes menu version 2 and “В.А.М. Пицца” branding once |
 | `v5/manifest.json`, `v5/checksums.sha256`, `v5/public-*.json` | Frozen printed-menu release |
 | `v6/update.sql` | Menu version 3: researched roll descriptions, unchanged names/prices |
-| `v6/manifest.json`, `v6/checksums.sha256`, `v6/public-*.json` | Current asset inventory, integrity checks and expected API responses |
+| `v6/manifest.json`, `v6/checksums.sha256`, `v6/public-*.json` | Frozen roll-photo release |
+| `v7/update.sql` | Menu version 4: clearer Caesar/four-cheese descriptions, unchanged names/prices |
+| `v7/manifest.json`, `v7/checksums.sha256`, `v7/public-*.json` | Current inventory, integrity checks and expected API responses |
 | `bootstrap.sh`, `is-empty.sql`, `apply.sql` | Local initialization, empty-database guard and transaction |
 
 The snapshot was exported from the existing application on 2026-10-26. It preserves
@@ -74,8 +76,10 @@ notification setup must be configured separately on another machine.
    menu was manually published, initialization stops for review instead of overwriting it.
 10. The transaction applies `vam-pizza-roll-photos-v6` once, publishing version 3
     with revised roll descriptions while preserving the 19 printed names/prices.
-11. The frontend starts after successful bootstrap completion. The current menu
-    uses 14 original photos, two new pizza photos and three revised roll photos.
+11. The transaction applies `vam-pizza-pizza-photos-v7` once, publishing version 4
+    with matching Caesar/four-cheese descriptions and the same 19 names/prices.
+12. The frontend starts after successful bootstrap completion. The current menu
+    uses 11 original photos and eight revised pizza/roll photos.
     Older immutable assets remain available for pinned snapshots.
 
 An interrupted upload can be retried. A failed SQL apply rolls back all rows. A
@@ -96,7 +100,7 @@ With the local application and MinIO running, export a **new** version from the
 repository root:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/export-local-bootstrap.ps1 -Version v7
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/export-local-bootstrap.ps1 -Version v8
 ```
 
 The exporter refuses to overwrite an existing version. It uses the explicit table

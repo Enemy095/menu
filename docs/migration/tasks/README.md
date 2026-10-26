@@ -76,6 +76,8 @@ Printed-menu parity: [APP-LOCAL-009](APP-LOCAL-009.md) publishes the owner's 19 
 two new pizza photos, corrected prices and “В.А.М. Пицца” branding.
 Visual/navigation follow-up: [APP-LOCAL-010](APP-LOCAL-010.md) revises roll photos
 from delivery references and makes the active header section track navigation.
+Pizza audit: [APP-LOCAL-011](APP-LOCAL-011.md) improves Caesar/Julienne/four-cheese
+photos and checks the other seven pizzas against their visible toppings.
 
 Каждый task-файл обязан содержать:
 
